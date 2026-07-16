@@ -14,15 +14,23 @@ self.addEventListener("activate", e => {
       .then(() => self.clients.claim())
   );
 });
+const NET_TIMEOUT = 3000; // 网络竞速窗口:超过 3 秒直接用缓存(应对 github.io 被墙/慢网时的长时间白屏)
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
-  e.respondWith(
-    fetch(e.request).then(r => {
+  e.respondWith((async () => {
+    const cached = await caches.match(e.request, { ignoreSearch: true });
+    const network = fetch(e.request).then(r => {
       const cp = r.clone();
       caches.open(CACHE).then(c => c.put(e.request, cp)).catch(() => {});
       return r;
-    }).catch(() =>
-      caches.match(e.request, { ignoreSearch: true }).then(r => r || caches.match("./index.html"))
-    )
-  );
+    }).catch(() => null);
+    if (cached) {
+      // 已有缓存:给网络最多 3 秒,拿到就用最新,否则先用缓存(网络请求继续在后台更新缓存)
+      const winner = await Promise.race([network, new Promise(res => setTimeout(() => res(null), NET_TIMEOUT))]);
+      return winner || cached;
+    }
+    // 首次访问(无缓存):只能等网络
+    const r = await network;
+    return r || caches.match("./index.html");
+  })());
 });
