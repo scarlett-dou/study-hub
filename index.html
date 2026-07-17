@@ -443,7 +443,7 @@ async function refreshFromFile(silent){
   needReconnect=false;
   try{ const f=await fileHandle.getFile(); const t=await f.text(); if(t.trim()&&t!==lastFileText){ lastFileText=t; db=normalizeDb(JSON.parse(t)); render(); toast("已从文件刷新"); } updateFs(); }catch(e){}
 }
-function maybeAutoRefresh(){ if(document.getElementById("scrim").classList.contains("on")) return; if(fileHandle) refreshFromFile(true); }
+function maybeAutoRefresh(){ if(document.getElementById("scrim").classList.contains("on")) return; if(fileHandle) refreshFromFile(true); csMaybePull(); }
 async function connectFile(){ if(!fsSupported()){ alert("当前浏览器不支持文件同步,请用 Chrome / Edge,或用导出/导入。"); return; }
   try{ const [h]=await window.showOpenFilePicker({multiple:false,types:[{description:"数据文件",accept:{"application/json":[".json"]}}]}); if(!(await fhPerm(h,true))) return; fileHandle=h; needReconnect=false; await idbSet("fh",h); await readFile(); state.view="home"; render(); updateFs(); toast("已连接数据文件 ✓"); }catch(e){} }
 async function createFile(){ if(!fsSupported()){ alert("当前浏览器不支持文件同步,请用 Chrome / Edge,或用导出/导入。"); return; }
@@ -458,7 +458,46 @@ async function load(){
   db=blankDb();
 }
 function setSave(t){ const el=document.getElementById("saveState"); if(!el) return; el.textContent=t; if(t==="已保存 ✓") setTimeout(()=>{ if(el.textContent==="已保存 ✓") el.textContent=""; },1600); }
-async function save(){ setSave("保存中…"); db.version=7; db.savedAt=new Date().toISOString(); const p=JSON.stringify(db); let ok=false; if(hasLS()){ try{ localStorage.setItem(STORE_KEY,p); ok=true; }catch(e){} } if(fileHandle&&!needReconnect){ if(await writeFile()) ok=true; } setSave(ok?"已保存 ✓":"保存失败(请用导出备份)"); }
+async function save(opts){ opts=opts||{}; setSave("保存中…"); db.version=7; if(!opts.keepSavedAt) db.savedAt=new Date().toISOString(); const p=JSON.stringify(db); let ok=false; if(hasLS()){ try{ localStorage.setItem(STORE_KEY,p); ok=true; }catch(e){} } if(fileHandle&&!needReconnect){ if(await writeFile()) ok=true; } setSave(ok?"已保存 ✓":"保存失败(请用导出备份)"); if(!opts.noSync) csSchedulePush(); }
+
+/* ===== 2.5 云同步 (GitHub Contents API;私有仓库存 study-data.json,全平台含 iPhone 都能用) =====
+   开 App 自动拉最新、改完自动上传;令牌只存本机 localStorage,绝不写入同步数据。冲突按 savedAt 时间戳"较新者胜"。 */
+const CS={ token:"", repo:"", path:"study-data.json", branch:"main", sha:null, status:"", busy:false, pending:false, applying:false, timer:null, lastPushedSavedAt:null };
+let csLastPull=0;
+function csLoadCfg(){ if(!hasLS()) return; try{ CS.token=localStorage.getItem("cs-token")||""; CS.repo=localStorage.getItem("cs-repo")||""; CS.path=localStorage.getItem("cs-path")||"study-data.json"; CS.branch=localStorage.getItem("cs-branch")||"main"; CS.sha=localStorage.getItem("cs-sha")||null; }catch(e){} }
+function csSaveCfg(){ if(!hasLS()) return; try{ localStorage.setItem("cs-token",CS.token); localStorage.setItem("cs-repo",CS.repo); localStorage.setItem("cs-path",CS.path); localStorage.setItem("cs-branch",CS.branch); CS.sha?localStorage.setItem("cs-sha",CS.sha):localStorage.removeItem("cs-sha"); }catch(e){} }
+function csConfigured(){ return !!(CS.token&&CS.repo); }
+function csFmt(t){ try{ return t?new Date(t).toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}):""; }catch(e){ return ""; } }
+function csSetStatus(t,ok){ CS.status=t; const el=document.getElementById("csStatus"); if(el){ el.textContent=t; el.style.color=ok?"#2ca02c":""; } }
+function b64enc(str){ const b=new TextEncoder().encode(str); let s="",CH=0x8000; for(let i=0;i<b.length;i+=CH) s+=String.fromCharCode.apply(null,b.subarray(i,i+CH)); return btoa(s); }
+function b64dec(b64){ const bin=atob((b64||"").replace(/\s/g,"")); const b=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) b[i]=bin.charCodeAt(i); return new TextDecoder().decode(b); }
+function csApi(method,body){ const base="https://api.github.com/repos/"+CS.repo+"/contents/"+CS.path.split("/").map(encodeURIComponent).join("/"); const url=base+(method==="GET"?("?ref="+encodeURIComponent(CS.branch)+"&t="+Date.now()):""); return fetch(url,{ method, cache:"no-store", headers:{ "Authorization":"Bearer "+CS.token, "Accept":"application/vnd.github+json", "X-GitHub-Api-Version":"2022-11-28" }, body: body?JSON.stringify(body):undefined }); }
+async function csAdopt(remote,rt){ CS.applying=true; db=normalizeDb(remote); await save({noSync:true,keepSavedAt:true}); CS.applying=false; CS.lastPushedSavedAt=rt||db.savedAt; }
+async function csDoPut(){ const body={ message:"sync "+(db.savedAt||""), content:b64enc(JSON.stringify(db)), branch:CS.branch }; if(CS.sha) body.sha=CS.sha;
+  let r=await csApi("PUT",body);
+  if(r.status===409||r.status===422){ const g=await csApi("GET"); if(g.ok){ const gj=await g.json(); CS.sha=gj.sha; let rem=null,rt=""; try{ rem=JSON.parse(b64dec(gj.content)); rt=rem.savedAt||""; }catch(e){}
+      if(rem&&rt>(db.savedAt||"")){ await csAdopt(rem,rt); csSaveCfg(); render(); csSetStatus("云端有更新的数据,已采用云端 ✓",true); return; }
+      body.sha=CS.sha; r=await csApi("PUT",body); } }
+  if(r.status===401||r.status===403){ csSetStatus("令牌无效或无权限,请检查 Token/仓库",false); return; }
+  if(!r.ok){ csSetStatus("上传失败("+r.status+")",false); return; }
+  const j=await r.json(); if(j&&j.content&&j.content.sha) CS.sha=j.content.sha; CS.lastPushedSavedAt=db.savedAt; csSaveCfg(); csSetStatus("已上传到云端 ✓ "+csFmt(db.savedAt),true); }
+async function csSync(opts){ opts=opts||{}; if(!csConfigured()) return; if(CS.busy){ CS.pending=true; return; } CS.busy=true; try{
+    const r=await csApi("GET"); let remote=null, rt="";
+    if(r.status===401||r.status===403){ csSetStatus("令牌无效或无权限,请检查 Token/仓库",false); return; }
+    if(r.status===404){ CS.sha=null; }
+    else if(!r.ok){ csSetStatus("拉取失败("+r.status+")",false); return; }
+    else { const j=await r.json(); CS.sha=j.sha; try{ remote=JSON.parse(b64dec(j.content)); rt=remote.savedAt||""; }catch(e){ remote=null; } }
+    csSaveCfg();
+    const lt=db.savedAt||"";
+    if(remote && rt>lt){ await csAdopt(remote,rt); render(); csSetStatus("已拉取云端最新 ✓ "+csFmt(rt),true); if(!opts.silent) toast("已从云端同步最新 ✓"); return; }
+    if(lt && (!remote || lt>rt || lt!==CS.lastPushedSavedAt)){ await csDoPut(); return; }
+    csSetStatus("已是最新 ✓ "+csFmt(rt||lt||db.savedAt),true);
+  }catch(e){ csSetStatus("同步出错(网络离线?)",false); }
+  finally{ CS.busy=false; if(CS.pending){ CS.pending=false; setTimeout(()=>csSync({silent:true}),400); } } }
+function csSchedulePush(){ if(!csConfigured()) return; if(CS.timer) clearTimeout(CS.timer); CS.timer=setTimeout(()=>{ CS.timer=null; csSync({silent:true}); },2500); }
+function csMaybePull(){ if(!csConfigured()) return; const sc=document.getElementById("scrim"); if(sc&&sc.classList.contains("on")) return; const now=Date.now(); if(now-csLastPull<15000) return; csLastPull=now; csSync({silent:true}); }
+async function csConnect(token,repo,path){ CS.token=(token||"").trim(); CS.repo=(repo||"").trim().replace(/^https?:\/\/github\.com\//i,"").replace(/\.git$/i,"").replace(/^\/+|\/+$/g,""); CS.path=((path||"").trim())||"study-data.json"; CS.sha=null; CS.lastPushedSavedAt=null; csSaveCfg(); csSetStatus("连接中…",false); await csSync({}); }
+function csDisconnect(){ CS.token=""; CS.repo=""; CS.sha=null; CS.lastPushedSavedAt=null; if(hasLS()){ ["cs-token","cs-repo","cs-sha"].forEach(k=>{ try{ localStorage.removeItem(k); }catch(e){} }); } csSetStatus("已断开(本机数据保留)",false); }
 
 /* ===== 习思想文件夹 → 背诵库 自动重导入（绑定一次，打开自动同步各章 var CHAPTER；按“第X章”匹配，覆盖内容、保留题库与掌握度） ===== */
 let libDir=null, libNeedGrant=false;
@@ -1913,10 +1952,11 @@ function mountSettings(main){
       '<div class="frow">'+tf("tpPmS","下午起",tp.periods.pm[0])+tf("tpPmE","下午止",tp.periods.pm[1])+tf("tpEveS","晚上起",tp.periods.eve[0])+tf("tpEveE","晚上止",tp.periods.eve[1])+'</div>'+
       '<div class="frow">'+tf("tpLunchS","午饭起",tp.meals.lunch[0])+tf("tpLunchE","午饭止",tp.meals.lunch[1])+tf("tpDinS","晚饭起",tp.meals.dinner[0])+tf("tpDinE","晚饭止",tp.meals.dinner[1])+'</div>'+
       '<div class="frow">'+tf("tpWinS","学习窗口起",tp.window[0])+tf("tpWinE","学习窗口止",tp.window[1])+'<div class="field"><label>单项最长(小时)</label><input type="number" id="tpMax" min="1" step="1" value="'+(tp.maxSpanH||5)+'"></div></div><div class="desc">指定时间用 5 分钟一档的滚轮选起止;自动分配避开午/晚饭。</div></div>'; }
+  h+='<div class="card"><h4>☁️ 云同步（GitHub 自动 · 推荐）</h4><div class="desc" id="csStatus" style="margin-bottom:8px">'+(csConfigured()?("已连接："+esc(CS.repo)+(CS.status?" · "+esc(CS.status):" · 打开即自动同步")):"未配置 —— 填入一个<b>私有</b>仓库与令牌,三台设备(含 iPhone)开 App 自动拉、改完自动上传,不用再手动搬文件。")+'</div><div class="frow"><div class="field"><label>数据仓库 owner/repo</label><input type="text" id="csRepo" placeholder="scarlett-dou/study-data" value="'+esc(CS.repo)+'"></div><div class="field"><label>访问令牌 Token</label><input type="password" id="csToken" autocomplete="off" placeholder="'+(CS.token?"（已保存，换令牌再粘贴）":"github_pat_… / ghp_…")+'" value=""></div></div><div class="btnrow"><button class="btn sm" id="csConnect">连接 / 保存</button><button class="btn sm sec" id="csSyncNow">立即同步</button><button class="btn sm sec" id="csDisc">断开</button></div><div class="desc" style="margin-top:8px"><b>令牌只存在本机,不会写入同步数据。</b>数据请务必存<b>私有</b>仓库(别用公开的 study-hub 那个,否则进度会被公开)。首次设置步骤见《部署说明.md》第八节。</div></div>';
   if(fsSupported()){
   h+='<div class="card"><h4>数据同步(OneDrive 多机)</h4><div class="desc" id="fsStatus"></div><div class="btnrow"><button class="btn sm" id="setFsCreate">新建数据文件</button><button class="btn sm sec" id="setFsConnect">连接已有数据文件</button><button class="btn sm sec" id="setFsRefresh">立即从文件刷新</button></div><div class="desc" style="margin-top:10px"><b>新建数据文件</b>＝把当前数据写进新 json(首次/换位置),之后自动同步。<br><b>连接已有数据文件</b>＝读取另一台机器已有 json(覆盖当前未保存内容)并继续同步。<br><b>立即从文件刷新</b>＝重新授权或手动拉最新。文件放进 OneDrive 文件夹即可多机同步。需 Chrome / Edge 桌面版。</div></div>';
   } else {
-  h+='<div class="card"><h4>数据同步</h4><div class="desc">📱 <b>此设备无法“绑定数据文件”</b>——这是 iOS 系统限制,iPhone / iPad 上换 Chrome / Edge 也一样(它们在 iOS 上都用 Safari 内核),<b>不是 bug,也不用再找 OneDrive 按钮</b>。<br><br>手机换数据请用下方「<b>备份(导出 / 导入)</b>」:电脑上导出一份,用 <b>隔空投送 AirDrop</b>(Mac→iPhone)或 <b>微信「文件传输助手」</b>(Windows→iPhone)传到手机,再回这里点「选取文件 → 导入并覆盖」。<br>👉 电脑之间照旧用 OneDrive 自动同步,<b>手机单独走导入,完全不必经过 OneDrive</b>。</div></div>';
+  h+='<div class="card"><h4>数据同步（本地文件）</h4><div class="desc">📱 手机换数据请优先用上面的「<b>☁️ 云同步</b>」——配好后全自动,无需任何手动操作。<br><br>此设备无法"绑定本地数据文件"(iOS 系统限制,换 Chrome / Edge 也一样,它们都用 Safari 内核)。若你不想用云同步,也可用下方「<b>备份(导出 / 导入)</b>」:电脑导出一份,用 <b>AirDrop</b>(Mac→iPhone)或 <b>微信「文件传输助手」</b>(Windows→iPhone)传来,再「选取文件 → 导入并覆盖」。</div></div>';
   }
   h+='<div class="card"><h4>备份(导出 / 导入文本)</h4><div class="btnrow"><button class="btn sm sec" id="setBackup">打开导出 / 导入</button></div></div>';
   h+='<div class="card"><h4>模块扩展</h4><div id="modList"></div><button class="btn sm" id="addMod" style="margin-top:8px">＋ 新增模块</button><div class="desc">粘贴一段 JS(函数体),会收到 container 和 api。用与内置相同 id 可覆盖内置;停用/删除则恢复。<b>只粘贴你信任的代码。</b></div></div>';
@@ -1944,6 +1984,9 @@ function wireSettings(main){
     tpOn("tpWinS",v=>tp.window[0]=v); tpOn("tpWinE",v=>tp.window[1]=v);
     on("tpMax","onchange",async e=>{ tp.maxSpanH=Math.max(1,+e.target.value||5); await save(); }); }
   on("setFsCreate","onclick",createFile); on("setFsConnect","onclick",connectFile); on("setFsRefresh","onclick",()=>refreshFromFile(false));
+  on("csConnect","onclick",async()=>{ const rp=(main.querySelector("#csRepo").value||"").trim(); let tk=(main.querySelector("#csToken").value||"").trim(); if(!tk) tk=CS.token; if(!rp||!tk){ csSetStatus("请填写仓库和令牌",false); return; } await csConnect(tk,rp); const t=main.querySelector("#csToken"); if(t) t.value=""; });
+  on("csSyncNow","onclick",()=>csSync({}));
+  on("csDisc","onclick",()=>{ if(confirm("断开云同步?本机数据保留,只是不再自动上传/下载。")){ csDisconnect(); const t=main.querySelector("#csToken"); if(t) t.value=""; } });
   on("setBackup","onclick",openBackup);
   renderModList(main); on("addMod","onclick",()=>editModule(null));
   on("setToday","onchange",async e=>{ db.today=e.target.value||null; await save(); render(); });
@@ -2014,14 +2057,14 @@ window.addEventListener("scroll",hideSelbar,true);
 window.addEventListener("focus",maybeAutoRefresh);
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden) maybeAutoRefresh(); });
 setInterval(()=>{ if(state.view==="home" && !document.getElementById("scrim").classList.contains("on")) render(); },60000);
-(async function init(){ await load(); render(); updateFs(); await autoImportOnBoot(); })();
+(async function init(){ csLoadCfg(); await load(); render(); updateFs(); await autoImportOnBoot(); csSync({}); })();
 
 /* ===== 13. PWA:离线缓存 + 备份提醒 ===== */
 if("serviceWorker" in navigator && (location.protocol==="https:"||["localhost","127.0.0.1"].includes(location.hostname))){
   window.addEventListener("load",()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); });
 }
-(function backupReminder(){ /* 没有文件自动同步的环境(如 iPhone):提醒定期导出到 OneDrive */
-  if(fsSupported()||!hasLS()) return;
+(function backupReminder(){ /* 没有任何自动同步的环境(如 iPhone 且未配云同步):提醒定期导出备份 */
+  if(fsSupported()||csConfigured()||!hasLS()) return;
   try{ const last=+localStorage.getItem("sh-last-backup")||0;
     if(!last){ localStorage.setItem("sh-last-backup",String(Date.now())); return; }
     const days=Math.floor((Date.now()-last)/86400000);
