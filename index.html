@@ -339,7 +339,70 @@
   @media(max-width:560px){ /* iOS:输入框字号≥16px 才不会聚焦时自动放大页面 */
     input[type=text],input[type=date],input[type=number],select,textarea{font-size:16px}
   }
-</style>
+  /* ===== 卡片背诵 (flash) ===== */
+  .fc-wrap{ max-width:720px; margin:0 auto }
+  .fc-hero{ background:var(--card); border-radius:var(--r-lg); box-shadow:var(--shadow); padding:16px 18px; margin-bottom:14px }
+  .fc-daily{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:12px; font-size:13px; color:var(--text2) }
+  .fc-daily .fc-dl-lb{ font-weight:600; color:var(--text) }
+  .fc-daily b{ min-width:26px; text-align:center; font-size:15px; color:var(--text) }
+  .fc-daily .fc-dl-hint{ flex-basis:100%; color:var(--text3); font-size:12px }
+  .fc-step{ width:28px; height:28px; border:none; border-radius:8px; background:var(--fill); color:var(--tint); font-size:17px; font-weight:700 }
+  .fc-row{ display:flex; align-items:center; gap:12px; background:var(--card); border-radius:var(--r); box-shadow:var(--shadow); padding:11px 14px; margin-bottom:8px; cursor:pointer }
+  .fc-row .fc-seal{ width:34px; height:34px; border-radius:9px; background:var(--tint-soft); color:var(--tint); font-weight:700; display:flex; align-items:center; justify-content:center; flex:none }
+  .fc-row .fc-nm{ font-weight:600 }
+  .fc-row .fc-meta{ font-size:12px; color:var(--text2); margin-top:2px }
+  .fc-row .fc-meta b{ color:var(--text) }
+  .fc-mini{ height:5px; border-radius:3px; background:var(--fill2); overflow:hidden; margin-top:6px; max-width:230px }
+  .fc-mini i{ display:block; height:100%; background:var(--green); border-radius:3px }
+  .fc-chev{ margin-left:auto; color:var(--text3); font-size:22px; flex:none }
+  .fc-btn{ border:none; border-radius:10px; padding:9px 16px; font-weight:600; background:var(--tint); color:#fff; font-size:15px }
+  .fc-btn.sec{ background:var(--fill); color:var(--text) }
+  .fc-btn.sm{ padding:6px 12px; font-size:13px }
+  .fc-back{ background:none; border:none; color:var(--tint); font-size:14px; padding:6px 0; margin-bottom:6px }
+  .fc-card{ background:var(--card); border-radius:var(--r-lg); box-shadow:var(--shadow); padding:20px }
+  .fc-ctx{ font-size:12px; color:var(--text2); margin-bottom:4px }
+  .fc-pre{ font-size:12px; color:var(--text2); font-weight:600; margin-bottom:2px }
+  .fc-title{ font-size:17px; font-weight:700; margin-bottom:10px; color:var(--tint) }
+  .fc-body{ font-size:16px; line-height:1.7 }
+  .fc-p{ margin:7px 0 }
+  .fc-bk{ border-radius:5px; padding:0 3px; font-weight:600; border-bottom:2px solid currentColor; cursor:pointer }
+  .fc-bk.R{ color:var(--R) } .fc-bk.B{ color:var(--B) }
+  .fc-bk.hidden{ color:transparent; background:var(--fill2); min-width:2.6em; display:inline-block; text-align:center; border-bottom-color:transparent }
+  .fc-bk.shown.R{ background:var(--R-bg) } .fc-bk.shown.B{ background:var(--B-bg) }
+  .fc-c.R{ color:var(--R) } .fc-c.B{ color:var(--B) } .fc-c.G{ color:var(--G) } .fc-c.P{ color:var(--P) } .fc-c.O{ color:var(--orange) }
+  .fc-cue{ color:var(--text2); font-style:italic; font-size:.92em }
+  .fc-tblwrap{ overflow-x:auto; margin:9px 0; -webkit-overflow-scrolling:touch; border-radius:9px }
+  .fc-tbl{ border-collapse:collapse; font-size:13px; min-width:100%; line-height:1.5 }
+  .fc-tbl th,.fc-tbl td{ border:1px solid var(--sep); padding:5px 8px; text-align:left; vertical-align:top; min-width:56px }
+  .fc-tbl th{ background:var(--fill); font-weight:600 }
+  .fc-img{ max-width:100%; border-radius:10px; margin:9px 0; display:block; background:#fff }
+  .fc-timg{ max-height:46px; vertical-align:middle; background:#fff; border-radius:4px }
+  .fc-rate{ display:flex; gap:8px; margin-top:16px }
+  .fc-rate button{ flex:1; border:none; border-radius:12px; padding:14px 0; font-weight:700; font-size:15px }
+  .fc-rate .again{ background:var(--R-bg); color:var(--R) }
+  .fc-rate .hard{ background:var(--fill2); color:var(--text) }
+  .fc-rate .good{ background:var(--G-bg); color:var(--G) }
+  .fc-opt{ display:block; width:100%; text-align:left; border:1.5px solid var(--sep2); background:var(--card); border-radius:12px; padding:12px 14px; margin:8px 0; font-size:15px; color:var(--text); line-height:1.5 }
+  .fc-opt.correct{ border-color:var(--green); background:var(--G-bg) }
+  .fc-opt.wrong{ border-color:var(--red); background:var(--R-bg) }
+  .fc-explain{ margin-top:12px; font-size:13.5px; background:var(--G-bg); color:var(--G); border-radius:9px; padding:9px 13px; line-height:1.6 }
+  .fc-explain.bad{ background:var(--R-bg); color:var(--R) }
+  .fc-prog{ display:flex; align-items:center; gap:10px; margin-bottom:12px }
+  .fc-prog .bar{ flex:1; height:6px; border-radius:4px; background:var(--fill2); overflow:hidden }
+  .fc-prog .bar i{ display:block; height:100%; background:var(--tint); border-radius:4px }
+  .fc-badge{ display:inline-block; font-size:11px; font-weight:700; padding:1px 8px; border-radius:20px; background:var(--G-bg); color:var(--G) }
+  .fc-tag{ display:inline-block; font-size:11px; padding:1px 8px; border-radius:20px; background:var(--fill); color:var(--text2) }
+  .fc-edithint{ font-size:12px; color:var(--text2); background:var(--fill); border-radius:8px; padding:7px 10px; margin-bottom:10px; line-height:1.55 }
+  .fc-erow{ display:flex; gap:8px; align-items:flex-start; margin:7px 0 }
+  .fc-eblk{ flex:1; line-height:2.05 }
+  .fc-chip{ cursor:pointer; border-radius:4px; padding:0 2px }
+  .fc-bc{ border-bottom:2px solid currentColor } .fc-bc.R{ color:var(--R); background:var(--R-bg) } .fc-bc.B{ color:var(--B); background:var(--B-bg) }
+  .fc-cc{ border-bottom:1px dotted currentColor } .fc-cc.R{ color:var(--R) } .fc-cc.B{ color:var(--B) } .fc-cc.P{ color:var(--P) } .fc-cc.O{ color:var(--orange) } .fc-cc.G{ color:var(--G) }
+  .fc-srcbtn{ border:1px solid var(--sep2); background:var(--fill); color:var(--text2); border-radius:7px; padding:3px 9px; font-size:12px; flex:none; cursor:pointer; align-self:flex-start }
+  .fc-tbledit td, .fc-tbledit th{ cursor:pointer } .fc-tbledit td:hover, .fc-tbledit th:hover{ outline:2px solid var(--tint); outline-offset:-2px }
+  #selbar .col.O{ background:var(--orange) }  .fc-decks{ display:flex; gap:6px; background:var(--fill); padding:3px; border-radius:11px; margin-bottom:12px; flex-wrap:wrap }
+  .fc-decks button{ border:none; background:transparent; border-radius:8px; padding:7px 16px; font-size:14px; font-weight:500; color:var(--text) }
+  .fc-decks button.sel{ background:var(--bg2); box-shadow:var(--shadow); font-weight:600 }</style>
 
 <div class="wrap">
   <header class="top"><div class="brand">Study Hub</div><nav class="nav" id="nav"></nav></header>
@@ -368,11 +431,11 @@ function defaultSettings(){ return {
   levels:defaultLevels(),
   mastery:{ model:"S", selfWeight:0.6, examWeight:0.4, recallWindow:5, examWindow:3, sCap:45, aggregate:"avg" },
   starters:[1,2,4], ease0:2.3, easeMin:1.3, easeMax:3.2, reviewCapPerDay:3,
-  historyUnlocked:false,
+  historyUnlocked:false, flashDaily:20,
   timeplan:{ periods:{am:["08:00","12:00"],noon:["12:00","14:00"],pm:["14:00","18:00"],eve:["18:00","23:00"]},
              meals:{lunch:["12:00","13:30"],dinner:["18:00","19:30"]}, window:["08:00","22:30"], stepMin:30, maxSpanH:5 },
 }; }
-function blankDb(){ return { version:7, today:null, settings:defaultSettings(), contents:[], courses:[], recites:[], plans:[], userModules:[], timeplan:{} }; }
+function blankDb(){ return { version:7, today:null, settings:defaultSettings(), contents:[], courses:[], recites:[], plans:[], userModules:[], flashDecks:[], flashState:{}, timeplan:{} }; }
 let db=blankDb();
 let state={ view:"home", calBase:null, selDate:null };
 
@@ -417,7 +480,7 @@ function normalizeDb(o){
   d.settings.timeplan.periods=Object.assign({},dtp.periods,d.settings.timeplan.periods||{});
   d.settings.timeplan.meals=Object.assign({},dtp.meals,d.settings.timeplan.meals||{});
   d.timeplan=(o.timeplan&&typeof o.timeplan==="object")?o.timeplan:{};
-  d.contents=o.contents||[]; d.courses=o.courses||[]; d.recites=o.recites||[]; d.plans=(o.plans||[]).filter(p=>p.kind==="review"||!p.courseId); d.userModules=o.userModules||[];
+  d.contents=o.contents||[]; d.courses=o.courses||[]; d.recites=o.recites||[]; d.plans=(o.plans||[]).filter(p=>p.kind==="review"||!p.courseId); d.userModules=o.userModules||[]; d.flashDecks=Array.isArray(o.flashDecks)?o.flashDecks:[]; d.flashState=(o.flashState&&typeof o.flashState==="object")?o.flashState:{};
   d.contents.forEach(c=>{ if(c&&!Array.isArray(c.questions)) c.questions=[]; });
   db=d;
   // 远古原型 entries → recites
@@ -445,7 +508,7 @@ async function refreshFromFile(silent){
 }
 function maybeAutoRefresh(){ if(document.getElementById("scrim").classList.contains("on")) return; if(fileHandle) refreshFromFile(true); csMaybePull(); }
 async function connectFile(){ if(!fsSupported()){ alert("当前浏览器不支持文件同步,请用 Chrome / Edge,或用导出/导入。"); return; }
-  try{ const [h]=await window.showOpenFilePicker({multiple:false,types:[{description:"数据文件",accept:{"application/json":[".json"]}}]}); if(!(await fhPerm(h,true))) return; fileHandle=h; needReconnect=false; await idbSet("fh",h); await readFile(); state.view="home"; render(); updateFs(); toast("已连接数据文件 ✓"); }catch(e){} }
+  try{ const [h]=await window.showOpenFilePicker({multiple:false,types:[{description:"数据文件",accept:{"application/json":[".json"]}}]}); if(!(await fhPerm(h,true))) return; fileHandle=h; needReconnect=false; await idbSet("fh",h); await readFile(); ensureStamp(); state.view="home"; render(); updateFs(); toast("已连接数据文件 ✓"); csSync({}); }catch(e){} }
 async function createFile(){ if(!fsSupported()){ alert("当前浏览器不支持文件同步,请用 Chrome / Edge,或用导出/导入。"); return; }
   try{ const h=await window.showSaveFilePicker({suggestedName:"study-data.json",types:[{description:"数据文件",accept:{"application/json":[".json"]}}]}); if(!(await fhPerm(h,true))) return; fileHandle=h; needReconnect=false; await idbSet("fh",h); await writeFile(); updateFs(); toast("已新建数据文件 ✓"); }catch(e){} }
 async function reconnectFile(){ if(!fileHandle){ return connectFile(); } if(await fhPerm(fileHandle,true)){ needReconnect=false; await readFile(); render(); updateFs(); toast("已恢复同步 ✓"); } }
@@ -467,6 +530,9 @@ let csLastPull=0;
 function csLoadCfg(){ if(!hasLS()) return; try{ CS.token=localStorage.getItem("cs-token")||""; CS.repo=localStorage.getItem("cs-repo")||""; CS.path=localStorage.getItem("cs-path")||"study-data.json"; CS.branch=localStorage.getItem("cs-branch")||"main"; CS.sha=localStorage.getItem("cs-sha")||null; }catch(e){} }
 function csSaveCfg(){ if(!hasLS()) return; try{ localStorage.setItem("cs-token",CS.token); localStorage.setItem("cs-repo",CS.repo); localStorage.setItem("cs-path",CS.path); localStorage.setItem("cs-branch",CS.branch); CS.sha?localStorage.setItem("cs-sha",CS.sha):localStorage.removeItem("cs-sha"); }catch(e){} }
 function csConfigured(){ return !!(CS.token&&CS.repo); }
+/* 旧版桌面 study-hub 写出的 json 没有 savedAt,会被误判成"无数据可上传"。
+   本机若有真实数据却没时间戳,补盖一个"现在",使它能正常参与新旧比较并上传。 */
+function ensureStamp(){ if(!db||db.savedAt) return; const has=(db.contents&&db.contents.length)||(db.courses&&db.courses.length)||(db.recites&&db.recites.length); if(has) db.savedAt=new Date().toISOString(); }
 function csFmt(t){ try{ return t?new Date(t).toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}):""; }catch(e){ return ""; } }
 function csSetStatus(t,ok){ CS.status=t; const el=document.getElementById("csStatus"); if(el){ el.textContent=t; el.style.color=ok?"#2ca02c":""; } }
 function b64enc(str){ const b=new TextEncoder().encode(str); let s="",CH=0x8000; for(let i=0;i<b.length;i+=CH) s+=String.fromCharCode.apply(null,b.subarray(i,i+CH)); return btoa(s); }
@@ -488,9 +554,9 @@ async function csSync(opts){ opts=opts||{}; if(!csConfigured()) return; if(CS.bu
     else if(!r.ok){ csSetStatus("拉取失败("+r.status+")",false); return; }
     else { const j=await r.json(); CS.sha=j.sha; try{ remote=JSON.parse(b64dec(j.content)); rt=remote.savedAt||""; }catch(e){ remote=null; } }
     csSaveCfg();
-    const lt=db.savedAt||"";
+    ensureStamp(); const lt=db.savedAt||"";
     if(remote && rt>lt){ await csAdopt(remote,rt); render(); csSetStatus("已拉取云端最新 ✓ "+csFmt(rt),true); if(!opts.silent) toast("已从云端同步最新 ✓"); return; }
-    if(lt && (!remote || lt>rt || lt!==CS.lastPushedSavedAt)){ await csDoPut(); return; }
+    if(lt && (!remote || lt>rt)){ await csDoPut(); return; }
     csSetStatus("已是最新 ✓ "+csFmt(rt||lt||db.savedAt),true);
   }catch(e){ csSetStatus("同步出错(网络离线?)",false); }
   finally{ CS.busy=false; if(CS.pending){ CS.pending=false; setTimeout(()=>csSync({silent:true}),400); } } }
@@ -687,7 +753,7 @@ function renderText(text,reveal){ return parseTokens(text).map(tk=>{
   if(tk.type==="color") return esc(tk.text);
   const c=tk.color,b=esc(tk.ans);
   if(reveal) return '<span class="bk shown '+c+'">'+b+'</span>';
-  return '<span class="bk hidden '+c+'" data-ans="'+b+'" tabindex="0" role="button">'+b+'</span>'; }).join(""); }
+  return '<span class="bk hidden '+c+'" data-ans="'+b+'" tabindex="0" role="button">＿＿＿</span>'; }).join(""); }
 function parseChapter(htmlText){ const s=[],re=/<script[^>]*>([\s\S]*?)<\/script>/gi; let m; while((m=re.exec(htmlText))) s.push(m[1]);
   let body=s.find(x=>/\bCHAPTER\s*=/.test(x)); if(!body&&/\bCHAPTER\s*=/.test(htmlText)) body=htmlText; if(!body) return null;
   try{ const fn=new Function("module","exports",body+"\n;return typeof CHAPTER!=='undefined'?CHAPTER:null;"); const ch=fn(undefined,undefined);
@@ -744,6 +810,7 @@ const api={
 const BUILTIN_MODULES=[
   { id:"home", name:"日历", mount:mountHome },
   { id:"library", name:"背诵库", mount:mountLibrary },
+  { id:"flash", name:"卡片", mount:mountFlash },
   { id:"exam", name:"考试", mount:mountExam, hidden:true },
   { id:"courses", name:"课程", mount:mountCourses },
   { id:"settings", name:"设置", mount:mountSettings },
@@ -1933,6 +2000,313 @@ async function finishReviewPlan(){
   p.done=true; p.results={pct:_rp.pct,correct:_rp.correct,total:_rp.items.length,lessons:summary,date:_rp.onDate};
   await save(); const dd=_rp.dd; closeModal(); _rp=null; refreshDay(dd); toast('复习完成,已更新各节排期');
 }
+/* ===== 10.7 · 卡片背诵 (Leitner 盒子 + 连胜掌握; 独立数据 flashDecks/flashState, 不改复习/排期/掌握度内核) ===== */
+const FC_IVL={1:1,2:2,3:4,4:7,5:15};          // 盒子层级 → 下次复习间隔(天)
+const FC_MASTER=3;                            // 连续「记住」达到此数 = 已掌握
+const FC_LVL={ again:{k:"again",label:"没记住"}, hard:{k:"hard",label:"一般"}, good:{k:"good",label:"记住"} };
+let fc={ nav:{level:"deck",ci:null,si:null}, session:null, screen:"home" };
+
+function fcDecks(){ return db.flashDecks||[]; }
+function fcDeck(){ const ds=fcDecks(); if(!ds.length) return null; return ds.find(d=>d.id===fc.deckId)||ds[0]; }
+function fcPeek(id){ return (db.flashState&&db.flashState[id])||null; }
+function fcEnsure(id){ if(!db.flashState) db.flashState={}; let s=db.flashState[id];
+  if(!s){ s={box:1,good:0,hard:0,again:0,streak:0,mastered:false,seen:0,due:today(),last:null,wrong:false,wrongN:0}; db.flashState[id]=s; } return s; }
+function fcIsDue(id){ const s=fcPeek(id); if(!s) return true; return (s.due||today())<=today(); }   // 未学过=待学
+function fcRate(id,lvl){ const s=fcEnsure(id); s.seen++; s.last=today();
+  if(lvl==="good"){ s.good++; s.box=Math.min(5,s.box+1); s.streak++; if(s.streak>=FC_MASTER) s.mastered=true; }
+  else if(lvl==="hard"){ s.hard++; s.streak=0; }
+  else { s.again++; s.streak=0; s.box=1; s.mastered=false; }
+  const ivl = lvl==="again"?1 : lvl==="hard"?Math.max(1,Math.round(FC_IVL[s.box]/2)) : FC_IVL[s.box];
+  s.due=addDays(today(),ivl); save(); }
+function fcAnswerQuiz(id,correct){ const s=fcEnsure(id);
+  if(correct){ s.wrong=false; fcRate(id,"good"); } else { s.wrong=true; s.wrongN=(s.wrongN||0)+1; fcRate(id,"again"); } }
+function fcCardById(deck,id){ return deck.cards.find(c=>c.id===id); }
+
+/* ---- markup 渲染: [[答案|R/B]] 挖空 · ‹文本|R/B/P/O/G› 上色 · 〔提示〕 · ⟦IMG:x⟧ 图 ---- */
+function fcEscBr(s){ return esc(s).replace(/\n/g,"<br>"); }
+function fcRender(md,deck){ const imgs=(deck&&deck.images)||{}; let out="",last=0,m;
+  const re=/\[\[([^\]|]+)\|([RB])\]\]|‹([^|›]*)\|([RBPOG])›|〔([^〕]*)〕|⟦IMG:([^⟧]+)⟧/g;
+  while((m=re.exec(md))!==null){ if(m.index>last) out+=fcEscBr(md.slice(last,m.index));
+    if(m[1]!==undefined) out+='<span class="fc-bk hidden '+m[2]+'" data-ans="'+esc(m[1])+'" tabindex="0" role="button">＿＿＿</span>';
+    else if(m[3]!==undefined) out+='<span class="fc-c '+m[4]+'">'+fcEscBr(m[3])+'</span>';
+    else if(m[5]!==undefined) out+='<span class="fc-cue">〔'+esc(m[5])+'〕</span>';
+    else if(m[6]!==undefined){ const src=imgs[m[6]]; if(src) out+='<img class="fc-timg" src="'+src+'" alt="图">'; }
+    last=re.lastIndex; }
+  if(last<md.length) out+=fcEscBr(md.slice(last)); return out; }
+function fcTable(rows,deck){ let h='<div class="fc-tblwrap"><table class="fc-tbl">';
+  rows.forEach((row,ri)=>{ h+="<tr>"; row.forEach(cell=>{ const tag=ri===0?"th":"td"; h+="<"+tag+">"+fcRender(String(cell),deck)+"</"+tag+">"; }); h+="</tr>"; });
+  return h+"</table></div>"; }
+function fcCardBody(card,deck){ let h="";
+  (card.blocks||[]).forEach(b=>{ if(b.t==="p") h+='<p class="fc-p">'+fcRender(b.md,deck)+"</p>";
+    else if(b.t==="table") h+=fcTable(b.rows,deck);
+    else if(b.t==="img"){ const src=(deck.images||{})[b.src]; if(src) h+='<img class="fc-img" src="'+src+'">'; } });
+  return h; }
+
+/* ---- 统计 & 章节树 ---- */
+function fcStats(cards){ let seen=0,mastered=0,due=0,neu=0,wrong=0;
+  cards.forEach(c=>{ const s=fcPeek(c.id); if(!s){ neu++; due++; } else { seen++; if(s.mastered) mastered++; if((s.due||today())<=today()) due++; if(s.wrong) wrong++; } });
+  return {total:cards.length,seen,mastered,due,neu,wrong}; }
+function fcTree(deck){ const chaps=[],cm={};
+  deck.cards.forEach(c=>{ if(cm[c.chapIdx]===undefined){ cm[c.chapIdx]=chaps.length; chaps.push({idx:c.chapIdx,title:c.chap,cards:[],secs:[],_sm:{}}); }
+    const ch=chaps[cm[c.chapIdx]]; ch.cards.push(c);
+    if(ch._sm[c.secIdx]===undefined){ ch._sm[c.secIdx]=ch.secs.length; ch.secs.push({idx:c.secIdx,title:c.sec,cards:[],subs:[],_um:{}}); }
+    const se=ch.secs[ch._sm[c.secIdx]]; se.cards.push(c);
+    const uk=c.subIdx; if(se._um[uk]===undefined){ se._um[uk]=se.subs.length; se.subs.push({idx:uk,title:c.sub||"（本节）",cards:[]}); }
+    se.subs[se._um[uk]].cards.push(c); });
+  return chaps; }
+function fcMiniBar(st){ const pct=st.total?Math.round(st.mastered/st.total*100):0;
+  return '<div class="fc-mini"><i style="width:'+pct+'%"></i></div>'; }
+function fcMetaLine(st){ return '掌握 <b>'+st.mastered+'</b>/'+st.total+(st.due?' · 待复习 <b>'+st.due+'</b>':'')+(st.wrong?' · 错题 <b>'+st.wrong+'</b>':''); }
+
+/* ---- 会话构建 ---- */
+function fcStartSession(cards,label,onlyDue){ let ids=cards.map(c=>c.id);
+  if(onlyDue) ids=ids.filter(id=>fcIsDue(id));
+  if(!ids.length){ toast(onlyDue?"这里没有待复习的卡":"这里还没有卡"); return; }
+  fc.session={ ids, i:0, label, good:0,hard:0,again:0, reveal:false, answered:null, missIds:[], done:false }; fc.editing=false;
+  fc.screen="session"; render(); }
+function fcTodayQueue(deck){ const daily=(db.settings&&db.settings.flashDaily)||20;
+  const dueSeen=deck.cards.filter(c=>{ const s=fcPeek(c.id); return s&&(s.due||today())<=today(); });
+  const neu=deck.cards.filter(c=>!fcPeek(c.id)).slice(0,daily);
+  return dueSeen.concat(neu); }
+
+/* ---- 模块入口 ---- */
+function mountFlash(main){ hideSelbar&&hideSelbar(); const deck=fcDeck();
+  if(!deck){ const e=document.createElement("div"); e.className="kempty"; e.innerHTML='<div class="big">还没有卡片牌组</div>导入含 <code>flashDecks</code> 的数据文件（study-data.json）即可看到「经济」卡片。'; main.appendChild(e); return; }
+  if(fc.screen==="session"&&fc.session){ fcRenderSession(main,deck); return; }
+  if(fc.screen==="wrong"){ fcRenderWrong(main,deck); return; }
+  fcRenderHome(main,deck); }
+
+function fcRenderHome(main,deck){
+  const wrap=document.createElement("div"); wrap.className="fc-wrap"; main.appendChild(wrap);
+  const nav=fc.nav; const all=fcStats(deck.cards);
+  // 顶部：标题 + 今日 + 错题
+  if(nav.level==="deck"){
+    if(fcDecks().length>1) wrap.appendChild(fcDeckTabs());
+    const hero=document.createElement("div"); hero.className="fc-hero";
+    const q=fcTodayQueue(deck);
+    hero.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px">'+
+      '<div><h2 class="mod-h" style="margin:0">卡片背诵 · '+esc(deck.name)+'</h2><p class="mod-sub" style="margin:2px 0 0">共 '+all.total+' 张 · 已掌握 '+all.mastered+' · 待复习 '+all.due+(all.wrong?' · 错题 '+all.wrong:'')+'</p></div>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="fc-btn" id="fcToday">今日学习（'+q.length+'）</button>'+(all.wrong?'<button class="fc-btn sec" id="fcWrong">错题本（'+all.wrong+'）</button>':'')+'</div></div>'+
+      '<div class="fc-daily" id="fcDaily"></div>';
+    wrap.appendChild(hero);
+    hero.querySelector("#fcToday").onclick=()=>fcStartSession(fcTodayQueue(deck),"今日学习",false);
+    const bw=hero.querySelector("#fcWrong"); if(bw) bw.onclick=()=>{ fc.screen="wrong"; render(); };
+    fcDailyCtl(hero.querySelector("#fcDaily"));
+    // 章节列表
+    const lab=document.createElement("div"); lab.className="seclab"; lab.textContent="按章节选择（点进去可选到小节）"; wrap.appendChild(lab);
+    fcTree(deck).forEach(ch=>{ const st=fcStats(ch.cards); const row=fcRowEl(String(ch.idx+1),ch.title,fcMetaLine(st),st);
+      row.onclick=()=>{ fc.nav={level:"chap",ci:ch.idx}; render(); }; wrap.appendChild(row); });
+    return;
+  }
+  // 章 内部 → 列节
+  const tree=fcTree(deck);
+  if(nav.level==="chap"){
+    const ch=tree.find(c=>c.idx===nav.ci); if(!ch){ fc.nav={level:"deck"}; render(); return; }
+    wrap.appendChild(fcBack("← 全部章节",()=>{ fc.nav={level:"deck"}; render(); }));
+    wrap.appendChild(fcScopeHead(deck,ch.title,ch.cards));
+    ch.secs.forEach(se=>{ const st=fcStats(se.cards);
+      const row=fcRowEl("§",se.title||"（本章直属）",fcMetaLine(st),st);
+      row.onclick=()=>{ fc.nav={level:"sec",ci:ch.idx,si:se.idx}; render(); }; wrap.appendChild(row); });
+    return;
+  }
+  if(nav.level==="sec"){
+    const ch=tree.find(c=>c.idx===nav.ci); const se=ch&&ch.secs.find(s=>s.idx===nav.si);
+    if(!se){ fc.nav={level:"chap",ci:nav.ci}; render(); return; }
+    wrap.appendChild(fcBack("← "+esc(ch.title),()=>{ fc.nav={level:"chap",ci:ch.idx}; render(); }));
+    wrap.appendChild(fcScopeHead(deck,se.title,se.cards));
+    const realSubs=se.subs.filter(u=>u.title!=="（本节）");
+    if(!realSubs.length){ const tip=document.createElement("div"); tip.className="mod-sub"; tip.style.padding="4px 2px"; tip.textContent="本节没有更细的小节，直接点上方「开始背」即可。"; wrap.appendChild(tip); return; }
+    se.subs.forEach(u=>{ const st=fcStats(u.cards); const row=fcRowEl("·",u.title,fcMetaLine(st),st);
+      row.style.cursor="default"; const b=document.createElement("button"); b.className="fc-btn sm"; b.textContent="背 "+u.cards.length; b.onclick=(e)=>{ e.stopPropagation(); fcStartSession(u.cards,ch.title+" · "+u.title,false); };
+      row.querySelector(".fc-chev").replaceWith(b); wrap.appendChild(row); });
+    return;
+  }
+}
+function fcDeckTabs(){ const box=document.createElement("div"); box.className="fc-decks"; const cur=fcDeck();
+  fcDecks().forEach(d=>{ const b=document.createElement("button"); b.textContent=d.name; if(cur&&d.id===cur.id) b.className="sel";
+    b.onclick=()=>{ fc.deckId=d.id; fc.nav={level:"deck"}; fc.session=null; fc.editing=false; fc.screen="home"; render(); }; box.appendChild(b); });
+  return box; }function fcDailyCtl(host){ if(!host) return; const cur=(db.settings&&db.settings.flashDaily)||20;
+  host.innerHTML='<span class="fc-dl-lb">每天新卡上限</span><button class="fc-step" data-d="-5">−</button><b id="fcDailyN">'+cur+'</b><button class="fc-step" data-d="5">＋</button><span class="fc-dl-hint">今日 = 到期复习卡 + 最多这么多张新卡</span>';
+  host.querySelectorAll(".fc-step").forEach(b=>b.onclick=()=>{ let v=((db.settings.flashDaily)||20)+(+b.dataset.d); v=Math.max(5,Math.min(100,v)); db.settings.flashDaily=v; save(); host.querySelector("#fcDailyN").textContent=v; }); }
+function fcScopeHead(deck,title,cards){ const st=fcStats(cards); const box=document.createElement("div"); box.className="fc-hero";
+  box.innerHTML='<div style="font-size:17px;font-weight:700;margin-bottom:3px">'+esc(title||"本章")+'</div><p class="mod-sub" style="margin:0 0 10px">'+fcMetaLine(st)+' · 共 '+st.total+' 张</p>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="fc-btn" id="fcGoAll">开始背（'+st.total+'）</button>'+(st.due<st.total?'<button class="fc-btn sec" id="fcGoDue">只背到期（'+st.due+'）</button>':'')+
+    ((st.total-st.mastered)>0?'<button class="fc-btn sec" id="fcGoWeak">只背没掌握（'+(st.total-st.mastered)+'）</button>':'')+'</div>';
+  box.querySelector("#fcGoAll").onclick=()=>fcStartSession(cards,title,false);
+  const bd=box.querySelector("#fcGoDue"); if(bd) bd.onclick=()=>fcStartSession(cards,title,true);
+  const bw=box.querySelector("#fcGoWeak"); if(bw) bw.onclick=()=>fcStartSession(cards.filter(c=>{ const s=fcPeek(c.id); return !(s&&s.mastered); }),title,false);
+  return box; }
+function fcRowEl(seal,name,meta,st){ const row=document.createElement("div"); row.className="fc-row";
+  row.innerHTML='<div class="fc-seal">'+esc(String(seal))+'</div><div style="flex:1;min-width:0"><div class="fc-nm">'+esc(name)+'</div><div class="fc-meta">'+meta+'</div>'+(st?fcMiniBar(st):'')+'</div><span class="fc-chev">›</span>';
+  return row; }
+function fcBack(label,fn){ const b=document.createElement("button"); b.className="fc-back"; b.textContent=label; b.onclick=fn; return b; }
+
+/* ---- 会话（逐卡） ---- */
+function fcRenderSession(main,deck){ const S=fc.session; if(!S){ fc.screen="home"; render(); return; }
+  const wrap=document.createElement("div"); wrap.className="fc-wrap"; main.appendChild(wrap);
+  if(S.done){ return fcSummary(wrap,deck); }
+  const total=S.ids.length, card=fcCardById(deck,S.ids[S.i]);
+  if(!card){ S.i++; if(S.i>=total){ S.done=true; } render(); return; }
+  // 顶部进度
+  const top=document.createElement("div"); top.className="fc-prog";
+  top.innerHTML='<button class="fc-back" style="margin:0" id="fcExit">✕ 退出</button><span style="font-size:13px;color:var(--text2);white-space:nowrap">'+esc(S.label)+'</span><div class="bar"><i style="width:'+Math.round(S.i/total*100)+'%"></i></div><span style="font-size:13px;color:var(--text2);white-space:nowrap">'+(S.i+1)+' / '+total+'</span>';
+  wrap.appendChild(top); top.querySelector("#fcExit").onclick=()=>{ if(confirm("退出本轮？已评价的卡片进度已保存。")){ fc.screen="home"; fc.session=null; fc.nav={level:"deck"}; render(); } };
+  if(card.kind!=="quiz"){ const _eb=document.createElement("button"); _eb.className="fc-back"; _eb.style.margin="0"; _eb.textContent=fc.editing?"✓ 完成编辑":"✎ 编辑挖空"; _eb.onclick=()=>{ fc.editing=!fc.editing; hideSelbar(); render(); }; top.appendChild(_eb); }
+  const cardEl=document.createElement("div"); cardEl.className="fc-card"; wrap.appendChild(cardEl);
+  // 情景标题
+  const ctxParts=[card.chap,card.sec,card.sub].filter(Boolean);
+  let head='<div class="fc-ctx">'+esc(ctxParts.join(" › "))+(card.h4?' › '+esc(card.h4):'')+'</div>';
+  if(card.pretitle) head+='<div class="fc-pre">'+esc(card.pretitle)+'</div>';
+  if(card.title) head+='<div class="fc-title">'+esc(card.title)+'</div>';
+  const s=fcPeek(card.id); const badge = s&&s.mastered?'<span class="fc-badge">已掌握</span>':(s?'<span class="fc-tag">记'+s.good+'/一般'+s.hard+'/没'+s.again+'</span>':'<span class="fc-tag">新卡</span>');
+  if(fc.editing && card.kind!=="quiz"){ fcRenderClozeEdit(cardEl,card,deck,head,wrap); return; }
+  if(card.kind==="quiz") fcRenderQuizCard(cardEl,card,deck,head,badge,wrap);
+  else fcRenderClozeCard(cardEl,card,deck,head,badge,wrap);
+}
+function fcRenderClozeCard(cardEl,card,deck,head,badge,wrap){ const S=fc.session;
+  cardEl.innerHTML=head+'<div class="fc-body">'+fcCardBody(card,deck)+'</div>';
+  // 绑定挖空点击
+  const reveal=el=>{ el.classList.remove("hidden"); el.classList.add("shown"); el.textContent=el.dataset.ans; };
+  cardEl.querySelectorAll(".fc-bk.hidden").forEach(el=>{ if(S.reveal) reveal(el);
+    el.onclick=()=>reveal(el); el.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); reveal(el); } }; });
+  const nBlanks=cardEl.querySelectorAll(".fc-bk").length;
+  const tools=document.createElement("div"); tools.style.cssText="margin-top:14px;text-align:center";
+  if(nBlanks){ const rb=document.createElement("button"); rb.className="fc-btn sec sm"; rb.textContent="显示全部答案"; rb.onclick=()=>{ S.reveal=true; cardEl.querySelectorAll(".fc-bk.hidden").forEach(reveal); }; tools.appendChild(rb); }
+  else { const t=document.createElement("span"); t.className="mod-sub"; t.textContent="（本卡无挖空 · 看懂即可评价）"; tools.appendChild(t); }
+  cardEl.appendChild(tools);
+  const rate=document.createElement("div"); rate.className="fc-rate";
+  rate.innerHTML='<button class="again">没记住</button><button class="hard">一般</button><button class="good">记住</button>';
+  rate.querySelector(".again").onclick=()=>fcRateNext(card.id,"again");
+  rate.querySelector(".hard").onclick=()=>fcRateNext(card.id,"hard");
+  rate.querySelector(".good").onclick=()=>fcRateNext(card.id,"good");
+  wrap.appendChild(rate); }
+function fcRateNext(id,lvl){ const S=fc.session; fcRate(id,lvl);
+  if(lvl==="good") S.good++; else if(lvl==="hard"){ S.hard++; S.missIds.push(id); } else { S.again++; S.missIds.push(id); }
+  fcAdvance(); }
+function fcAdvance(){ const S=fc.session; S.i++; S.reveal=false; S.answered=null; fc.editing=false; if(S.i>=S.ids.length) S.done=true; render(); }
+function fcRenderQuizCard(cardEl,card,deck,head,badge,wrap){ const S=fc.session; const ans=S.answered;
+  let h=head+'<div class="fc-body"><p class="fc-p"><b>'+fcRender(card.stem,deck)+'</b></p></div>';
+  cardEl.innerHTML=h;
+  if(card.qtype==="mc"){ const box=document.createElement("div"); box.style.marginTop="6px";
+    (card.options||[]).forEach((opt,i)=>{ const b=document.createElement("button"); b.className="fc-opt"; b.innerHTML='<b>'+String.fromCharCode(65+i)+'.</b> '+fcRender(String(opt),deck);
+      if(ans){ if(i===card.answer) b.classList.add("correct"); if(i===ans.pick&&ans.pick!==card.answer) b.classList.add("wrong"); }
+      else { b.onclick=()=>{ S.answered={pick:i,correct:i===card.answer}; render(); }; }
+      box.appendChild(b); }); cardEl.appendChild(box);
+  } else { // tf
+    const box=document.createElement("div"); box.className="fc-tf"; box.style.cssText="display:flex;gap:10px;margin-top:8px";
+    [["对",true],["错",false]].forEach(([lab,val])=>{ const b=document.createElement("button"); b.className="fc-opt"; b.style.textAlign="center"; b.textContent=lab;
+      if(ans){ if(val===card.answer) b.classList.add("correct"); if(val===ans.pick&&ans.pick!==card.answer) b.classList.add("wrong"); }
+      else { b.onclick=()=>{ S.answered={pick:val,correct:val===card.answer}; render(); }; }
+      box.appendChild(b); }); cardEl.appendChild(box);
+  }
+  if(ans){ const rv=document.createElement("div"); rv.className="fc-explain"+(ans.correct?"":" bad");
+    rv.innerHTML=(ans.correct?"✓ 答对了":"✗ 答错了 · 正确答案："+(card.qtype==="mc"?String.fromCharCode(65+card.answer):(card.answer?"对":"错")))+(card.explain?'<br>解析：'+fcRender(card.explain,deck):"");
+    cardEl.appendChild(rv);
+    const nx=document.createElement("div"); nx.className="fc-rate"; nx.innerHTML='<button class="good" style="flex:1">下一张 ›</button>';
+    nx.querySelector("button").onclick=()=>{ fcAnswerQuiz(card.id,ans.correct); if(ans.correct) S.good++; else { S.again++; S.missIds.push(card.id); } fcAdvance(); };
+    wrap.appendChild(nx);
+  } else { const tip=document.createElement("div"); tip.style.cssText="margin-top:14px;text-align:center;color:var(--text2);font-size:13px"; tip.textContent="选一个答案"; cardEl.appendChild(tip); }
+}
+function fcSummary(wrap,deck){ const S=fc.session;
+  const box=document.createElement("div"); box.className="fc-card"; box.style.textAlign="center";
+  box.innerHTML='<div style="font-size:44px">🎉</div><div style="font-size:20px;font-weight:700;margin:6px 0">完成本轮 '+S.ids.length+' 张</div>'+
+    '<div style="display:flex;gap:16px;justify-content:center;margin:14px 0;font-size:15px"><span style="color:var(--G)">记住 '+S.good+'</span><span style="color:var(--text2)">一般 '+S.hard+'</span><span style="color:var(--R)">没记住 '+S.again+'</span></div>';
+  wrap.appendChild(box);
+  const btns=document.createElement("div"); btns.style.cssText="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;justify-content:center";
+  const miss=[...new Set(S.missIds)];
+  if(miss.length){ const b=document.createElement("button"); b.className="fc-btn"; b.textContent="再背没记住/一般（"+miss.length+"）";
+    b.onclick=()=>{ const cards=miss.map(id=>fcCardById(deck,id)).filter(Boolean); fcStartSession(cards,S.label+" · 重背",false); }; btns.appendChild(b); }
+  const home=document.createElement("button"); home.className="fc-btn sec"; home.textContent="返回"; home.onclick=()=>{ fc.screen="home"; fc.session=null; fc.nav={level:"deck"}; render(); }; btns.appendChild(home);
+  wrap.appendChild(btns); }
+
+/* ---- 错题本 ---- */
+function fcRenderWrong(main,deck){ const wrap=document.createElement("div"); wrap.className="fc-wrap"; main.appendChild(wrap);
+  wrap.appendChild(fcBack("← 返回",()=>{ fc.screen="home"; render(); }));
+  const wrongCards=deck.cards.filter(c=>c.kind==="quiz"&&(()=>{ const s=fcPeek(c.id); return s&&s.wrong; })());
+  const h=document.createElement("div"); h.innerHTML='<h2 class="mod-h">错题本</h2><p class="mod-sub">做错的真题会留在这里，做对一次就移出。共 '+wrongCards.length+' 题。</p>'; wrap.appendChild(h);
+  if(!wrongCards.length){ const e=document.createElement("div"); e.className="kempty"; e.innerHTML='<div class="big">暂无错题</div>做题做错了会自动进来。'; wrap.appendChild(e); return; }
+  const b=document.createElement("button"); b.className="fc-btn"; b.style.margin="0 0 12px"; b.textContent="开始重做（"+wrongCards.length+"）";
+  b.onclick=()=>fcStartSession(wrongCards,"错题重做",false); wrap.appendChild(b);
+  wrongCards.forEach(c=>{ const s=fcPeek(c.id); const row=document.createElement("div"); row.className="fc-row"; row.style.cursor="default";
+    row.innerHTML='<div class="fc-seal" style="background:var(--R-bg);color:var(--R)">✗</div><div style="flex:1;min-width:0"><div class="fc-nm" style="font-weight:500;font-size:14px">'+esc(c.stem.slice(0,46))+(c.stem.length>46?"…":"")+'</div><div class="fc-meta">'+esc([c.chap,c.sec].filter(Boolean).join(" › "))+' · 错 '+(s.wrongN||1)+' 次</div></div>';
+    wrap.appendChild(row); }); }
+
+/* ---- 卡片编辑：改挖空 / 上色 / 源码（复用 #selbar 与 openModal） ---- */
+function fcTok(md){ const t=[]; let last=0,m; const re=/\[\[([^\]|]+)\|([RB])\]\]|‹([^|›]*)\|([RBPOG])›|〔([^〕]*)〕|⟦IMG:([^⟧]+)⟧/g;
+  while((m=re.exec(md))!==null){ if(m.index>last) t.push({type:"plain",text:md.slice(last,m.index)});
+    if(m[1]!==undefined) t.push({type:"blank",ans:m[1],color:m[2]});
+    else if(m[3]!==undefined) t.push({type:"color",text:m[3],color:m[4]});
+    else if(m[5]!==undefined) t.push({type:"hint",text:m[5]});
+    else t.push({type:"img",file:m[6]}); last=re.lastIndex; }
+  if(last<md.length) t.push({type:"plain",text:md.slice(last)}); return t; }
+function fcSer(toks){ return toks.map(tk=> tk.type==="plain"?tk.text : tk.type==="blank"?("[["+tk.ans+"|"+tk.color+"]]") : tk.type==="color"?("‹"+tk.text+"|"+tk.color+"›") : tk.type==="hint"?("〔"+tk.text+"〕") : tk.type==="img"?("⟦IMG:"+tk.file+"⟧"):"").join(""); }
+function fcProj(toks){ const o=[]; toks.forEach((tk,ti)=>{
+  if(tk.type==="plain"){ for(let i=0;i<tk.text.length;i++) o.push({ti,ci:i,kind:"plain",ch:tk.text[i]}); }
+  else if(tk.type==="color"){ for(let i=0;i<tk.text.length;i++) o.push({ti,ci:i,kind:"color",ch:tk.text[i]}); }
+  else if(tk.type==="hint"){ const f="〔"+tk.text+"〕"; for(let i=0;i<f.length;i++) o.push({ti,ci:i,kind:"hint",ch:f[i]}); }
+  else if(tk.type==="blank"){ for(let i=0;i<tk.ans.length;i++) o.push({ti,ci:i,kind:"blank",ch:tk.ans[i]}); } }); return o; }
+function fcSelInfo(proj,a,b){ if(a<0||b>proj.length||a>=b) return null; const s=proj.slice(a,b),ti=s[0].ti;
+  return { allPlain:s.every(p=>p.ti===ti&&p.kind==="plain"), ti, ci0:s[0].ci, ci1:s[s.length-1].ci+1, text:s.map(p=>p.ch).join("") }; }
+function fcWrapSel(toks,proj,a,b,mk){ const info=fcSelInfo(proj,a,b); if(!info||!info.allPlain) return null;
+  const tk=toks[info.ti],before=tk.text.slice(0,info.ci0),mid=tk.text.slice(info.ci0,info.ci1),after=tk.text.slice(info.ci1);
+  const ins=[]; if(before) ins.push({type:"plain",text:before}); ins.push(mk(mid)); if(after) ins.push({type:"plain",text:after});
+  const nt=toks.slice(); nt.splice(info.ti,1,...ins); return nt; }
+function fcRemoveMark(toks,ti){ const tk=toks[ti]; if(!tk||(tk.type!=="blank"&&tk.type!=="color")) return toks;
+  const nt=toks.slice(); nt.splice(ti,1,{type:"plain",text:tk.type==="blank"?tk.ans:tk.text});
+  const m=[]; nt.forEach(x=>{ const l=m[m.length-1]; if(l&&l.type==="plain"&&x.type==="plain") l.text+=x.text; else m.push(Object.assign({},x)); }); return m; }
+function fcEditPara(card,bi,block){ const wrap=document.createElement("div"); wrap.className="fc-eblk"; wrap.dataset.bi=bi;
+  const toks=fcTok(block.md); let gi=0,html="";
+  toks.forEach((tk,ti)=>{
+    if(tk.type==="blank"){ html+='<span class="fc-chip fc-bc '+tk.color+'" data-ti="'+ti+'" title="点击取消挖空">'; for(const ch of tk.ans) html+='<span class="ch" data-gi="'+(gi++)+'">'+esc(ch)+'</span>'; html+='</span>'; }
+    else if(tk.type==="color"){ html+='<span class="fc-chip fc-cc '+tk.color+'" data-ti="'+ti+'" title="点击取消上色">'; for(const ch of tk.text) html+='<span class="ch" data-gi="'+(gi++)+'">'+esc(ch)+'</span>'; html+='</span>'; }
+    else if(tk.type==="hint"){ html+='<span class="fc-cue">'; for(const ch of ("〔"+tk.text+"〕")) html+='<span class="ch" data-gi="'+(gi++)+'">'+esc(ch)+'</span>'; html+='</span>'; }
+    else if(tk.type==="img"){ html+='<span class="fc-cue">〔图〕</span>'; }
+    else { for(const ch of tk.text) html+='<span class="ch" data-gi="'+(gi++)+'">'+esc(ch)+'</span>'; }
+  });
+  wrap.innerHTML=html;
+  wrap.querySelectorAll(".fc-chip").forEach(chip=>{ chip.onclick=e=>{ e.stopPropagation(); if(!confirm("取消这个标记？")) return; const ti=+chip.dataset.ti; block.md=fcSer(fcRemoveMark(fcTok(block.md),ti)); save(); render(); }; });
+  wrap.addEventListener("mouseup",()=>fcOnSelectCard(wrap,card,bi));
+  return wrap; }
+function fcOnSelectCard(wrap,card,bi){ const cap=captureSel(wrap); if(!cap){ hideSelbar(); return; }
+  fc.sel={cardId:card.id,bi,a:cap.a,b:cap.b};
+  const bar=document.getElementById("selbar");
+  bar.innerHTML='<span class="lbl">挖空</span>'+[["R","红·挖空"],["B","蓝·挖空"],["P","紫·补充"],["O","橙·解释"]].map(x=>'<button class="col '+x[0]+'" data-c="'+x[0]+'" title="'+x[1]+'"></button>').join("");
+  bar.querySelectorAll(".col").forEach(b=>b.onclick=()=>fcApplyMark(b.dataset.c)); showSelbar(cap.rect); }
+function fcApplyMark(kind){ const sel=fc.sel; if(!sel) return; const deck=fcDeck(),card=fcCardById(deck,sel.cardId); if(!card) return;
+  const block=card.blocks[sel.bi]; const toks=fcTok(block.md),proj=fcProj(toks); let nt;
+  if(kind==="R"||kind==="B"){ const info=fcSelInfo(proj,sel.a,sel.b); if(info&&/[\[\]\|]/.test(info.text)){ toast("这段含 [ ] | 符号，请用「源码」编辑"); return; }
+    nt=fcWrapSel(toks,proj,sel.a,sel.b,mid=>({type:"blank",ans:mid,color:kind})); }
+  else nt=fcWrapSel(toks,proj,sel.a,sel.b,mid=>({type:"color",text:mid,color:kind}));
+  if(!nt){ toast("请只选普通文字（勿跨越已有标记）"); return; }
+  block.md=fcSer(nt); hideSelbar(); window.getSelection().removeAllRanges(); save(); render(); }
+function fcEditMdModal(title,getter,setter){ const body=openModal(esc(title),""); const cur=getter();
+  body.innerHTML='<div class="field"><textarea id="fcSrcT" style="width:100%;min-height:110px;font-family:ui-monospace,Consolas,monospace;font-size:14px;line-height:1.6">'+esc(cur)+'</textarea></div><div class="field"><label class="fl">预览</label><div class="fc-body" id="fcSrcP" style="background:var(--fill);border-radius:9px;padding:10px 13px">'+fcRender(cur,fcDeck())+'</div></div><div style="font-size:12px;color:var(--text2);margin:2px 0 10px;line-height:1.7">挖空：<code>[[答案|R]]</code> 红 / <code>[[答案|B]]</code> 蓝　上色：<code>‹文字|P›</code> 紫补充 / <code>‹文字|O›</code> 橙解释</div><div class="btnrow"><button class="btn" id="fcSrcSave">保存</button><button class="btn sec" id="fcSrcX">取消</button></div>';
+  const ta=body.querySelector("#fcSrcT"), prev=body.querySelector("#fcSrcP");
+  const fcRevealAll=()=>prev.querySelectorAll(".fc-bk.hidden").forEach(el=>{ el.classList.remove("hidden"); el.classList.add("shown"); el.textContent=el.dataset.ans; });
+  fcRevealAll(); ta.oninput=()=>{ prev.innerHTML=fcRender(ta.value,fcDeck()); fcRevealAll(); };
+  body.querySelector("#fcSrcSave").onclick=()=>{ setter(ta.value); closeModal(); };
+  body.querySelector("#fcSrcX").onclick=closeModal; }
+function fcEditTableEl(card,bi,block,deck){ const w=document.createElement("div"); w.className="fc-tblwrap";
+  const tbl=document.createElement("table"); tbl.className="fc-tbl fc-tbledit";
+  block.rows.forEach((row,r)=>{ const tr=document.createElement("tr"); row.forEach((cell,c)=>{ const td=document.createElement(r===0?"th":"td");
+    td.innerHTML=fcRender(String(cell),deck)||"&nbsp;"; td.title="点击编辑此格";
+    td.onclick=()=>fcEditMdModal("改这个单元格",()=>block.rows[r][c],v=>{ block.rows[r][c]=v; save(); render(); }); tr.appendChild(td); }); tbl.appendChild(tr); });
+  w.appendChild(tbl); return w; }
+function fcRenderClozeEdit(cardEl,card,deck,head,wrap){
+  cardEl.innerHTML=head+'<div class="fc-edithint">选中普通文字 → 浮条设「红/蓝挖空」或「紫/橙上色」；点已有标记可取消。表格点单元格、整段点「源码」可直接改字。</div>';
+  const bodyEl=document.createElement("div"); bodyEl.className="fc-body";
+  (card.blocks||[]).forEach((b,bi)=>{
+    if(b.t==="p"){ const row=document.createElement("div"); row.className="fc-erow";
+      const pel=fcEditPara(card,bi,b); pel.style.flex="1"; row.appendChild(pel);
+      const src=document.createElement("button"); src.className="fc-srcbtn"; src.textContent="源码"; src.onclick=()=>fcEditMdModal("改这段文字",()=>b.md,v=>{ b.md=v; save(); render(); }); row.appendChild(src);
+      bodyEl.appendChild(row);
+    } else if(b.t==="table"){ bodyEl.appendChild(fcEditTableEl(card,bi,b,deck)); }
+    else if(b.t==="img"){ const s=(deck.images||{})[b.src]; if(s){ const im=document.createElement("img"); im.className="fc-img"; im.src=s; bodyEl.appendChild(im); } }
+  });
+  cardEl.appendChild(bodyEl);
+  const done=document.createElement("div"); done.className="fc-rate"; done.innerHTML='<button class="good" style="flex:1">✓ 完成编辑</button>';
+  done.querySelector("button").onclick=()=>{ fc.editing=false; hideSelbar(); render(); }; wrap.appendChild(done); }
+
 /* ===== 11. 设置 ===== */
 function mountSettings(main){
   const s=db.settings;
@@ -2057,7 +2431,7 @@ window.addEventListener("scroll",hideSelbar,true);
 window.addEventListener("focus",maybeAutoRefresh);
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden) maybeAutoRefresh(); });
 setInterval(()=>{ if(state.view==="home" && !document.getElementById("scrim").classList.contains("on")) render(); },60000);
-(async function init(){ csLoadCfg(); await load(); render(); updateFs(); await autoImportOnBoot(); csSync({}); })();
+(async function init(){ csLoadCfg(); await load(); ensureStamp(); render(); updateFs(); await autoImportOnBoot(); csSync({}); })();
 
 /* ===== 13. PWA:离线缓存 + 备份提醒 ===== */
 if("serviceWorker" in navigator && (location.protocol==="https:"||["localhost","127.0.0.1"].includes(location.hostname))){
