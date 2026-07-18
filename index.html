@@ -525,10 +525,11 @@ async function save(opts){ opts=opts||{}; setSave("保存中…"); db.version=7;
 
 /* ===== 2.5 云同步 (GitHub Contents API;私有仓库存 study-data.json,全平台含 iPhone 都能用) =====
    开 App 自动拉最新、改完自动上传;令牌只存本机 localStorage,绝不写入同步数据。冲突按 savedAt 时间戳"较新者胜"。 */
-const CS={ token:"", repo:"", path:"study-data.json", branch:"main", sha:null, status:"", busy:false, pending:false, applying:false, timer:null, lastPushedSavedAt:null };
+const CS={ token:"", repo:"", path:"study-data.json", branch:"main", sha:null, remoteSavedAt:"", status:"", busy:false, pending:false, applying:false, timer:null, lastPushedSavedAt:null, lastPushAt:0 };
+const CS_MIN_PUSH_MS=60000; /* 自动上传最小间隔:整包上传较大,刷题时别一动就传 */
 let csLastPull=0;
-function csLoadCfg(){ if(!hasLS()) return; try{ CS.token=localStorage.getItem("cs-token")||""; CS.repo=localStorage.getItem("cs-repo")||""; CS.path=localStorage.getItem("cs-path")||"study-data.json"; CS.branch=localStorage.getItem("cs-branch")||"main"; CS.sha=localStorage.getItem("cs-sha")||null; }catch(e){} }
-function csSaveCfg(){ if(!hasLS()) return; try{ localStorage.setItem("cs-token",CS.token); localStorage.setItem("cs-repo",CS.repo); localStorage.setItem("cs-path",CS.path); localStorage.setItem("cs-branch",CS.branch); CS.sha?localStorage.setItem("cs-sha",CS.sha):localStorage.removeItem("cs-sha"); }catch(e){} }
+function csLoadCfg(){ if(!hasLS()) return; try{ CS.token=localStorage.getItem("cs-token")||""; CS.repo=localStorage.getItem("cs-repo")||""; CS.path=localStorage.getItem("cs-path")||"study-data.json"; CS.branch=localStorage.getItem("cs-branch")||"main"; CS.sha=localStorage.getItem("cs-sha")||null; CS.remoteSavedAt=localStorage.getItem("cs-rsa")||""; }catch(e){} }
+function csSaveCfg(){ if(!hasLS()) return; try{ localStorage.setItem("cs-token",CS.token); localStorage.setItem("cs-repo",CS.repo); localStorage.setItem("cs-path",CS.path); localStorage.setItem("cs-branch",CS.branch); CS.sha?localStorage.setItem("cs-sha",CS.sha):localStorage.removeItem("cs-sha"); CS.remoteSavedAt?localStorage.setItem("cs-rsa",CS.remoteSavedAt):localStorage.removeItem("cs-rsa"); }catch(e){} }
 function csConfigured(){ return !!(CS.token&&CS.repo); }
 /* 旧版桌面 study-hub 写出的 json 没有 savedAt,会被误判成"无数据可上传"。
    本机若有真实数据却没时间戳,补盖一个"现在",使它能正常参与新旧比较并上传。 */
@@ -537,7 +538,12 @@ function csFmt(t){ try{ return t?new Date(t).toLocaleString("zh-CN",{month:"nume
 function csSetStatus(t,ok){ CS.status=t; const el=document.getElementById("csStatus"); if(el){ el.textContent=t; el.style.color=ok?"#2ca02c":""; } }
 function b64enc(str){ const b=new TextEncoder().encode(str); let s="",CH=0x8000; for(let i=0;i<b.length;i+=CH) s+=String.fromCharCode.apply(null,b.subarray(i,i+CH)); return btoa(s); }
 function b64dec(b64){ const bin=atob((b64||"").replace(/\s/g,"")); const b=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) b[i]=bin.charCodeAt(i); return new TextDecoder().decode(b); }
-function csApi(method,body){ const base="https://api.github.com/repos/"+CS.repo+"/contents/"+CS.path.split("/").map(encodeURIComponent).join("/"); const url=base+(method==="GET"?("?ref="+encodeURIComponent(CS.branch)+"&t="+Date.now()):""); return fetch(url,{ method, cache:"no-store", headers:{ "Authorization":"Bearer "+CS.token, "Accept":"application/vnd.github+json", "X-GitHub-Api-Version":"2022-11-28" }, body: body?JSON.stringify(body):undefined }); }
+function csApi(method,body,accept){ const base="https://api.github.com/repos/"+CS.repo+"/contents/"+CS.path.split("/").map(encodeURIComponent).join("/"); const url=base+(method==="GET"?("?ref="+encodeURIComponent(CS.branch)+"&t="+Date.now()):""); return fetch(url,{ method, cache:"no-store", headers:{ "Authorization":"Bearer "+CS.token, "Accept":accept||"application/vnd.github+json", "X-GitHub-Api-Version":"2022-11-28" }, body: body?JSON.stringify(body):undefined }); }
+/* 取云端正文。GitHub Contents API 对 >1MB 的文件只返回元数据、content 为空,
+   必须改用 raw 媒体类型(上限 100MB)。数据涨到 1MB 以上时全靠这条分支。 */
+async function csReadContent(meta){
+  if(meta&&meta.content&&meta.content.length){ try{ return b64dec(meta.content); }catch(e){ return null; } }
+  try{ const r=await csApi("GET",null,"application/vnd.github.raw"); if(!r.ok) return null; const t=await r.text(); return t||null; }catch(e){ return null; } }
 async function csAdopt(remote,rt){ CS.applying=true; db=normalizeDb(remote); await save({noSync:true,keepSavedAt:true}); CS.applying=false; CS.lastPushedSavedAt=rt||db.savedAt; }
 async function csDoPut(){ const body={ message:"sync "+(db.savedAt||""), content:b64enc(JSON.stringify(db)), branch:CS.branch }; if(CS.sha) body.sha=CS.sha;
   let r=await csApi("PUT",body);
@@ -546,24 +552,34 @@ async function csDoPut(){ const body={ message:"sync "+(db.savedAt||""), content
       body.sha=CS.sha; r=await csApi("PUT",body); } }
   if(r.status===401||r.status===403){ csSetStatus("令牌无效或无权限,请检查 Token/仓库",false); return; }
   if(!r.ok){ csSetStatus("上传失败("+r.status+")",false); return; }
-  const j=await r.json(); if(j&&j.content&&j.content.sha) CS.sha=j.content.sha; CS.lastPushedSavedAt=db.savedAt; csSaveCfg(); csSetStatus("已上传到云端 ✓ "+csFmt(db.savedAt),true); }
+  const j=await r.json(); if(j&&j.content&&j.content.sha) CS.sha=j.content.sha; CS.lastPushedSavedAt=db.savedAt; CS.remoteSavedAt=db.savedAt||""; CS.lastPushAt=Date.now(); csSaveCfg(); csSetStatus("已上传到云端 ✓ "+csFmt(db.savedAt),true); }
 async function csSync(opts){ opts=opts||{}; if(!csConfigured()) return; if(CS.busy){ CS.pending=true; return; } CS.busy=true; try{
-    const r=await csApi("GET"); let remote=null, rt="";
+    const r=await csApi("GET"); let remote=null, rt="", meta=null, exists=false, known=false;
     if(r.status===401||r.status===403){ csSetStatus("令牌无效或无权限,请检查 Token/仓库",false); return; }
-    if(r.status===404){ CS.sha=null; }
+    if(r.status===404){ CS.sha=null; CS.remoteSavedAt=""; }
     else if(!r.ok){ csSetStatus("拉取失败("+r.status+")",false); return; }
-    else { const j=await r.json(); CS.sha=j.sha; try{ remote=JSON.parse(b64dec(j.content)); rt=remote.savedAt||""; }catch(e){ remote=null; } }
-    csSaveCfg();
+    else { exists=true; meta=await r.json(); if(meta.sha&&meta.sha===CS.sha){ rt=CS.remoteSavedAt||""; known=true; } }
     ensureStamp(); const lt=db.savedAt||"";
+    /* 云端 sha 与上次一致 → 内容没变,不必下载整包(数据大时省下几乎全部流量) */
+    if(exists&&known&&!(rt>lt)){ csSaveCfg();
+      if(lt&&lt>rt){ await csDoPut(); return; }
+      csSetStatus("已是最新 ✓ "+csFmt(rt||lt),true); return; }
+    if(exists){ const txt=await csReadContent(meta);
+      if(txt===null){ csSetStatus("云端数据读取失败(过大或损坏)",false); return; }
+      try{ remote=JSON.parse(txt); rt=remote.savedAt||""; }catch(e){ remote=null; rt=""; }
+      CS.sha=meta.sha; CS.remoteSavedAt=rt; }
+    csSaveCfg();
     if(remote && rt>lt){ await csAdopt(remote,rt); render(); csSetStatus("已拉取云端最新 ✓ "+csFmt(rt),true); if(!opts.silent) toast("已从云端同步最新 ✓"); return; }
-    if(lt && (!remote || lt>rt)){ await csDoPut(); return; }
+    if(lt && (!exists || lt>rt)){ await csDoPut(); return; }
     csSetStatus("已是最新 ✓ "+csFmt(rt||lt||db.savedAt),true);
   }catch(e){ csSetStatus("同步出错(网络离线?)",false); }
   finally{ CS.busy=false; if(CS.pending){ CS.pending=false; setTimeout(()=>csSync({silent:true}),400); } } }
-function csSchedulePush(){ if(!csConfigured()) return; if(CS.timer) clearTimeout(CS.timer); CS.timer=setTimeout(()=>{ CS.timer=null; csSync({silent:true}); },2500); }
+function csSchedulePush(){ if(!csConfigured()) return; if(CS.timer) clearTimeout(CS.timer);
+  const wait=Math.max(3000, CS_MIN_PUSH_MS-(Date.now()-(CS.lastPushAt||0))); /* 刷题时按最小间隔合并上传,省流量 */
+  CS.timer=setTimeout(()=>{ CS.timer=null; csSync({silent:true}); },wait); }
 function csMaybePull(){ if(!csConfigured()) return; const sc=document.getElementById("scrim"); if(sc&&sc.classList.contains("on")) return; const now=Date.now(); if(now-csLastPull<15000) return; csLastPull=now; csSync({silent:true}); }
-async function csConnect(token,repo,path){ CS.token=(token||"").trim(); CS.repo=(repo||"").trim().replace(/^https?:\/\/github\.com\//i,"").replace(/\.git$/i,"").replace(/^\/+|\/+$/g,""); CS.path=((path||"").trim())||"study-data.json"; CS.sha=null; CS.lastPushedSavedAt=null; csSaveCfg(); csSetStatus("连接中…",false); await csSync({}); }
-function csDisconnect(){ CS.token=""; CS.repo=""; CS.sha=null; CS.lastPushedSavedAt=null; if(hasLS()){ ["cs-token","cs-repo","cs-sha"].forEach(k=>{ try{ localStorage.removeItem(k); }catch(e){} }); } csSetStatus("已断开(本机数据保留)",false); }
+async function csConnect(token,repo,path){ CS.token=(token||"").trim(); CS.repo=(repo||"").trim().replace(/^https?:\/\/github\.com\//i,"").replace(/\.git$/i,"").replace(/^\/+|\/+$/g,""); CS.path=((path||"").trim())||"study-data.json"; CS.sha=null; CS.remoteSavedAt=""; CS.lastPushedSavedAt=null; csSaveCfg(); csSetStatus("连接中…",false); await csSync({}); }
+function csDisconnect(){ CS.token=""; CS.repo=""; CS.sha=null; CS.remoteSavedAt=""; CS.lastPushedSavedAt=null; if(hasLS()){ ["cs-token","cs-repo","cs-sha","cs-rsa"].forEach(k=>{ try{ localStorage.removeItem(k); }catch(e){} }); } csSetStatus("已断开(本机数据保留)",false); }
 
 /* ===== 习思想文件夹 → 背诵库 自动重导入（绑定一次，打开自动同步各章 var CHAPTER；按“第X章”匹配，覆盖内容、保留题库与掌握度） ===== */
 let libDir=null, libNeedGrant=false;
