@@ -2020,12 +2020,15 @@ function renderLqModal(){
   const r=db.recites.find(x=>x.id===_lq.reciteId),c=contentGet(_lq.cid); if(!r||!c){ closeModal(); _lq=null; return; }
   const title=esc(r.title)+(_lq.mem?' · 首次背诵前测':' · 复习前测');
   if(_lq.phase==="config"){
-    const m=_lq.pool.length;
+    const m=_lq.pool.length,sjN=_lq.pool.filter(q=>q.suji).length;
     const body=openModal('<div class="d">'+title+'</div>',
-      '<div class="msub">链接章节《'+esc(c.name)+'》· 共 <b>'+m+'</b> 题可测</div>'+
-      '<div class="field" style="margin-top:12px"><label>做几题</label><input type="number" id="lqN" min="1" max="'+m+'" value="'+_lq.count+'"><div class="desc">从该章已定稿题里随机抽,最多 '+m+' 题。</div></div>'+
+      '<div class="msub">链接章节《'+esc(c.name)+'》· 共 <b>'+m+'</b> 题可测'+(sjN?('（含速记必考 <b>'+sjN+'</b> 道）'):'')+'</div>'+
+      '<div class="field" style="margin-top:12px"><label>做几题</label><input type="number" id="lqN" min="1" max="'+m+'" value="'+_lq.count+'"><div class="desc">'+(sjN?('本章 <b>'+sjN+'</b> 道速记必考题<b>每次必出</b>；所选题数超出部分从其余题随机补足。'):('从该章已定稿题里随机抽,最多 '+m+' 题。'))+'</div></div>'+
       '<div class="btnrow"><button class="btn" id="lqStart">开始测验</button><button class="btn sec" id="lqCancel">取消</button></div>');
-    body.querySelector("#lqStart").onclick=()=>{ const n=clamp(parseInt(body.querySelector("#lqN").value)||1,1,m); _lq.count=n; _lq.items=weightedPick(_lq.pool.map(q=>({q})),n).map(o=>({q:o.q,resp:undefined})); _lq.phase="quiz"; _lq.submitted=false; renderLqModal(); };
+    body.querySelector("#lqStart").onclick=()=>{ const n=clamp(parseInt(body.querySelector("#lqN").value)||1,1,m); _lq.count=n;
+      const sj=_lq.pool.filter(q=>q.suji),rest=_lq.pool.filter(q=>!q.suji),need=Math.max(0,n-sj.length);
+      const picked=sj.map(q=>({q})).concat(weightedPick(rest.map(q=>({q})),Math.min(need,rest.length)));
+      _lq.items=shuffle(picked).map(o=>({q:o.q,resp:undefined})); _lq.phase="quiz"; _lq.submitted=false; renderLqModal(); };
     body.querySelector("#lqCancel").onclick=()=>{ closeModal(); _lq=null; };
   } else if(_lq.phase==="quiz"){
     const body=openModal('<div class="d">'+title+'</div>','<div class="msub">'+_lq.items.length+' 题 · 全部作答后点交卷</div><div id="lqCards" style="margin-top:8px"></div><div class="btnrow"><button class="btn" id="lqSubmit">交卷判分</button><button class="btn sec" id="lqExit">退出</button></div>');
