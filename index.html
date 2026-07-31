@@ -446,7 +446,7 @@ function iso(y,m,d){ return y+"-"+pad(m+1)+"-"+pad(d); }
 function addDays(s,n){ const dt=new Date(s+"T00:00:00"); dt.setDate(dt.getDate()+n); return ymd(dt); }
 function daysDiff(a,b){ return Math.round((new Date(b+"T00:00:00")-new Date(a+"T00:00:00"))/86400000); }
 function clamp(v,lo,hi){ return Math.max(lo,Math.min(hi,v)); }
-function realToday(){ return ymd(new Date()); }
+function realToday(){ const d=new Date(); d.setHours(d.getHours()-6); return ymd(d); }  /* 一天从早上6:00开始:0:00–5:59 仍算前一天 */
 function today(){ return db.today || realToday(); }
 function yesterday(){ return addDays(today(),-1); }
 function fmtLong(s){ const dt=new Date(s+"T00:00:00"); return (dt.getMonth()+1)+"月"+dt.getDate()+"日"; }
