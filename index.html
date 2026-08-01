@@ -1948,8 +1948,8 @@ function paperQ(it,i){ const q=it.q,done=_exam.submitted,card=document.createEle
 function revel(ok,txt){ const d=document.createElement("div"); d.className="ansrev"+(ok?"":" bad"); d.innerHTML=(ok?"✓ 答对":"✗ 答错")+" · "+esc(txt); return d; }
 function lcsLen(a,b){ const n=b.length; if(!a.length||!n) return 0; let prev=new Array(n+1).fill(0);
   for(let i=0;i<a.length;i++){ const cur=new Array(n+1).fill(0); for(let j=0;j<n;j++){ cur[j+1]=a[i]===b[j]?prev[j]+1:Math.max(prev[j+1],cur[j]); } prev=cur; } return prev[n]; }
-/* 单空得分:答案>5字→按对的字数(最长公共子序列)占比给分,占比≤50%不计分;≤5字→全对才得分 */
-function blankScore(resp,ans){ const A=norm(ans),R=norm(resp); if(!A.length) return R.length?0:1; if(A.length<=5) return R===A?1:0; const ratio=lcsLen(R,A)/A.length; return ratio<=0.5?0:ratio; }
+/* 单空得分(2026-08-01 用户定):相似度=最长公共子序列÷较长串长;≥90% 视为全对(容忍一两个字出入),其余按相同字比例给分 */
+function blankScore(resp,ans){ const A=norm(ans),R=norm(resp); if(!A.length) return R.length?0:1; if(!R.length) return 0; const ratio=lcsLen(R,A)/Math.max(A.length,R.length); return ratio>=0.9?1:Math.round(ratio*100)/100; }
 function gradeScore(it){ const q=it.q;
   if(q.type==="mc") return it.resp===q.mcAnswer?1:0;
   if(q.type==="tf") return it.resp===q.truth?1:0;
@@ -1957,14 +1957,14 @@ function gradeScore(it){ const q=it.q;
   if(q.type==="fill"){ const ans=fillParts(q.fillText).answers; if(!ans.length) return 0; let s=0; ans.forEach((a,k)=>s+=blankScore((it.resp||[])[k]||"",a)); return s/ans.length; }
   return 0; }
 function gradeItem(it){ return gradeScore(it)>=0.999; }
-function quizPassed(it){ return gradeScore(it)>=0.5; }
+function quizPassed(it){ return gradeScore(it)>=0.9; } /* 一道题算「对」=得分≥90%,否则计入错题(2026-08-01) */
 function qAnswerText(q){ if(q.type==="mc") return q.mcAnswer||""; if(q.type==="tf") return q.truth?"对":"错"; if(q.type==="fill") return fillParts(q.fillText).answers.join(" / "); if(q.type==="match") return q.pairs.map(p=>p.left+"→"+p.right).join("；"); return ""; }
 function qRespText(it){ const q=it.q,r=it.resp; if(r==null||r==="") return "（未答）"; if(q.type==="mc") return String(r); if(q.type==="tf") return r?"对":"错"; if(q.type==="fill") return (Array.isArray(r)?r:[]).map(x=>(x&&String(x).trim())?x:"（空）").join(" / "); if(q.type==="match") return q.pairs.map((p,k)=>p.left+"→"+((r||{})[k]||"?")).join("；"); return String(r); }
 function qStemText(q){ if(q.type==="mc") return (q.mcStem||"").replace(/<[^>]+>/g,""); if(q.type==="tf") return q.statement||""; if(q.type==="fill") return fillParts(q.fillText).segs.map(s=>s.blank!=null?"____":(s.hint!=null?"〔"+s.hint+"〕":s.text)).join(""); if(q.type==="match") return "连线："+q.pairs.map(p=>p.left).join("、"); return ""; }
 function lqReviewHtml(){ return '<div class="lqreview" style="margin:4px 0 12px;max-height:42vh;overflow:auto">'+_lq.items.map((it,i)=>{ const sc=gradeScore(it),ok=sc>=0.999,part=sc>0&&sc<0.999; const mark=ok?'<span style="color:var(--green)">✓</span>':part?'<span style="color:var(--orange)">◑</span>':'<span style="color:var(--red)">✗</span>'; return '<div style="border:1px solid var(--sep2);border-radius:9px;padding:8px 10px;margin-bottom:7px">'+'<div style="font-weight:600;font-size:12.5px;margin-bottom:2px">'+mark+' 第'+(i+1)+'题 · '+TLABEL[it.q.type]+'题</div>'+'<div style="font-size:12.5px;color:var(--text2);margin-bottom:3px">'+esc(qStemText(it.q))+'</div>'+'<div style="font-size:12.5px">你的答案：<b style="color:'+(ok?'var(--green)':'var(--red)')+'">'+esc(qRespText(it))+'</b></div>'+(ok?'':'<div style="font-size:12.5px">正确答案：<b style="color:var(--green)">'+esc(qAnswerText(it.q))+'</b></div>')+'</div>'; }).join('')+'</div>'; }
-/* 每题考试统计:出现/通过/连胜/曾错;曾错且连胜<5 视为「错题」,连胜≥5 视为已恢复=做对 */
+/* 每题考试统计:出现/通过/连胜/曾错;曾错且连胜<出库次数(settings.errStreak,默认5) 视为「错题」,连胜达标视为已恢复 */
 function recordQuestionResult(q,pass){ q.seen=(q.seen||0)+1; if(pass){ q.passCount=(q.passCount||0)+1; q.streak=(q.streak||0)+1; } else { q.streak=0; q.wrongEver=true; } }
-function qClass(q){ if(!q.seen) return "new"; if(q.wrongEver&&(q.streak||0)<5) return "wrong"; return "correct"; }
+function qClass(q){ const K=(db.settings&&db.settings.errStreak)||5; if(!q.seen) return "new"; if(q.wrongEver&&(q.streak||0)<K) return "wrong"; return "correct"; }
 function qWeight(q){ const base={new:12,wrong:6,correct:2}[qClass(q)]; return base/(1+(q.seen||0)); }
 /* 概率抽题:没出过>出过且错>出过且对;出过少>出过多 */
 function weightedPick(list,count){ const pool=list.slice(),out=[]; count=Math.min(count,pool.length);
