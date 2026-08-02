@@ -990,6 +990,7 @@ const api={
   engine:{ newRecite, rateReview, markMemorize, postponeReview, ensureNextReview, projectReviews, mastery, masteryLabel, partFamiliarity, strengthScore, recordFamiliarity, recordExam },
   content:{ get:contentGet, layers:contentLayers, clozes:contentClozes, parse:parseContentHTML, list:()=>db.contents },
   courses:{ items:courseItems, next:courseNext, color:courseColor, complete:completeCourseLesson, miss:missCourseLesson, undo:undoCourseLast, exerciseTimes, fmtDur },
+  nav:{ openChapter:(cid,layerId)=>{ const c=db.contents.find(x=>x.id===cid); if(!c) return false; const L=c.data.layers.find(l=>l.id===(layerId||2))||c.data.layers[0]; _open={cid,tab:"view",layer:L.id,reveal:false}; _libCourse=null; _libQuery=""; state.view="library"; render(); window.scrollTo({top:0,behavior:"smooth"}); return true; } },
   registerModule:(m)=>{ EXTRA_MODULES.push(m); },
 };
 const BUILTIN_MODULES=[
