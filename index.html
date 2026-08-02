@@ -243,6 +243,7 @@
   .bk.R{ color:var(--R) } .bk.B{ color:var(--B) } .bk.G{ color:var(--G) } .bk.P{ color:var(--P) }
   .bk.hidden{ color:transparent; background:var(--fill2); min-width:2.4em; display:inline-block; text-align:center; cursor:pointer; border-bottom-color:transparent }
   .bk.shown.R{ background:var(--R-bg) } .bk.shown.B{ background:var(--B-bg) } .bk.shown.G{ background:var(--G-bg) } .bk.shown.P{ background:var(--P-bg) } .bk.shown{ cursor:pointer }
+  .bk.missed{ background:#ffe3e0 !important; border-bottom-color:#d63a2f !important; color:#b3251a !important; box-shadow:0 0 0 1.5px #d63a2f inset }
 
   .selwrap{ display:block; margin:0 0 12px; border-radius:6px; padding:2px 4px; transition:background .12s; font-family:var(--serif) }
   .selwrap.h3{ font-weight:700; font-size:19px; border-left:4px solid var(--text); padding-left:10px; margin-top:20px }
@@ -1588,17 +1589,33 @@ function reciteBar(c,layer){
   return wrap;
 }
 function viewDoc(c,layer){
-  const doc=document.createElement("div"); doc.className="doc"; doc.innerHTML=renderItemsView(layer.items,_open.reveal);
+  const doc=document.createElement("div"); doc.className="doc"; doc.innerHTML=renderItemsView(layer.items,_open.reveal,c.data.layers.indexOf(layer)+".items");
   if(layer.id===c.data.layers[c.data.layers.length-1].id&&(c.data.notes||[]).length){
     doc.innerHTML+='<div class="notes-h">参考答案 · 解析</div>'+(c.data.notes||[]).map(n=>'<div class="noteblk"><b>'+esc(n.title||"")+'</b><br>'+esc(n.text||"").replace(/\n/g,"<br>")+'</div>').join(""); }
-  setTimeout(()=>doc.querySelectorAll(".bk.hidden").forEach(el=>{ const rv=()=>{ el.classList.remove("hidden"); el.classList.add("shown"); el.textContent=el.dataset.ans; }; el.onclick=rv; el.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); rv(); } }; }),0);
+  setTimeout(()=>{ doc.querySelectorAll(".bk.hidden").forEach(el=>{ const rv=()=>{ el.classList.remove("hidden"); el.classList.add("shown"); el.textContent=el.dataset.ans; markMissedStyle(c,el); bindBlankMiss(c,el); }; el.onclick=rv; el.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); rv(); } }; }); doc.querySelectorAll(".bk.shown").forEach(el=>{ markMissedStyle(c,el); bindBlankMiss(c,el); }); },0);
   return doc;
 }
-function renderItemsView(items,reveal){ return (items||[]).map(it=>{
-  if(it.t==="h"){ const tag=it.lvl===1?"h3":"h4"; return '<'+tag+'>'+renderText(it.text,reveal)+'</'+tag+'>'; }
-  if(it.t==="sub") return '<span class="sub">'+renderText(it.text,reveal)+'</span>';
-  if(it.t==="box") return '<div class="box '+(it.style||"")+'">'+(it.title?'<div class="bt">'+esc(it.title)+'</div>':"")+renderItemsView(it.items,reveal)+'</div>';
-  return '<p>'+renderText(it.text||"",reveal)+'</p>'; }).join(""); }
+/* 自测三连击(2026-08-03 用户定):第1击显示答案,答案已显示时再连点2击=标记「没背住」,进思想回顾的回顾库 */
+function blankKeyOf(c,el){ const host=el.closest("[data-bid]"); if(!host) return null;
+  const bks=[].slice.call(host.querySelectorAll(".bk")),bi=bks.indexOf(el); if(bi<0) return null;
+  return {key:c.id+"|"+host.dataset.bid+"|"+bi,bid:host.dataset.bid,bi}; }
+function blockTextByBid(c,bid){ try{ const seg=bid.split("."); let cur=c.data.layers[+seg[0]]; for(let i=1;i<seg.length;i+=2){ cur=cur[seg[i]][+seg[i+1]]; } return cur&&typeof cur.text==="string"?cur.text:null; }catch(e){ return null; } }
+function markMissedStyle(c,el){ const k=blankKeyOf(c,el); if(k&&db.settings.blankMarks&&db.settings.blankMarks[k.key]&&(db.settings.blankMarks[k.key].streak||0)<((db.settings&&db.settings.errStreak)||5)) el.classList.add("missed"); }
+function bindBlankMiss(c,el){ if(el.dataset.mb) return; el.dataset.mb="1"; let n=0,t0=0;
+  el.addEventListener("click",()=>{ if(el.classList.contains("hidden")) return; const now=Date.now(); if(now-t0>1600) n=0; t0=now; n++; if(n>=2){ n=0; markBlankMissed(c,el); } }); }
+function markBlankMissed(c,el){ const k=blankKeyOf(c,el); if(!k) return;
+  const raw=blockTextByBid(c,k.bid); if(raw==null) return;
+  const ans=el.dataset.ans||el.textContent;
+  db.settings.blankMarks=db.settings.blankMarks||{};
+  const m=db.settings.blankMarks[k.key]||(db.settings.blankMarks[k.key]={cid:c.id,bid:k.bid,bi:k.bi,ans:"",para:"",seen:0,miss:0,streak:0,first:today(),last:null});
+  m.ans=ans; m.para=raw; m.seen=(m.seen||0)+1; m.miss=(m.miss||0)+1; m.streak=0; m.last=today();
+  el.classList.add("missed");
+  save(); toast("已记入「没背住的空」："+(ans.length>10?ans.slice(0,10)+"…":ans)); }
+function renderItemsView(items,reveal,pfx){ return (items||[]).map((it,ii)=>{ const bid=pfx!=null?pfx+"."+ii:null,ba=bid?' data-bid="'+bid+'"':'';
+  if(it.t==="h"){ const tag=it.lvl===1?"h3":"h4"; return '<'+tag+ba+'>'+renderText(it.text,reveal)+'</'+tag+'>'; }
+  if(it.t==="sub") return '<span class="sub"'+ba+'>'+renderText(it.text,reveal)+'</span>';
+  if(it.t==="box") return '<div class="box '+(it.style||"")+'">'+(it.title?'<div class="bt">'+esc(it.title)+'</div>':"")+renderItemsView(it.items,reveal,bid!=null?bid+".items":null)+'</div>';
+  return '<p'+ba+'>'+renderText(it.text||"",reveal)+'</p>'; }).join(""); }
 function editDoc(c,layer){
   const li=c.data.layers.indexOf(layer),doc=document.createElement("div"); doc.className="doc editing";
   const frag=document.createDocumentFragment();
@@ -1963,7 +1980,7 @@ function qRespText(it){ const q=it.q,r=it.resp; if(r==null||r==="") return "（�
 function qStemText(q){ if(q.type==="mc") return (q.mcStem||"").replace(/<[^>]+>/g,""); if(q.type==="tf") return q.statement||""; if(q.type==="fill") return fillParts(q.fillText).segs.map(s=>s.blank!=null?"____":(s.hint!=null?"〔"+s.hint+"〕":s.text)).join(""); if(q.type==="match") return "连线："+q.pairs.map(p=>p.left).join("、"); return ""; }
 function lqReviewHtml(){ return '<div class="lqreview" style="margin:4px 0 12px;max-height:42vh;overflow:auto">'+_lq.items.map((it,i)=>{ const sc=gradeScore(it),ok=sc>=0.999,part=sc>0&&sc<0.999; const mark=ok?'<span style="color:var(--green)">✓</span>':part?'<span style="color:var(--orange)">◑</span>':'<span style="color:var(--red)">✗</span>'; return '<div style="border:1px solid var(--sep2);border-radius:9px;padding:8px 10px;margin-bottom:7px">'+'<div style="font-weight:600;font-size:12.5px;margin-bottom:2px">'+mark+' 第'+(i+1)+'题 · '+TLABEL[it.q.type]+'题</div>'+'<div style="font-size:12.5px;color:var(--text2);margin-bottom:3px">'+esc(qStemText(it.q))+'</div>'+'<div style="font-size:12.5px">你的答案：<b style="color:'+(ok?'var(--green)':'var(--red)')+'">'+esc(qRespText(it))+'</b></div>'+(ok?'':'<div style="font-size:12.5px">正确答案：<b style="color:var(--green)">'+esc(qAnswerText(it.q))+'</b></div>')+'</div>'; }).join('')+'</div>'; }
 /* 每题考试统计:出现/通过/连胜/曾错;曾错且连胜<出库次数(settings.errStreak,默认5) 视为「错题」,连胜达标视为已恢复 */
-function recordQuestionResult(q,pass){ q.seen=(q.seen||0)+1; if(pass){ q.passCount=(q.passCount||0)+1; q.streak=(q.streak||0)+1; } else { q.streak=0; q.wrongEver=true; } }
+function recordQuestionResult(q,pass,score){ q.seen=(q.seen||0)+1; q.scoreSum=Math.round(((q.scoreSum||0)+(typeof score==="number"?Math.max(0,Math.min(1,score)):(pass?1:0)))*1000)/1000; if(pass){ q.passCount=(q.passCount||0)+1; q.streak=(q.streak||0)+1; } else { q.streak=0; q.wrongEver=true; } } /* scoreSum:历次得分累计,正确率=scoreSum/seen(2026-08-03) */
 function qClass(q){ const K=(db.settings&&db.settings.errStreak)||5; if(!q.seen) return "new"; if(q.wrongEver&&(q.streak||0)<K) return "wrong"; return "correct"; }
 function qWeight(q){ const base={new:12,wrong:6,correct:2}[qClass(q)]; return base/(1+(q.seen||0)); }
 /* 概率抽题:没出过>出过且错>出过且对;出过少>出过多 */
@@ -1977,7 +1994,7 @@ function revelScore(sc,txt){ const d=document.createElement("div"); const full=s
 function applyExamWriteback(){
   const agg={};
   _exam.items.forEach(it=>{ const cid=it.cid,L=it.q.layerId,key=cid+"|"+L;
-    (agg[key]=agg[key]||{n:0,ok:0,cid,layerId:L,cname:it.cname}); agg[key].n++; agg[key].ok+=gradeScore(it); recordQuestionResult(it.q,quizPassed(it)); });
+    (agg[key]=agg[key]||{n:0,ok:0,cid,layerId:L,cname:it.cname}); agg[key].n++; const esc_=gradeScore(it); agg[key].ok+=esc_; recordQuestionResult(it.q,quizPassed(it),esc_); });
   const updated=[],missing=[];
   Object.keys(agg).forEach(key=>{ const g=agg[key],pct=Math.round(g.ok/g.n*100);
     let rec=db.recites.find(r=>r.contentId===g.cid&&r.layerId===g.layerId);
@@ -2087,7 +2104,7 @@ function readQuizAnswers(items,host){
   });
 }
 function lqReadAnswers(host){ readQuizAnswers(_lq.items,host); }
-function gradeLq(){ let sum=0,pass=0; _lq.items.forEach(it=>{ sum+=gradeScore(it); const p=quizPassed(it); if(p)pass++; recordQuestionResult(it.q,p); }); _lq.correct=pass; _lq.pct=_lq.items.length?Math.round(sum/_lq.items.length*100):0; }
+function gradeLq(){ let sum=0,pass=0; _lq.items.forEach(it=>{ const sc_=gradeScore(it); sum+=sc_; const p=quizPassed(it); if(p)pass++; recordQuestionResult(it.q,p,sc_); }); _lq.correct=pass; _lq.pct=_lq.items.length?Math.round(sum/_lq.items.length*100):0; }
 async function applyLqRating(key){
   const r=db.recites.find(x=>x.id===_lq.reciteId); if(!r){ closeModal(); _lq=null; return; }
   const mm=db.settings.mastery,sw=(+mm.selfWeight||0),ew=(+mm.examWeight||0),lv=levelByKey(key),sv=(lv.value!=null?lv.value:0.5),qv=_lq.pct/100;
@@ -2154,7 +2171,7 @@ function renderRpModal(){
   } else renderRpResult(title);
 }
 function rpGrade(){ const byLesson={}; let sum=0,pass=0;
-  _rp.items.forEach(it=>{ const sc=gradeScore(it); sum+=sc; const good=quizPassed(it); if(good) pass++; recordQuestionResult(it.q,good); const L=it.lessonNum; (byLesson[L]=byLesson[L]||{n:0,ok:0,reciteId:it.reciteId}); byLesson[L].n++; byLesson[L].ok+=sc; });
+  _rp.items.forEach(it=>{ const sc=gradeScore(it); sum+=sc; const good=quizPassed(it); if(good) pass++; recordQuestionResult(it.q,good,sc); const L=it.lessonNum; (byLesson[L]=byLesson[L]||{n:0,ok:0,reciteId:it.reciteId}); byLesson[L].n++; byLesson[L].ok+=sc; });
   _rp.byLesson=byLesson; _rp.correct=pass; _rp.pct=_rp.items.length?Math.round(sum/_rp.items.length*100):0;
   Object.keys(byLesson).forEach(L=>{ const g=byLesson[L]; recordExam(g.reciteId,{pct:Math.round(g.ok/g.n*100),part:"whole",date:_rp.onDate}); });
   save();
