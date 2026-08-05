@@ -495,6 +495,7 @@ function normalizeDb(o){
     if(!Array.isArray(c.log)){ c.log=[]; if(c.done&&typeof c.done==="object"){ Object.keys(c.done).map(Number).sort((a,b)=>a-b).forEach(n=>c.log.push({date:c.done[String(n)],amount:1,lesson:n})); } delete c.done; }
     if(!Array.isArray(c.misses)) c.misses=[]; if(!Array.isArray(c.lessons)) c.lessons=[]; });
   d.recites.forEach(r=>{ if(!r.cps||!r.cps.length) r.cps=[{id:uid(),stage:0,kind:"memorize",due:r.date,done:false,doneDate:null,rating:null,ivl:0,relearn:false}]; r.signals=r.signals||[]; r.examScores=r.examScores||[]; if(r.ease==null) r.ease=d.settings.ease0; if(!r.title) r.title=r.content||"背诵"; if(r.courseId===undefined) r.courseId=null; if(r.cps[0].done) ensureNextReview(r); });
+  if(!d.settings._pause1516){ d.recites.forEach(r=>{ if(r.contentId==="mrz86418-0ple"||r.contentId==="mrz86dc2-14iq") r.paused=true; }); d.settings._pause1516=true; }
   // 一次性修正:历史上"一般"评级的迟到复习曾把下次间隔撑到迟到天数(elapsed),按正常 hard 间隔回收(只缩短不延长;幂等)
   if(!d._curveFixV1){ d.recites.forEach(r=>{ const rev=r.cps.filter(c=>c.kind==="review"),pend=rev.find(c=>!c.done),done=rev.filter(c=>c.done); if(!pend||!done.length) return; const last=done[done.length-1]; if(last.rating!=="hard") return; const corrected=nextIvlAfterDone(r),anchor=last.doneDate||last.due,newDue=addDays(anchor,corrected); if(newDue<pend.due){ pend.due=newDue; pend.ivl=corrected; } }); d._curveFixV1=true; }
   return d;
@@ -837,7 +838,7 @@ function rateReview(r,cpId,ratingKey,onDate){ const cp=r.cps.find(c=>c.id===cpId
   else { let ivl=nextIvlAfterDone(r); if(elapsed>planned&&(ratingKey==="good"||ratingKey==="easy")) ivl=Math.max(ivl,elapsed); r.cps.push({id:uid(),stage:reviewCps(r).length+1,kind:"review",due:addDays(onDate,ivl),done:false,doneDate:null,rating:null,ivl,relearn:false}); }
   r.fam=famScore(r); }
 function postponeReview(r,cpId,toDate){ const cp=r.cps.find(c=>c.id===cpId); if(!cp||cp.done) return; cp.due=toDate||addDays(today(),1); }
-function projectReviews(r,horizon){ const s=db.settings,out=[],pending=reviewCps(r).find(c=>!c.done); let reps=doneGoodCps(r).length;
+function projectReviews(r,horizon){ if(r.paused) return []; const s=db.settings,out=[],pending=reviewCps(r).find(c=>!c.done); let reps=doneGoodCps(r).length;
   let curIvl=pending?pending.ivl:(reps<s.starters.length?s.starters[reps]:Math.max(1,Math.round(lastIvl(r)*r.ease)));
   let date=pending?pending.due:addDays(lastReviewDate(r)||r.date,curIvl),guard=0;
   while(date<=horizon&&guard++<60){ out.push(date); reps++; let nx=reps<s.starters.length?s.starters[reps]:Math.round(curIvl*r.ease); nx=Math.max(1,nx); date=addDays(date,nx); curIvl=nx; } return out; }
@@ -882,7 +883,7 @@ let GSCHED={};
 /* 每天复习上限：把超过 cap 的复习按“最紧急/最脆弱优先保留”顺延到之后有空位的日子（只会往后、不会提前；逾期的先拉到今天）。 */
 function capDailyReviews(){
   const cap=Math.max(1,db.settings.reviewCapPerDay||3), tdy=today(), hz=addDays(tdy,400);
-  const list=[]; db.recites.forEach(r=>reviewCps(r).forEach(cp=>{ if(!cp.done&&cp.due<=hz) list.push(cp); }));
+  const list=[]; db.recites.forEach(r=>{ if(r.paused) return; reviewCps(r).forEach(cp=>{ if(!cp.done&&cp.due<=hz) list.push(cp); }); });
   list.sort((a,b)=> a.due<b.due?-1 : a.due>b.due?1 : ((a.ivl||1)-(b.ivl||1)) );
   const cnt={}; let changed=false;
   list.forEach(cp=>{ let d=cp.due<tdy?tdy:cp.due; while((cnt[d]||0)>=cap) d=addDays(d,1); if(d!==cp.due){ cp.due=d; changed=true; } cnt[d]=(cnt[d]||0)+1; });
@@ -891,7 +892,7 @@ function capDailyReviews(){
 function capDailyMemos(){
   const cap=Math.max(1,db.settings.newCapPerDay||2), tdy=today(), hz=addDays(tdy,400);
   const cnt={}, list=[];
-  db.recites.forEach(r=>{ const cp0=r.cps&&r.cps[0]; if(!cp0||cp0.kind!=="memorize"||r.courseId) return;
+  db.recites.forEach(r=>{ const cp0=r.cps&&r.cps[0]; if(!cp0||cp0.kind!=="memorize"||r.courseId||r.paused) return;
     if(cp0.done){ if(cp0.doneDate) cnt[cp0.doneDate]=(cnt[cp0.doneDate]||0)+1; }
     else if(cp0.due<=hz) list.push({r,cp:cp0}); });
   list.sort((a,b)=> a.cp.due<b.cp.due?-1 : a.cp.due>b.cp.due?1 : 0 );
@@ -899,7 +900,7 @@ function capDailyMemos(){
   list.forEach(o=>{ let d=o.cp.due<tdy?tdy:o.cp.due; while((cnt[d]||0)>=cap) d=addDays(d,1); if(d!==o.cp.due){ o.cp.due=d; o.r.date=d; changed=true; } cnt[d]=(cnt[d]||0)+1; });
   return changed; }
 function reschedule(){ const chR=capDailyReviews(),chM=capDailyMemos(); if(chR||chM){ try{ localStorage.setItem(STORE_KEY,JSON.stringify(db)); }catch(e){} } const h=addDays(today(),400),sched={},load={};
-  db.recites.forEach(r=>reviewCps(r).forEach(cp=>{ if(!cp.done&&cp.due<=h) load[cp.due]=(load[cp.due]||0)+1; }));
+  db.recites.forEach(r=>{ if(r.paused) return; reviewCps(r).forEach(cp=>{ if(!cp.done&&cp.due<=h) load[cp.due]=(load[cp.due]||0)+1; }); });
   db.plans.forEach(p=>{ if(!p.done) load[p.date]=(load[p.date]||0)+1; });
   db.courses.filter(c=>c.mode!=="range").forEach(c=>{ const it=scheduleCadence(c,h); sched[c.id]=it; it.forEach(x=>{ if(x.upcoming) load[x.date]=(load[x.date]||0)+1; }); });
   db.courses.filter(c=>c.mode==="range").forEach(c=>{ sched[c.id]=scheduleRange(c,h,load); });
@@ -1061,9 +1062,9 @@ function renderHomeSched(){ const host=document.getElementById("homeSched"); if(
 function dayItems(dd){ const t=today();
   const lessons=[]; db.courses.forEach(c=>{ courseItems(c).forEach(L=>{ if(L.date===dd) lessons.push(Object.assign({course:c},L)); }); });
   const reviews=[]; db.recites.forEach(r=>{ const cp0=r.cps[0];
-    if(!r.courseId && !cp0.done && (cp0.due===dd || (dd===t && cp0.due<t))) reviews.push({recite:r,cp:cp0,mem:true});
+    if(!r.courseId && !cp0.done && !r.paused && (cp0.due===dd || (dd===t && cp0.due<t))) reviews.push({recite:r,cp:cp0,mem:true});
     reviewCps(r).forEach(cp=>{ if(cp.done){ if(cp.doneDate===dd) reviews.push({recite:r,cp,mem:false}); }
-      else if(cp.due===dd || (dd===t && cp.due<t)) reviews.push({recite:r,cp,mem:false}); }); });
+      else if(!r.paused && (cp.due===dd || (dd===t && cp.due<t))) reviews.push({recite:r,cp,mem:false}); }); });
   const plans=db.plans.filter(p=>p.date===dd);
   return {lessons,reviews,plans};
 }
@@ -1187,8 +1188,10 @@ function renderDayPanel(dd){
   if(canEdit && db.courses.some(c=>c.kind==="recite")) h+='<div class="addrow" style="margin-top:6px"><button class="btn sm sec" id="adReview" style="flex:1">＋ 复习规划（抽题测验 · 按节回写掌握度）</button></div>';
   else if(!it.plans.length) h+='<div class="empty">无</div>';
   if(canDo && db.courses.length) h+='<div class="addrow" style="margin-top:6px"><select id="adCourse"><option value="">＋ 在这天补记一门课的一节…</option>'+db.courses.map(c=>'<option value="'+c.id+'">'+esc(c.name)+'</option>').join('')+'</select><button class="btn sm sec" id="adCBtn">记一节</button></div>';
-  if(canDo){ const erList=db.recites.filter(r=>{ const c0=r.cps[0],pend=reviewCps(r).find(x=>!x.done); return c0&&c0.done&&pend&&pend.due>dd; });
+  if(canDo){ const erList=db.recites.filter(r=>{ const c0=r.cps[0],pend=reviewCps(r).find(x=>!x.done); return !r.paused&&c0&&c0.done&&pend&&pend.due>dd; });
     if(erList.length) h+='<div class="addrow" style="margin-top:6px"><select id="adEarly"><option value="">＋ 提前复习一个背诵条目…</option>'+erList.map(r=>{ const pend=reviewCps(r).find(x=>!x.done); return '<option value="'+r.id+'">'+esc(r.title)+'（下次 '+fmtShort(pend.due)+'）</option>'; }).join('')+'</select><button class="btn sm sec" id="adEarlyBtn">提前复习</button></div>'; }
+  if(dd===t){ const pList=db.recites.filter(r=>r.paused);
+    if(pList.length) h+='<div class="seclab">已暂停的背诵（不排复习）</div><div class="glist">'+pList.map(r=>'<div class="gi"><span class="gdot" style="background:transparent;box-shadow:inset 0 0 0 2px '+reciteColor(r)+'"></span><div class="gt"><span class="gtitle">'+esc(r.title)+'</span><div class="gs">已暂停 · 掌握 '+Math.round(mastery(r)*100)+'%</div></div>'+(canEdit?'<div class="gacts"><button data-rpr="'+r.id+'" title="恢复复习排期">▶ 恢复</button></div>':'')+'</div>').join('')+'</div>'; }
   if(canEdit && (dd===today()||dd===addDays(today(),1))) h+=timeplanSection(dd);
   if(!it.lessons.length&&!it.reviews.length&&!it.plans.length&&!canEdit) h+='<div class="empty">这天没有内容。</div>';
   host.innerHTML=h; wireDayPanel(host,dd);
@@ -1245,7 +1248,7 @@ function reviewRow(o,dd,canDo){
     else if(timing) rate='<div class="rate" style="flex-basis:100%"><span class="tk-elsewhere">⏱ 计时中（在日历下方时间表里结束）</span></div>';
     else { const cont=r.contentId?contentGet(r.contentId):null,hasQ=cont&&(cont.questions||[]).some(q=>q.done);
       const quizBtn=hasQ?'<button class="rb rb-good" data-lq="'+r.id+'" data-cp="'+cp.id+'" data-mem="'+(o.mem?1:0)+'" style="font-weight:700">📝 先测验</button>':'';
-      let acts=quizBtn+db.settings.levels.map(l=>'<button class="rb rb-'+l.key+'" data-rr="'+r.id+'" data-cp="'+cp.id+'" data-rate="'+l.key+'" data-mem="'+(o.mem?1:0)+'">'+esc(l.label)+'</button>').join('')+'<button class="rb rb-skip" data-rsk="'+r.id+'" data-cp="'+cp.id+'">改天</button>';
+      let acts=quizBtn+db.settings.levels.map(l=>'<button class="rb rb-'+l.key+'" data-rr="'+r.id+'" data-cp="'+cp.id+'" data-rate="'+l.key+'" data-mem="'+(o.mem?1:0)+'">'+esc(l.label)+'</button>').join('')+'<button class="rb rb-skip" data-rsk="'+r.id+'" data-cp="'+cp.id+'">改天</button>'+(o.mem?'':'<button class="rb rb-skip" data-rps="'+r.id+'" title="暂停排期，可在当日面板底部「已暂停的背诵」里恢复">⏸ 暂停</button>');
       if(showTimerHere){ const tc=timerCtlHtml(key,dd); if(tc) acts=tc+acts; }
       rate='<div class="rate" style="flex-basis:100%">'+acts+'</div>'; }
   }
@@ -1332,6 +1335,8 @@ function wireDayPanel(host,dd){
   host.querySelectorAll("button[data-rr]").forEach(b=>b.onclick=async()=>{ const r=db.recites.find(x=>x.id===b.dataset.rr); if(!r) return; const on=dd<=today()?dd:today(); if(b.dataset.mem==="1") markMemorize(r,b.dataset.rate,on); else rateReview(r,b.dataset.cp,b.dataset.rate,on); await save(); refreshDay(dd); });
   host.querySelectorAll("button[data-lq]").forEach(b=>b.onclick=()=>{ const r=db.recites.find(x=>x.id===b.dataset.lq); if(r) openLessonQuiz(r.id,b.dataset.cp,b.dataset.mem==="1",dd); });
   host.querySelectorAll("button[data-rsk]").forEach(b=>b.onclick=async()=>{ const r=db.recites.find(x=>x.id===b.dataset.rsk); if(r){ postponeReview(r,b.dataset.cp,addDays(today(),1)); await save(); refreshDay(dd); } });
+  host.querySelectorAll("button[data-rps]").forEach(b=>b.onclick=async()=>{ const r=db.recites.find(x=>x.id===b.dataset.rps); if(r){ r.paused=true; await save(); refreshDay(dd); toast("已暂停「"+r.title+"」，可在当日面板底部恢复"); } });
+  host.querySelectorAll("button[data-rpr]").forEach(b=>b.onclick=async()=>{ const r=db.recites.find(x=>x.id===b.dataset.rpr); if(r){ r.paused=false; await save(); refreshDay(dd); toast("已恢复「"+r.title+"」的复习排期"); } });
   host.querySelectorAll(".gck[data-pt]").forEach(el=>el.onclick=async()=>{ const p=db.plans.find(x=>x.id===el.dataset.pt); if(p&&editable(dd)){ if(p.done){ p.done=false; } else { p.done=true; p.missed=false; } await save(); refreshDay(dd); } });
   host.querySelectorAll("button[data-pm]").forEach(b=>b.onclick=async()=>{ const p=db.plans.find(x=>x.id===b.dataset.pm); if(p&&editable(dd)){ p.missed=true; p.done=false; await save(); refreshDay(dd); } });
   host.querySelectorAll("button[data-pe]").forEach(b=>b.onclick=()=>editPlan(b.dataset.pe,dd));
@@ -1436,8 +1441,8 @@ function lessonEditorHtml(c){
     const rec=db.recites.find(r=>r.courseId===c.id&&r.lesson===i);
     const revTxt=rec?String(reviewCps(rec).filter(cp=>cp.done).length):'—';
     const masTxt=rec?(Math.round(mastery(rec)*100)+'%'):'—';
-    const pend=rec?reviewCps(rec).find(cp=>!cp.done):null,overdue=pend&&pend.due<tdy;
-    const nextTxt=pend?(overdue?'逾期·'+fmtShort(pend.due):pend.due===tdy?'今天':fmtShort(pend.due)):'—';
+    const pend=rec?reviewCps(rec).find(cp=>!cp.done):null,overdue=pend&&pend.due<tdy&&!(rec&&rec.paused);
+    const nextTxt=(rec&&rec.paused)?'⏸ 暂停':pend?(overdue?'逾期·'+fmtShort(pend.due):pend.due===tdy?'今天':fmtShort(pend.due)):'—';
     h+='<tr><td>第'+i+'节</td><td><input type="text" data-ln="'+i+'" value="'+esc(m.name||"")+'" placeholder="'+esc(c.name+" 第"+i+"节")+'"></td>'+
       '<td><select data-lk="'+i+'"><option value="">（不链接）</option>'+db.contents.map(ct=>'<option value="'+ct.id+'"'+(m.contentId===ct.id?' selected':'')+'>'+esc(ct.name)+'</option>').join('')+'</select></td>'+
       '<td style="text-align:center;color:var(--text2)">'+revTxt+'</td><td style="text-align:center;font-weight:600'+(rec?';color:var(--tint)':';color:var(--text2)')+'">'+masTxt+'</td>'+
