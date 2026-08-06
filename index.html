@@ -1610,23 +1610,37 @@ function viewDoc(c,layer){
   const doc=document.createElement("div"); doc.className="doc"; doc.innerHTML=renderItemsView(layer.items,_open.reveal,c.data.layers.indexOf(layer)+".items");
   if(layer.id===c.data.layers[c.data.layers.length-1].id&&(c.data.notes||[]).length){
     doc.innerHTML+='<div class="notes-h">参考答案 · 解析</div>'+(c.data.notes||[]).map(n=>'<div class="noteblk"><b>'+esc(n.title||"")+'</b><br>'+esc(n.text||"").replace(/\n/g,"<br>")+'</div>').join(""); }
-  setTimeout(()=>{ doc.querySelectorAll(".bk.hidden").forEach(el=>{ const rv=()=>{ el.classList.remove("hidden"); el.classList.add("shown"); el.textContent=el.dataset.ans; markMissedStyle(c,el); bindBlankMiss(c,el); }; el.onclick=rv; el.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); rv(); } }; }); doc.querySelectorAll(".bk.shown").forEach(el=>{ markMissedStyle(c,el); bindBlankMiss(c,el); }); },0);
+  setTimeout(()=>{ doc.querySelectorAll(".bk.hidden").forEach(el=>{ const rv=()=>{ el.classList.remove("hidden"); el.classList.add("shown"); el.textContent=el.dataset.ans; bindBlankMiss(c,el); blankPassed(c,el); }; el.onclick=rv; el.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); rv(); } }; }); doc.querySelectorAll(".bk.shown").forEach(el=>{ bindBlankMiss(c,el); }); },0);
   return doc;
 }
-/* 自测三连击(2026-08-03 用户定):第1击显示答案,答案已显示时再连点2击=标记「没背住」,进思想回顾的回顾库 */
+/* 自测记录(2026-08-06 用户定):点开空=做对(错题空连对+1,连满errStreak次出库;不再重现红框),三连击=没背住(没背住+1,连对清零);每次进入章节算新一次,一次内每空只计一遍,按天记入 settings.selfSessions 供思想回顾「自测完成」选哪一次为评分依据 */
 function blankKeyOf(c,el){ const host=el.closest("[data-bid]"); if(!host) return null;
   const bks=[].slice.call(host.querySelectorAll(".bk")),bi=bks.indexOf(el); if(bi<0) return null;
   return {key:c.id+"|"+host.dataset.bid+"|"+bi,bid:host.dataset.bid,bi}; }
 function blockTextByBid(c,bid){ try{ const seg=bid.split("."); let cur=c.data.layers[+seg[0]]; for(let i=1;i<seg.length;i+=2){ cur=cur[seg[i]][+seg[i+1]]; } return cur&&typeof cur.text==="string"?cur.text:null; }catch(e){ return null; } }
-function markMissedStyle(c,el){ const k=blankKeyOf(c,el); if(k&&db.settings.blankMarks&&db.settings.blankMarks[k.key]&&(db.settings.blankMarks[k.key].streak||0)<((db.settings&&db.settings.errStreak)||5)) el.classList.add("missed"); }
+let _sjT=null;
+function sessOf(c){ if(!_open||_open.cid!==c.id||_open.tab!=="view") return null;
+  if(!_open._sess){ const day=today(),k=c.id+"|"+day,all=db.settings.selfSessions=db.settings.selfSessions||{};
+    const cut=ymd(new Date(Date.now()-14*864e5)); for(const kk in all){ const dd=kk.split("|")[1]; if(dd&&dd<cut) delete all[kk]; }
+    const list=all[k]=all[k]||[]; const d0=new Date(); list.push({t:pad(d0.getHours())+":"+pad(d0.getMinutes()),ok:0,miss:0});
+    _open._sess={k,i:list.length-1,seen:{}}; }
+  const st=db.settings.selfSessions[_open._sess.k]||[],e=st[_open._sess.i]; return e?{e,S:_open._sess}:null; }
+function blankPassed(c,el){ const k=blankKeyOf(c,el); if(!k) return; const s=sessOf(c); if(!s||s.S.seen[k.key]) return;
+  const m=db.settings.blankMarks&&db.settings.blankMarks[k.key],K=(db.settings&&db.settings.errStreak)||5;
+  if(m&&(m.streak||0)<K){ m.seen=(m.seen||0)+1; m.streak=(m.streak||0)+1; m.last=today(); const raw=blockTextByBid(c,k.bid); if(raw!=null){ m.para=raw; m.ans=el.dataset.ans||el.textContent; } s.S.seen[k.key]="okr"; if((m.streak||0)>=K) toast("这个空已连对 "+m.streak+" 次，出库 🎉"); }
+  else { s.S.seen[k.key]="ok"; }
+  s.e.ok=(s.e.ok||0)+1; clearTimeout(_sjT); _sjT=setTimeout(()=>save(),2500); }
 function bindBlankMiss(c,el){ if(el.dataset.mb) return; el.dataset.mb="1"; let n=0,t0=0;
   el.addEventListener("click",()=>{ if(el.classList.contains("hidden")) return; const now=Date.now(); if(now-t0>1600) n=0; t0=now; n++; if(n>=2){ n=0; markBlankMissed(c,el); } }); }
 function markBlankMissed(c,el){ const k=blankKeyOf(c,el); if(!k) return;
   const raw=blockTextByBid(c,k.bid); if(raw==null) return;
   const ans=el.dataset.ans||el.textContent;
+  const s=sessOf(c); if(s&&s.S.seen[k.key]==="miss") return;
   db.settings.blankMarks=db.settings.blankMarks||{};
   const m=db.settings.blankMarks[k.key]||(db.settings.blankMarks[k.key]={cid:c.id,bid:k.bid,bi:k.bi,ans:"",para:"",seen:0,miss:0,streak:0,first:today(),last:null});
-  m.ans=ans; m.para=raw; m.seen=(m.seen||0)+1; m.miss=(m.miss||0)+1; m.streak=0; m.last=today();
+  const wasOkR=s&&s.S.seen[k.key]==="okr";
+  m.ans=ans; m.para=raw; if(!wasOkR) m.seen=(m.seen||0)+1; m.miss=(m.miss||0)+1; m.streak=0; m.last=today();
+  if(s){ if(s.S.seen[k.key]) s.e.ok=Math.max(0,(s.e.ok||0)-1); s.S.seen[k.key]="miss"; s.e.miss=(s.e.miss||0)+1; }
   el.classList.add("missed");
   save(); toast("已记入「没背住的空」："+(ans.length>10?ans.slice(0,10)+"…":ans)); }
 function renderItemsView(items,reveal,pfx){ return (items||[]).map((it,ii)=>{ const bid=pfx!=null?pfx+"."+ii:null,ba=bid?' data-bid="'+bid+'"':'';
