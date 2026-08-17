@@ -497,7 +497,7 @@ function normalizeDb(o){
   d.recites.forEach(r=>{ if(!r.cps||!r.cps.length) r.cps=[{id:uid(),stage:0,kind:"memorize",due:r.date,done:false,doneDate:null,rating:null,ivl:0,relearn:false}]; r.signals=r.signals||[]; r.examScores=r.examScores||[]; if(r.ease==null) r.ease=d.settings.ease0; if(!r.title) r.title=r.content||"背诵"; if(r.courseId===undefined) r.courseId=null; if(r.cps[0].done) ensureNextReview(r); });
   if(!d.settings._pause1516){ d.recites.forEach(r=>{ if(r.contentId==="mrz86418-0ple"||r.contentId==="mrz86dc2-14iq") r.paused=true; }); d.settings._pause1516=true; }
   // 一次性修正:历史上"一般"评级的迟到复习曾把下次间隔撑到迟到天数(elapsed),按正常 hard 间隔回收(只缩短不延长;幂等)
-  if(!d._curveFixV1){ d.recites.forEach(r=>{ const rev=r.cps.filter(c=>c.kind==="review"),pend=rev.find(c=>!c.done),done=rev.filter(c=>c.done); if(!pend||!done.length) return; const last=done[done.length-1]; if(last.rating!=="hard") return; const corrected=nextIvlAfterDone(r),anchor=last.doneDate||last.due,newDue=addDays(anchor,corrected); if(newDue<pend.due){ pend.due=newDue; pend.ivl=corrected; } }); d._curveFixV1=true; }
+  if(!(d.settings&&d.settings._curveFixV1)){ d.recites.forEach(r=>{ const rev=r.cps.filter(c=>c.kind==="review"),pend=rev.find(c=>!c.done),done=rev.filter(c=>c.done); if(!pend||!done.length) return; const last=done[done.length-1]; if(last.rating!=="hard") return; const corrected=nextIvlAfterDone(r),anchor=last.doneDate||last.due,newDue=addDays(anchor,corrected); if(newDue<pend.due){ pend.due=newDue; pend.ivl=corrected; } }); d.settings=d.settings||{}; d.settings._curveFixV1=true; }
   return d;
 }
 /* ===== 2.2 多文件拆分内核 (本地文件夹后端 与 云同步后端 共用) =====
