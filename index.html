@@ -490,6 +490,20 @@
   .lw-bar i{display:block;width:8px;background:var(--tint);border-radius:2px;opacity:.55}
   .lw-bar i.w{background:var(--red);opacity:.75}
   .lw-ta{width:100%;height:230px;font-size:12px;line-height:1.6;font-family:ui-monospace,Menlo,Consolas,monospace}
+  /* 模糊 / 不确定选项 */
+  .lw-stat b.f{color:var(--orange)}
+  .lw-tag.t-f{background:rgba(255,149,0,.16);color:#b06800}
+  .lw-fz{margin-top:13px;padding:11px 13px;border-radius:11px;background:var(--fill);display:flex;flex-direction:column;gap:8px}
+  .lw-fzrow{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+  .lw-fzlb{font-size:12.5px;color:var(--text2);min-width:70px}
+  .lw-fzbtn{border:1px solid var(--sep);background:var(--card);color:var(--text);border-radius:999px;padding:5px 13px;font-size:13px;font-family:inherit}
+  .lw-fzbtn.on{border-color:var(--green);background:rgba(52,199,89,.14);color:#128a3d;font-weight:600}
+  .lw-fzbtn.on.fz{border-color:var(--orange);background:rgba(255,149,0,.18);color:#b06800}
+  .lw-fzo{border:1px solid var(--sep);background:var(--card);color:var(--text2);border-radius:8px;
+    min-width:34px;padding:5px 9px;font-size:13px;font-weight:600;font-family:inherit}
+  .lw-fzo.on{border-color:var(--orange);background:rgba(255,149,0,.2);color:#b06800}
+  .lw-rw.f{color:var(--orange)}
+  .lw-cell.c-f{background:rgba(255,149,0,.18);border-color:rgba(255,149,0,.45);color:#b06800}
 </style>
 
 <div class="wrap">
@@ -2071,7 +2085,7 @@ function paperQ(it,i){ const q=it.q,done=_exam.submitted,card=document.createEle
     fp.segs.forEach(s=>{ if(s.blank!=null){ const idx=s.blank;
         const num=document.createElement("span"); num.className="gnum"; num.textContent=(idx+1);
         const inp=document.createElement("input"); inp.type="text"; inp.className="fillgap"; inp.value=it.resp[idx]||""; inp.disabled=done; inp.setAttribute("aria-label","第"+(idx+1)+"空");
-        if(done){ const bs=blankScore(it.resp[idx]||"",s.ans); inp.classList.add(bs>=0.999?"ok":bs>0?"partial":"no"); }
+        if(done){ const bs=(it._asim&&it._asim[idx]!=null)?it._asim[idx]:blankScore(it.resp[idx]||"",s.ans); inp.classList.add(bs>=0.999?"ok":bs>0?"partial":"no"); }
         inp.oninput=(e)=>{ it.resp[idx]=e.target.value; }; b.appendChild(num); b.appendChild(inp);
       } else if(s.hint!=null){ const sp=document.createElement("span"); sp.className="cue"; sp.textContent="〔"+s.hint+"〕"; b.appendChild(sp); }
       else{ const sp=document.createElement("span"); sp.textContent=s.text; b.appendChild(sp); } });
@@ -2093,11 +2107,18 @@ function lcsLen(a,b){ const n=b.length; if(!a.length||!n) return 0; let prev=new
   for(let i=0;i<a.length;i++){ const cur=new Array(n+1).fill(0); for(let j=0;j<n;j++){ cur[j+1]=a[i]===b[j]?prev[j]+1:Math.max(prev[j+1],cur[j]); } prev=cur; } return prev[n]; }
 /* 单空得分(2026-08-01 用户定):相似度=最长公共子序列÷较长串长;≥90% 视为全对(容忍一两个字出入),其余按相同字比例给分 */
 function blankScore(resp,ans){ const A=norm(ans),R=norm(resp); if(!A.length) return R.length?0:1; if(!R.length) return 0; const ratio=lcsLen(R,A)/Math.max(A.length,R.length); return ratio>=0.9?1:Math.round(ratio*100)/100; }
+/* 多空乱序判分(2026-08-19 用户定):并列列举类的空没有先后顺序——作答与答案做最优一一配对(贪心),换序不扣分 */
+function fillAssign(resps,answers){ const n=answers.length,pairs=[];
+  for(let i=0;i<n;i++){ for(let j=0;j<n;j++){ pairs.push([blankScore((resps||[])[j]||"",answers[i]),i,j]); } }
+  pairs.sort((a,b)=>b[0]-a[0]);
+  const aU=new Array(n).fill(false),rU=new Array(n).fill(false),respSim=new Array(n).fill(0); let total=0;
+  for(const p of pairs){ if(aU[p[1]]||rU[p[2]]) continue; aU[p[1]]=true; rU[p[2]]=true; total+=p[0]; respSim[p[2]]=p[0]; }
+  return {total,respSim}; }
 function gradeScore(it){ const q=it.q;
   if(q.type==="mc") return it.resp===q.mcAnswer?1:0;
   if(q.type==="tf") return it.resp===q.truth?1:0;
   if(q.type==="match") return (q.pairs.length&&q.pairs.every((p,k)=>((it.resp||{})[k]||"")===p.right))?1:0;
-  if(q.type==="fill"){ const ans=fillParts(q.fillText).answers; if(!ans.length) return 0; let s=0; ans.forEach((a,k)=>s+=blankScore((it.resp||[])[k]||"",a)); return s/ans.length; }
+  if(q.type==="fill"){ const ans=fillParts(q.fillText).answers; if(!ans.length) return 0; if(ans.length===1){ const s1=blankScore((it.resp||[])[0]||"",ans[0]); it._asim=[s1]; return s1; } const A=fillAssign(it.resp,ans); it._asim=A.respSim; return A.total/ans.length; }
   return 0; }
 function gradeItem(it){ return gradeScore(it)>=0.999; }
 function quizPassed(it){ return gradeScore(it)>=0.9; } /* 一道题算「对」=得分≥90%,否则计入错题(2026-08-01) */
@@ -2651,9 +2672,26 @@ function lawCs(){ return lawB().cards||[]; }
 function lawS(){ const s=db.lawState||(db.lawState={q:{},c:{},log:[]}); if(!s.q)s.q={}; if(!s.c)s.c={}; if(!s.log)s.log=[]; return s; }
 function lawQSt(id){ return lawS().q[id]||null; }
 function lawQEnsure(id){ const s=lawS(); let x=s.q[id];
-  if(!x){ x={w:0,r:0,n:0,streak:0,mastered:false,last:null}; s.q[id]=x; } return x; }
+  if(!x){ x={w:0,r:0,n:0,streak:0,mastered:false,last:null}; s.q[id]=x; }
+  if(!x.fzo) x.fzo=[];            /* 被标为「不确定」的选项字母 */
+  if(x.fz==null) x.fz=0;          /* 标过几次「模糊」 */
+  return x; }
 /* 错题本 = 错过至少 1 次且尚未掌握 */
 function lawInBook(id){ const x=lawQSt(id); return !!x && x.w>0 && !x.mastered; }
+/* 模糊 = 虽然做对了但自己没把握（或标了不确定的选项）；掌握后自动清除 */
+function lawIsFuzzy(id){ const x=lawQSt(id); return !!x && !!x.fuzzy; }
+function lawFuzzyList(){ return lawQs().filter(q=>lawIsFuzzy(q.id)); }
+/* 标记/取消「模糊」 */
+function lawSetFuzzy(id,on){ const x=lawQEnsure(id);
+  if(on&&!x.fuzzy) x.fz=(x.fz||0)+1;
+  x.fuzzy=!!on; if(!on) x.fzo=[];
+  const s=lawS(); s.log.push({d:today(),q:id,ok:1,f:on?1:0,t:"fuzzy"});
+  if(s.log.length>LAW_LOG_CAP) s.log=s.log.slice(-Math.floor(LAW_LOG_CAP*0.7));
+  save(); }
+/* 标记/取消某个「不确定的选项」——顺带把整题标成模糊 */
+function lawToggleOpt(id,k){ const x=lawQEnsure(id); const i=x.fzo.indexOf(k);
+  if(i>=0) x.fzo.splice(i,1); else { x.fzo.push(k); if(!x.fuzzy){ x.fuzzy=true; x.fz=(x.fz||0)+1; } }
+  save(); }
 function lawGrade(id,ok){ const x=lawQEnsure(id); x.n++; x.last=today();
   if(ok){ x.r++; if(x.w>0){ x.streak++; if(x.streak>=LAW_MASTER) x.mastered=true; } }
   else  { x.w++; x.streak=0; x.mastered=false; }
@@ -2670,13 +2708,14 @@ function lawList(){ return lawQs().filter(q=>
   (law.scope==="全部" ||
    (law.scope==="未做"   && !lawQSt(q.id)) ||
    (law.scope==="错题本" && lawInBook(q.id)) ||
+   (law.scope==="模糊"   && lawIsFuzzy(q.id)) ||
    (law.scope==="已掌握" && lawQSt(q.id) && lawQSt(q.id).mastered) ||
    (law.scope==="原书标记"&& q.mark)) ); }
 
-function lawStats(qs){ let done=0,book=0,mast=0,right=0;
+function lawStats(qs){ let done=0,book=0,mast=0,right=0,fuzzy=0;
   qs.forEach(q=>{ const x=lawQSt(q.id); if(!x) return; done++; if(x.r>0&&x.w===0) right++;
-    if(lawInBook(q.id)) book++; if(x.mastered) mast++; });
-  return {total:qs.length,done,book,mast,right}; }
+    if(lawInBook(q.id)) book++; if(x.mastered) mast++; if(x.fuzzy) fuzzy++; });
+  return {total:qs.length,done,book,mast,right,fuzzy}; }
 
 /* ---------- 模块入口 ---------- */
 function mountLaw(main){
@@ -2709,8 +2748,8 @@ function lawQuiz(body){
   body.innerHTML=
     lawChips("科目","subj",["全部","刑法","宪法"])+
     lawChips("题型","sec",["全部","判断题","单选题","多选题"])+
-    lawChips("范围","scope",["全部","未做","错题本","已掌握","原书标记"])+
-    '<div class="lw-stat">共 <b>'+st.total+'</b> 题 · 已做 <b>'+st.done+'</b> · 错题本 <b class="r">'+st.book+'</b> · 已掌握 <b class="g">'+st.mast+'</b></div>'+
+    lawChips("范围","scope",["全部","未做","错题本","模糊","已掌握","原书标记"])+
+    '<div class="lw-stat">共 <b>'+st.total+'</b> 题 · 已做 <b>'+st.done+'</b> · 错题本 <b class="r">'+st.book+'</b> · 模糊 <b class="f">'+st.fuzzy+'</b> · 已掌握 <b class="g">'+st.mast+'</b></div>'+
     '<div id="lwQ"></div><div class="lw-gridwrap"><div class="lw-lb2">题目总览（点击跳转 · 颜色＝掌握情况）</div><div class="lw-grid" id="lwGrid"></div></div>';
   body.querySelectorAll(".lw-chip").forEach(b=>b.onclick=()=>{ law[b.dataset.k]=b.dataset.v; law.qi=0; law.sel=[]; law.shown=false; render(); });
   lawRenderQ(body.querySelector("#lwQ"),q,qs);
@@ -2723,7 +2762,8 @@ function lawBadge(q){ let s='<span class="lw-tag t-'+(q.subject==="刑法"?"x":"
   else if(q.mark==="Y") s+='<span class="lw-tag t-y">原书🟡做错过</span>';
   const x=lawQSt(q.id);
   if(x){ if(x.mastered) s+='<span class="lw-tag t-g">已掌握</span>';
-         else if(x.w>0) s+='<span class="lw-tag t-r">错'+x.w+'次 · 连对 '+x.streak+"/"+LAW_MASTER+'</span>'; }
+         else if(x.w>0) s+='<span class="lw-tag t-r">错'+x.w+'次 · 连对 '+x.streak+"/"+LAW_MASTER+'</span>';
+         if(x.fuzzy) s+='<span class="lw-tag t-f">🤔 模糊'+(x.fzo&&x.fzo.length?"·选项 "+x.fzo.join(""):"")+'</span>'; }
   return s; }
 
 function lawRenderQ(host,q,qs){
@@ -2757,6 +2797,7 @@ function lawRenderQ(host,q,qs){
     ex.innerHTML='<b>【答案】'+esc(q.answer)+'</b>　<span class="lw-src">原书第'+q.page+'页</span><br>'+esc(q.explain||"（无解析）").replace(/\n/g,"<br>");
     lawRenderGrid(document.getElementById("lwGrid"),qs);
     const _bk=document.querySelectorAll(".lw-tab")[1]; if(_bk) _bk.innerHTML='🔴 错题本 <b>'+lawQs().filter(z=>lawInBook(z.id)).length+'</b>';
+    lawFuzzyBar(host,q);
   };
   host.querySelectorAll(".lw-opt").forEach(o=>o.onclick=()=>{
     if(law.shown) return;
@@ -2769,9 +2810,31 @@ function lawRenderQ(host,q,qs){
   host.querySelector("#lwNext").onclick=()=>{ if(law.qi<qs.length-1){ law.qi++; law.sel=[]; law.shown=false; render(); } else toast("已是最后一题"); };
 }
 
+/* 答完题后的「把握程度」条：即使答对也能标模糊，并逐个标出没把握的选项 */
+function lawFuzzyBar(host,q){
+  let bar=host.querySelector("#lwFz");
+  if(!bar){ bar=document.createElement("div"); bar.id="lwFz"; bar.className="lw-fz";
+    const nav=host.querySelector(".lw-nav"); nav.parentNode.insertBefore(bar,nav); }
+  const draw=()=>{
+    const x=lawQEnsure(q.id), on=!!x.fuzzy;
+    const keys=q.type==="tf"?["√","×"]:Object.keys(q.options||{});
+    bar.innerHTML='<div class="lw-fzrow"><span class="lw-fzlb">把握程度</span>'+
+      '<button class="lw-fzbtn'+(on?"":" on")+'" data-v="0">✅ 有把握</button>'+
+      '<button class="lw-fzbtn'+(on?" on fz":"")+'" data-v="1">🤔 模糊</button>'+
+      (x.fz>1?'<span class="lw-hint">（累计标过 '+x.fz+' 次）</span>':"")+'</div>'+
+      '<div class="lw-fzrow"><span class="lw-fzlb">不确定的选项</span>'+
+      keys.map(k=>'<button class="lw-fzo'+(x.fzo.indexOf(k)>=0?" on":"")+'" data-k="'+esc(k)+'">'+esc(k)+'</button>').join("")+
+      '<span class="lw-hint">点一下标记，再点取消</span></div>';
+    bar.querySelectorAll(".lw-fzbtn").forEach(b=>b.onclick=()=>{ lawSetFuzzy(q.id,b.dataset.v==="1"); draw();
+      lawRenderGrid(document.getElementById("lwGrid"),lawList()); });
+    bar.querySelectorAll(".lw-fzo").forEach(b=>b.onclick=()=>{ lawToggleOpt(q.id,b.dataset.k); draw();
+      lawRenderGrid(document.getElementById("lwGrid"),lawList()); });
+  };
+  draw();
+}
 function lawRenderGrid(host,qs){ if(!host) return;
   host.innerHTML=qs.map((q,i)=>{ const x=lawQSt(q.id); let cls="";
-    if(!x) cls=""; else if(x.mastered) cls="c-m"; else if(x.w>0) cls="c-w"+lawHeat(x.w); else cls="c-r";
+    if(!x) cls=""; else if(x.w>0&&!x.mastered) cls="c-w"+lawHeat(x.w); else if(x.fuzzy) cls="c-f"; else if(x.mastered) cls="c-m"; else cls="c-r";
     const lab=(q.subject==="刑法"?"刑":"宪")+q.sec[0]+q.num;
     return '<button class="lw-cell '+cls+(i===law.qi?" cur":"")+'" data-i="'+i+'" title="'+q.subject+q.sec+"第"+q.num+'题">'+lab+'</button>'; }).join("");
   host.querySelectorAll(".lw-cell").forEach(c=>c.onclick=()=>{ law.qi=+c.dataset.i; law.sel=[]; law.shown=false; render(); }); }
@@ -2780,19 +2843,29 @@ function lawRenderGrid(host,qs){ if(!host) return;
 function lawBook(body){
   const all=lawQs().filter(q=>lawInBook(q.id))
     .sort((a,b)=>{ const xa=lawQSt(a.id),xb=lawQSt(b.id); return (xb.w-xa.w)||((xb.last||"")<(xa.last||"")?-1:1); });
-  if(!all.length){ body.innerHTML='<div class="empty">错题本是空的 🎉<br><span class="lw-hint">做错一次的题会自动进这里；连续做对 '+LAW_MASTER+' 次后自动移出。</span></div>'; return; }
+  const fz=lawFuzzyList().filter(q=>!lawInBook(q.id));   /* 做对但没把握的(错题已在上面列了) */
+  if(!all.length&&!fz.length){ body.innerHTML='<div class="empty">错题本是空的 🎉<br><span class="lw-hint">做错一次的题会自动进这里；连续做对 '+LAW_MASTER+' 次后自动移出。<br>答对但没把握的题，可以在做完后点「🤔 模糊」，也会收进这里。</span></div>'; return; }
+  const row=(q,extra)=>{ const x=lawQSt(q.id)||{w:0,streak:0,fzo:[]};
+    return '<button class="lw-row h'+lawHeat(x.w)+'" data-id="'+q.id+'"><span class="lw-rn">'+q.num+'</span>'+
+      '<span class="lw-rs">'+esc(q.stem.slice(0,40))+(q.stem.length>40?"…":"")+'</span>'+extra(x)+'</button>'; };
   const g={}; all.forEach(q=>{ const k=q.subject+"·"+q.sec; (g[k]=g[k]||[]).push(q); });
-  body.innerHTML='<div class="lw-stat">错题本共 <b class="r">'+all.length+'</b> 题 · 颜色越深错得越多 · 连续做对 '+LAW_MASTER+' 次移出</div>'+
-    '<div class="lw-actions"><button class="lw-go" id="lwDo">开始练错题</button></div>'+
-    Object.keys(g).map(k=>'<div class="lw-grp"><div class="lw-lb2">'+k+'（'+g[k].length+'）</div>'+
-      g[k].map(q=>{ const x=lawQSt(q.id);
-        return '<button class="lw-row h'+lawHeat(x.w)+'" data-id="'+q.id+'"><span class="lw-rn">'+q.num+'</span>'+
-        '<span class="lw-rs">'+esc(q.stem.slice(0,42))+(q.stem.length>42?"…":"")+'</span>'+
-        '<span class="lw-rw">错'+x.w+'次</span><span class="lw-rk">连对 '+x.streak+"/"+LAW_MASTER+'</span></button>'; }).join("")+'</div>').join("");
-  body.querySelector("#lwDo").onclick=()=>{ law.tab="quiz"; law.scope="错题本"; law.subj="全部"; law.sec="全部"; law.qi=0; law.sel=[]; law.shown=false; render(); };
+  const gf={}; fz.forEach(q=>{ const k=q.subject+"·"+q.sec; (gf[k]=gf[k]||[]).push(q); });
+  body.innerHTML='<div class="lw-stat">错题 <b class="r">'+all.length+'</b> 题（颜色越深错得越多，连对 '+LAW_MASTER+' 次移出）· 答对但模糊 <b class="f">'+fz.length+'</b> 题</div>'+
+    '<div class="lw-actions"><button class="lw-go" id="lwDo">练错题</button>'+
+    (fz.length?'<button class="lw-go alt" id="lwDoF">练模糊题</button>':"")+'</div>'+
+    (all.length?'<div class="lw-lb2">🔴 错题本</div>'+Object.keys(g).map(k=>'<div class="lw-grp"><div class="lw-lb2">'+k+'（'+g[k].length+'）</div>'+
+      g[k].map(q=>row(q,x=>'<span class="lw-rw">错'+x.w+'次</span><span class="lw-rk">连对 '+x.streak+"/"+LAW_MASTER+
+        (x.fuzzy?' · 🤔'+(x.fzo&&x.fzo.length?x.fzo.join(""):""):"")+'</span>')).join("")+'</div>').join(""):"")+
+    (fz.length?'<div class="lw-lb2">🤔 答对了但没把握（自己标的）</div>'+Object.keys(gf).map(k=>'<div class="lw-grp"><div class="lw-lb2">'+k+'（'+gf[k].length+'）</div>'+
+      gf[k].map(q=>row(q,x=>'<span class="lw-rw f">'+(x.fzo&&x.fzo.length?'不确定 '+x.fzo.join(""):'模糊')+'</span>'+
+        '<span class="lw-rk">标过'+(x.fz||1)+'次</span>')).join("")+'</div>').join(""):"");
+  const jump=(scope)=>{ law.tab="quiz"; law.scope=scope; law.subj="全部"; law.sec="全部"; law.qi=0; law.sel=[]; law.shown=false; render(); };
+  body.querySelector("#lwDo").onclick=()=>jump("错题本");
+  const bf=body.querySelector("#lwDoF"); if(bf) bf.onclick=()=>jump("模糊");
   body.querySelectorAll(".lw-row").forEach(r=>r.onclick=()=>{
-    law.tab="quiz"; law.scope="错题本"; law.subj="全部"; law.sec="全部"; law.sel=[]; law.shown=false;
-    const i=lawList().findIndex(q=>q.id===r.dataset.id); law.qi=i<0?0:i; render(); });
+    const id=r.dataset.id, sc=lawInBook(id)?"错题本":"模糊";
+    law.tab="quiz"; law.scope=sc; law.subj="全部"; law.sec="全部"; law.sel=[]; law.shown=false;
+    const i=lawList().findIndex(q=>q.id===id); law.qi=i<0?0:i; render(); });
 }
 
 /* ---------- 卡片 ---------- */
@@ -2851,8 +2924,9 @@ function lawLog(body){
   const wrongQ={}; rec.forEach(e=>{ if(!e.ok) wrongQ[e.q]=(wrongQ[e.q]||0)+1; });
   const qmap={}; lawQs().forEach(q=>qmap[q.id]=q);
   const list=Object.keys(wrongQ).map(id=>({q:qmap[id],n:wrongQ[id]})).filter(o=>o.q).sort((a,b)=>b.n-a.n);
-  const tot=rec.length, wr=rec.filter(e=>!e.ok).length;
-  body.innerHTML='<div class="lw-stat">近 30 天：做题 <b>'+tot+'</b> 次 · 做错 <b class="r">'+wr+'</b> 次 · 正确率 <b class="g">'+(tot?Math.round((tot-wr)/tot*100):0)+'%</b></div>'+
+  const tot=rec.filter(e=>e.t!=="fuzzy").length, wr=rec.filter(e=>!e.ok).length;
+  const fzl=lawFuzzyList();
+  body.innerHTML='<div class="lw-stat">近 30 天：做题 <b>'+tot+'</b> 次 · 做错 <b class="r">'+wr+'</b> 次 · 正确率 <b class="g">'+(tot?Math.round((tot-wr)/tot*100):0)+'%</b> · 当前标为模糊 <b class="f">'+fzl.length+'</b> 题</div>'+
     '<div class="lw-actions"><button class="lw-go" id="lwExp">导出近一个月错题（给 Claude 梳理用）</button>'+
     '<button class="lw-go alt" id="lwImp">更新题库</button></div>'+
     '<div class="lw-lb2">每日情况</div><div class="lw-bars">'+days.map(d=>{ const o=byDay[d]||{n:0,w:0};
@@ -2860,8 +2934,13 @@ function lawLog(body){
       return '<span class="lw-bar" title="'+d+"：做"+o.n+" 错"+o.w+'"><i style="height:'+h+'px" class="'+(o.w?"w":"")+'"></i></span>'; }).join("")+'</div>'+
     '<div class="lw-lb2">近 30 天错过的题（'+list.length+'）</div>'+
     (list.length?list.map(o=>'<div class="lw-row h'+lawHeat(o.n)+' static"><span class="lw-rn">'+o.q.subject[0]+o.q.sec[0]+o.q.num+'</span>'+
-      '<span class="lw-rs">'+esc(o.q.stem.slice(0,40))+'…</span><span class="lw-rw">本月错'+o.n+'次</span></div>').join(""):'<div class="empty">近 30 天没有错题记录</div>');
-  body.querySelector("#lwExp").onclick=()=>lawExport(list,tot,wr,from);
+      '<span class="lw-rs">'+esc(o.q.stem.slice(0,40))+'…</span><span class="lw-rw">本月错'+o.n+'次</span></div>').join(""):'<div class="empty">近 30 天没有错题记录</div>')+
+    (fzl.length?'<div class="lw-lb2">🤔 标为模糊的题（'+fzl.length+'）</div>'+
+      fzl.map(q=>{ const x=lawQSt(q.id);
+        return '<div class="lw-row static"><span class="lw-rn">'+q.subject[0]+q.sec[0]+q.num+'</span>'+
+        '<span class="lw-rs">'+esc(q.stem.slice(0,40))+'…</span><span class="lw-rw f">'+
+        (x.fzo&&x.fzo.length?'不确定 '+x.fzo.join(""):'模糊')+'</span></div>'; }).join(""):"");
+  body.querySelector("#lwExp").onclick=()=>lawExport(list,tot,wr,from,fzl);
   body.querySelector("#lwImp").onclick=lawImport;
 }
 /* 只覆盖 lawBank(题目+卡片),不动做题记录,更不动日历/背诵库/卡片背诵等其它数据 */
@@ -2902,16 +2981,24 @@ function lawImport(){
     rd.readAsText(f);
   };
 }
-function lawExport(list,tot,wr,from){
+function lawExport(list,tot,wr,from,fzl){
+  fzl=fzl||lawFuzzyList();
+  const dump=(q,head)=>{ let s="### "+head+"\n"+q.stem+"\n";
+    if(q.options) Object.keys(q.options).forEach(k=>{ s+=k+". "+q.options[k]+"\n"; });
+    return s+"**答案：**"+q.answer+"\n**解析：**"+(q.explain||"")+"\n\n"; };
   let md="# 法律错题记录 "+from+" ~ "+today()+"\n\n";
   md+="近30天：做题 "+tot+" 次，做错 "+wr+" 次，正确率 "+(tot?Math.round((tot-wr)/tot*100):0)+"%\n";
   const book=lawQs().filter(q=>lawInBook(q.id));
-  md+="当前错题本："+book.length+" 题\n\n## 近一个月错过的题\n\n";
+  md+="当前错题本："+book.length+" 题；当前标为模糊："+fzl.length+" 题\n\n";
+  md+="> 说明：「模糊」是我做对了但心里没底、自己标的；「不确定的选项」是我拿不准的那几个选项。请据此一并梳理薄弱点。\n\n";
+  md+="## 一、近一个月错过的题\n\n";
   list.forEach(o=>{ const x=lawQSt(o.q.id)||{w:0,streak:0};
-    md+="### "+o.q.subject+"·"+o.q.sec+" 第"+o.q.num+"题（本月错 "+o.n+" 次 / 累计错 "+x.w+" 次 / 连对 "+x.streak+"/"+LAW_MASTER+"）\n";
-    md+=o.q.stem+"\n";
-    if(o.q.options) Object.keys(o.q.options).forEach(k=>{ md+=k+". "+o.q.options[k]+"\n"; });
-    md+="**答案：**"+o.q.answer+"\n**解析：**"+(o.q.explain||"")+"\n\n"; });
+    md+=dump(o.q,o.q.subject+"·"+o.q.sec+" 第"+o.q.num+"题（本月错 "+o.n+" 次 / 累计错 "+x.w+" 次 / 连对 "+x.streak+"/"+LAW_MASTER+
+      ((x.fuzzy)?" / 我还标了模糊"+((x.fzo&&x.fzo.length)?"，不确定选项："+x.fzo.join("、"):""):"")+"）"); });
+  if(fzl.length){ md+="## 二、答对但我没把握的题（自己标的「模糊」）\n\n";
+    fzl.forEach(q=>{ const x=lawQSt(q.id)||{};
+      md+=dump(q,q.subject+"·"+q.sec+" 第"+q.num+"题（标过模糊 "+(x.fz||1)+" 次"+
+        ((x.fzo&&x.fzo.length)?" / 不确定的选项："+x.fzo.join("、"):"")+(x.w>0?" / 累计错 "+x.w+" 次":"")+"）"); }); }
   const b=lawB(); const blob=new Blob([md],{type:"text/markdown;charset=utf-8"});
   const url=URL.createObjectURL(blob);
   const h=openModal("导出错题记录",
