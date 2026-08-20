@@ -423,6 +423,7 @@
   .lw-tag{padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:600}
   .lw-tag.t-x{background:var(--tint-soft);color:var(--tint)}
   .lw-tag.t-h{background:rgba(175,82,222,.14);color:#af52de}
+  .lw-tag.t-c{background:rgba(52,199,89,.14);color:#128a3d}
   .lw-tag.t-y{background:rgba(255,204,0,.2);color:#a07800}
   .lw-tag.t-r{background:rgba(255,59,48,.14);color:var(--red)}
   .lw-tag.t-g{background:rgba(52,199,89,.16);color:var(--green)}
@@ -504,6 +505,49 @@
   .lw-fzo.on{border-color:var(--orange);background:rgba(255,149,0,.2);color:#b06800}
   .lw-rw.f{color:var(--orange)}
   .lw-cell.c-f{background:rgba(255,149,0,.18);border-color:rgba(255,149,0,.45);color:#b06800}
+
+  /* ===== 10.8 法律题库 CSS END ===== */
+  /* ===== 10.9 管理题库 (复用 .lw-* 基础样式, 这里只加管理特有的) ===== */
+  .mg-help{font-size:12.5px;color:var(--text2);line-height:1.9;background:var(--card);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:11px 15px;margin-bottom:12px}
+  .mg-help b{color:var(--orange)}
+  .mg-ow{display:flex;flex-direction:column}
+  .mg-qm{flex:0 0 auto;width:26px;height:26px;border-radius:8px;border:1px solid var(--sep);background:var(--card);color:var(--text3);
+    font-size:13px;font-weight:700;font-family:inherit;line-height:1;display:flex;align-items:center;justify-content:center;margin-left:auto}
+  .mg-qm.on{background:var(--orange);border-color:var(--orange);color:#fff}
+  .lw-opt.unsure{border-color:var(--orange);background:rgba(255,149,0,.12)}
+  .lw-opt.locked{cursor:help}
+  .mg-okp{margin:7px 0 2px 24px;padding:9px 13px;border-left:3px solid var(--tint);border-radius:0 10px 10px 0;
+    background:var(--bg2);font-size:13px;line-height:1.85;color:var(--text2)}
+  .mg-okp b{color:var(--text)}
+  .mg-nm{display:inline-block;padding:1px 9px;border-radius:999px;background:var(--tint-soft);color:var(--tint);
+    font-size:11.5px;font-weight:600;font-family:inherit;border:none;margin-right:7px;vertical-align:1px}
+  .mg-tap{margin-top:9px;font-size:12px;color:var(--text3)}
+  .mg-uns{margin-top:11px;display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--text2);
+    background:none;border:none;font-family:inherit;padding:0}
+  .mg-uns i{font-style:normal;width:17px;height:17px;border-radius:5px;border:1.5px solid var(--sep);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff}
+  .mg-uns.on{color:var(--orange);font-weight:600} .mg-uns.on i{background:var(--orange);border-color:var(--orange)}
+  .mg-kb{width:100%;border-collapse:collapse;font-size:13px}
+  .mg-kb th{text-align:left;font-weight:600;color:var(--text2);font-size:12px;padding:7px 5px;border-bottom:1px solid var(--sep);white-space:nowrap}
+  .mg-kb td{padding:8px 5px;border-bottom:1px solid var(--sep);vertical-align:top}
+  .mg-kb tr.mod td{background:var(--bg2);font-weight:600;color:var(--text2);font-size:12.5px}
+  .mg-kn{background:none;border:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--text);text-align:left;padding:0}
+  .mg-kh{color:var(--text3);font-size:11.5px;line-height:1.65;margin-top:2px}
+  .mg-n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .mg-n.r{color:var(--red);font-weight:600} .mg-n.o{color:var(--orange);font-weight:600}
+  .mg-pb{height:7px;border-radius:99px;background:var(--fill);overflow:hidden;min-width:54px}
+  .mg-pb i{display:block;height:100%;border-radius:99px}
+  .mg-grid{display:flex;flex-wrap:wrap;gap:5px}
+  .mg-cell{width:42px;height:29px;border-radius:8px;border:1px solid var(--sep);background:var(--card);color:var(--text);
+    font-size:12px;font-family:inherit;display:flex;align-items:center;justify-content:center;position:relative;padding:0}
+  .mg-cell.cur{outline:2px solid var(--tint);outline-offset:1px}
+  .mg-cell.ok{background:rgba(52,199,89,.16);border-color:rgba(52,199,89,.5)}
+  .mg-cell.no{background:rgba(255,59,48,.13);border-color:rgba(255,59,48,.45)}
+  .mg-cell s{position:absolute;top:2px;right:2px;width:6px;height:6px;border-radius:50%;background:var(--orange)}
+  .lw-verdict.warn{display:block;background:rgba(255,149,0,.14);color:#a06000}
+  @media (prefers-color-scheme:dark){ .lw-verdict.warn{color:#ffb340} }
+  .mg-exp{margin-top:10px;padding:12px 14px;border-radius:11px;background:var(--fill);font-size:14px;line-height:1.85;white-space:pre-wrap}
+  .mg-exp b{color:var(--tint)}
+  .lw-go:disabled{opacity:.4}
 </style>
 
 <div class="wrap">
@@ -537,7 +581,7 @@ function defaultSettings(){ return {
   timeplan:{ periods:{am:["08:00","12:00"],noon:["12:00","14:00"],pm:["14:00","18:00"],eve:["18:00","23:00"]},
              meals:{lunch:["12:00","13:30"],dinner:["18:00","19:30"]}, window:["08:00","22:30"], stepMin:30, maxSpanH:5 },
 }; }
-function blankDb(){ return { version:7, today:null, settings:defaultSettings(), contents:[], courses:[], recites:[], plans:[], userModules:[], flashDecks:[], flashState:{}, timeplan:{}, lawBank:{version:1,questions:[],cards:[]}, lawState:{q:{},c:{},log:[]} }; }
+function blankDb(){ return { version:7, today:null, settings:defaultSettings(), contents:[], courses:[], recites:[], plans:[], userModules:[], flashDecks:[], flashState:{}, timeplan:{}, lawBank:{version:1,questions:[],cards:[]}, lawState:{q:{},c:{},log:[]}, mgBank:{version:1,modules:[],points:[],questions:[]}, mgState:{q:{},log:[],note:{},ui:{}} }; }
 let db=blankDb();
 let state={ view:"home", calBase:null, selDate:null };
 
@@ -585,6 +629,8 @@ function normalizeDb(o){
   d.timeplan=(o.timeplan&&typeof o.timeplan==="object")?o.timeplan:{};
   d.contents=o.contents||[]; d.courses=o.courses||[]; d.recites=o.recites||[]; d.plans=(o.plans||[]).filter(p=>p.kind==="review"||!p.courseId); d.userModules=o.userModules||[]; d.flashDecks=Array.isArray(o.flashDecks)?o.flashDecks:[]; d.flashState=(o.flashState&&typeof o.flashState==="object")?o.flashState:{};
   d.lawBank=(o.lawBank&&typeof o.lawBank==="object")?o.lawBank:{version:1,questions:[],cards:[]}; if(!Array.isArray(d.lawBank.questions)) d.lawBank.questions=[]; if(!Array.isArray(d.lawBank.cards)) d.lawBank.cards=[];
+  d.mgBank=(o.mgBank&&typeof o.mgBank==="object")?o.mgBank:{version:1,modules:[],points:[],questions:[]}; if(!Array.isArray(d.mgBank.questions)) d.mgBank.questions=[]; if(!Array.isArray(d.mgBank.points)) d.mgBank.points=[]; if(!Array.isArray(d.mgBank.modules)) d.mgBank.modules=[];
+  d.mgState=(o.mgState&&typeof o.mgState==="object")?o.mgState:{q:{},log:[],note:{},ui:{}}; if(!d.mgState.q) d.mgState.q={}; if(!Array.isArray(d.mgState.log)) d.mgState.log=[]; if(!d.mgState.note) d.mgState.note={}; if(!d.mgState.ui) d.mgState.ui={};
   d.lawState=(o.lawState&&typeof o.lawState==="object")?o.lawState:{q:{},c:{},log:[]}; if(!d.lawState.q) d.lawState.q={}; if(!d.lawState.c) d.lawState.c={}; if(!Array.isArray(d.lawState.log)) d.lawState.log=[];
   d.contents.forEach(c=>{ if(c&&!Array.isArray(c.questions)) c.questions=[]; });
   db=d;
@@ -616,7 +662,7 @@ function spDImg(d){ return "decks/"+d.id+"-images.json"; }
 /* db → { 路径:json字符串 }。文件名用 id(稳定、纯 ASCII),中文名放进 index.meta 供仓库网页查阅。 */
 function splitDb(){
   const files={}, meta={};
-  const state={}; Object.keys(db).forEach(k=>{ if(k!=="contents"&&k!=="flashDecks"&&k!=="lawBank") state[k]=db[k]; });
+  const state={}; Object.keys(db).forEach(k=>{ if(k!=="contents"&&k!=="flashDecks"&&k!=="lawBank"&&k!=="mgBank") state[k]=db[k]; });
   files["state.json"]=JSON.stringify(state);
   (db.contents||[]).forEach(c=>{ const p=spCPath(c); files[p]=JSON.stringify(c); meta[p]={name:c.name||""}; });
   (db.flashDecks||[]).forEach(d=>{ const p=spDPath(d), body={};
@@ -624,6 +670,8 @@ function splitDb(){
     files[p]=JSON.stringify(body); files[spDImg(d)]=JSON.stringify(d.images||{}); meta[p]={name:d.name||""}; });
   /* 法律题库:题目+卡片体积大且极少变,单独成文件,不随日常打卡重写 */
   if(db.lawBank&&(((db.lawBank.questions||[]).length)||((db.lawBank.cards||[]).length))) files["law/bank.json"]=JSON.stringify(db.lawBank);
+  /* 管理题库:题目+逐选项知识点体积大且极少变,同样单独成文件 */
+  if(db.mgBank&&((db.mgBank.questions||[]).length)) files["mg/bank.json"]=JSON.stringify(db.mgBank);
   const hashes={}; Object.keys(files).forEach(p=>{ hashes[p]=spHash(files[p]); });
   files["index.json"]=JSON.stringify({ _split:SPLIT_VER, savedAt:db.savedAt||null, files:hashes, meta },null,1);
   return files;
@@ -637,7 +685,8 @@ function spWriteOrder(files){
   const deck=all.filter(p=>p.indexOf("decks/")===0 && !/-images\.json$/.test(p));
   const cont=all.filter(p=>p.indexOf("content/")===0);
   const law=all.filter(p=>p.indexOf("law/")===0);
-  return img.concat(deck,cont,law,["state.json","index.json"]);
+  const mgb=all.filter(p=>p.indexOf("mg/")===0);
+  return img.concat(deck,cont,law,mgb,["state.json","index.json"]);
 }
 /* { 路径:json字符串 } → db(未 normalize)。任一被 index 引用的文件缺失/解析失败 → 返回 null。
    **调用方拿到 null 必须整体放弃采用**,绝不能拿残缺数据覆盖本机。这是最关键的安全边界。 */
@@ -656,6 +705,7 @@ function mergeFiles(files){
       d.images=(typeof files[ip]==="string")?JSON.parse(files[ip]):{};
       out.flashDecks.push(d); });
     if(typeof files["law/bank.json"]==="string") out.lawBank=JSON.parse(files["law/bank.json"]);
+    if(typeof files["mg/bank.json"]==="string") out.mgBank=JSON.parse(files["mg/bank.json"]);
     return out;
   }catch(e){ return null; }
 }
@@ -1118,6 +1168,7 @@ const BUILTIN_MODULES=[
   { id:"library", name:"背诵库", mount:mountLibrary },
   { id:"flash", name:"卡片", mount:mountFlash },
   { id:"law", name:"法律", mount:mountLaw },
+  { id:"mg", name:"管理", mount:mountMg },
   { id:"exam", name:"考试", mount:mountExam, hidden:true },
   { id:"courses", name:"课程", mount:mountCourses },
   { id:"settings", name:"设置", mount:mountSettings },
@@ -2739,15 +2790,19 @@ function mountLaw(main){
 
 /* ---------- 刷题 ---------- */
 function lawChips(name,key,vals){ return '<div class="lw-chips"><span class="lw-lb">'+name+'</span>'+
-  vals.map(v=>'<button class="lw-chip'+(law[key]===v?" on":"")+'" data-k="'+key+'" data-v="'+v+'">'+v+'</button>').join("")+'</div>'; }
+  vals.map(v=>'<button class="lw-chip'+(law[key]===v?" on":"")+'" data-k="'+key+'" data-v="'+esc(v)+'">'+esc(v)+'</button>').join("")+'</div>'; }
+/* 科目/题型按题库里实际有的动态生成——加了新科目(如民法)不用改代码 */
+function lawSubjects(){ return ["全部"].concat([...new Set(lawQs().map(q=>q.subject))]); }
+function lawSections(){ const s=lawQs().filter(q=>law.subj==="全部"||q.subject===law.subj);
+  return ["全部"].concat([...new Set(s.map(q=>q.sec))]); }
 
 function lawQuiz(body){
   const qs=lawList(); const st=lawStats(qs);
   if(law.qi>=qs.length) law.qi=0;
   const q=qs[law.qi];
   body.innerHTML=
-    lawChips("科目","subj",["全部","刑法","宪法"])+
-    lawChips("题型","sec",["全部","判断题","单选题","多选题"])+
+    lawChips("科目","subj",lawSubjects())+
+    lawChips("题型","sec",lawSections())+
     lawChips("范围","scope",["全部","未做","错题本","模糊","已掌握","原书标记"])+
     '<div class="lw-stat">共 <b>'+st.total+'</b> 题 · 已做 <b>'+st.done+'</b> · 错题本 <b class="r">'+st.book+'</b> · 模糊 <b class="f">'+st.fuzzy+'</b> · 已掌握 <b class="g">'+st.mast+'</b></div>'+
     '<div id="lwQ"></div><div class="lw-gridwrap"><div class="lw-lb2">题目总览（点击跳转 · 颜色＝掌握情况）</div><div class="lw-grid" id="lwGrid"></div></div>';
@@ -2756,7 +2811,8 @@ function lawQuiz(body){
   lawRenderGrid(body.querySelector("#lwGrid"),qs);
 }
 
-function lawBadge(q){ let s='<span class="lw-tag t-'+(q.subject==="刑法"?"x":"h")+'">'+q.subject+"·"+q.sec+"</span>";
+const LAW_SC={"刑法":"x","宪法":"h","民法":"c"};
+function lawBadge(q){ let s='<span class="lw-tag t-'+(LAW_SC[q.subject]||"x")+'">'+q.subject+"·"+q.sec+"</span>";
   s+='<span class="lw-num">第 '+q.num+' 题</span>';
   if(q.mark==="R") s+='<span class="lw-tag t-r">原书🔴反复记不住</span>';
   else if(q.mark==="Y") s+='<span class="lw-tag t-y">原书🟡做错过</span>';
@@ -2835,7 +2891,7 @@ function lawFuzzyBar(host,q){
 function lawRenderGrid(host,qs){ if(!host) return;
   host.innerHTML=qs.map((q,i)=>{ const x=lawQSt(q.id); let cls="";
     if(!x) cls=""; else if(x.w>0&&!x.mastered) cls="c-w"+lawHeat(x.w); else if(x.fuzzy) cls="c-f"; else if(x.mastered) cls="c-m"; else cls="c-r";
-    const lab=(q.subject==="刑法"?"刑":"宪")+q.sec[0]+q.num;
+    const lab=q.subject[0]+q.sec[0]+q.num;
     return '<button class="lw-cell '+cls+(i===law.qi?" cur":"")+'" data-i="'+i+'" title="'+q.subject+q.sec+"第"+q.num+'题">'+lab+'</button>'; }).join("");
   host.querySelectorAll(".lw-cell").forEach(c=>c.onclick=()=>{ law.qi=+c.dataset.i; law.sel=[]; law.shown=false; render(); }); }
 
@@ -2882,7 +2938,7 @@ function lawCard(body){
   body.innerHTML='<div class="lw-chips"><span class="lw-lb">分区</span>'+parts.map(([k,t])=>{
       const n=cs.filter(z=>(z.part||"k")===k&&(law.csubj==="全部"||z.subject===law.csubj)).length;
       return '<button class="lw-chip'+(law.cpart===k?" on":"")+'" data-k="cpart" data-v="'+k+'">'+t+" "+n+'</button>'; }).join("")+'</div>'+
-    lawChips("科目","csubj",["全部","刑法","宪法"])+
+    lawChips("科目","csubj",["全部"].concat([...new Set(lawCs().map(c=>c.subject))]))+
     '<div class="lw-chips wrap"><span class="lw-lb">板块</span>'+cls.map(v=>
       '<button class="lw-chip sm'+(law.ccl===v?" on":"")+'" data-k="ccl" data-v="'+esc(v)+'">'+esc(v)+'</button>').join("")+'</div>'+
     '<div id="lwC"></div>';
@@ -3009,6 +3065,394 @@ function lawExport(list,tot,wr,from,fzl){
   h.querySelector("#lwDl").href=url;
   h.querySelector("#lwCopy").onclick=()=>{ const ta=h.querySelector("#lwTa"); ta.select(); ta.setSelectionRange(0,999999);
     try{ document.execCommand("copy"); toast("已复制 ✓"); }catch(e){ toast("请手动长按选择复制"); } };
+}
+
+/* ===== 10.8 法律题库 END ===== *//* ===== 10.9 · 管理题库 (140题 + 逐选项知识点 + 不确定标记 + 知识点薄弱度 + 错题本) =====
+   独立数据 mgBank(题目/知识点,静态) + mgState(做题状态/日志/批注,热),不改复习/排期/掌握度内核。
+   与法律题库(10.8)的关键差别:每个选项都挂了知识点,判分后点选项才展开;
+   选项可标「不确定」,答对但标了不确定 = 蒙对,照样计入薄弱统计。 */
+const MG_LOG_CAP=6000;
+const MG_SECS=["单选题","多选题","判断题"];
+const MG_LET=["A","B","C","D"];
+let mg={ tab:"quiz", sec:"全部", scope:"全部", kp:"", qi:0, wsort:"weak", wdone:false, book:"全部", rev:{}, revKey:"" };
+let mgTimer=null;
+
+function mgB(){ return db.mgBank||(db.mgBank={version:1,modules:[],points:[],questions:[]}); }
+function mgQs(){ return mgB().questions||[]; }
+function mgPts(){ return mgB().points||[]; }
+function mgMods(){ return mgB().modules||[]; }
+function mgPMap(){ const m={}; mgPts().forEach(p=>m[p.id]=p); return m; }
+function mgS(){ const s=db.mgState||(db.mgState={q:{},log:[],note:{},ui:{}});
+  if(!s.q)s.q={}; if(!Array.isArray(s.log))s.log=[]; if(!s.note)s.note={}; if(!s.ui)s.ui={}; return s; }
+function mgQSt(id){ return mgS().q[id]||null; }
+function mgQEnsure(id){ const s=mgS(); let x=s.q[id];
+  if(!x){ x={pick:"",unsure:[],qUns:false,ans:false,ok:null,n:0,w:0,last:null}; s.q[id]=x; }
+  if(!Array.isArray(x.unsure)) x.unsure=[]; return x; }
+/* 有任何不确定标记(选项级或整题级) */
+function mgIsUns(x){ return !!x && (x.qUns || (x.unsure&&x.unsure.length>0)); }
+/* 错题本 = 做错过、或者「蒙对」(答对但标了不确定) */
+function mgInBook(q){ const x=mgQSt(q.id); return !!x && x.ans && (!x.ok || mgIsUns(x)); }
+function mgPct(a,b){ return b?Math.round(a/b*100):0; }
+
+function mgGrade(q,x){
+  x.ans=true; x.ok=(x.pick===q.answer); x.n++; if(!x.ok) x.w++; x.last=today();
+  const s=mgS(); s.log.push({d:today(),q:q.id,ok:x.ok?1:0,u:mgIsUns(x)?1:0});
+  if(s.log.length>MG_LOG_CAP) s.log=s.log.slice(-Math.floor(MG_LOG_CAP*0.7));
+  save();
+}
+function mgCancel(){ if(mgTimer){ clearTimeout(mgTimer); mgTimer=null; } }
+function mgGo(d,list){ mgCancel(); const n=mg.qi+d; if(n<0||n>=list.length) return; mg.qi=n; render(); }
+
+function mgList(){ return mgQs().filter(q=>{
+  if(mg.sec!=="全部" && q.sec!==mg.sec) return false;
+  if(mg.kp && (q.kps||[]).indexOf(mg.kp)<0) return false;
+  const x=mgQSt(q.id);
+  if(mg.scope==="未做")   return !(x&&x.ans);
+  if(mg.scope==="做错")   return !!(x&&x.ans&&!x.ok);
+  if(mg.scope==="不确定") return mgIsUns(x);
+  if(mg.scope==="做对")   return !!(x&&x.ans&&x.ok);
+  return true; }); }
+
+function mgKpStats(){
+  const st={}; mgPts().forEach(p=>st[p.id]={id:p.id,total:0,done:0,right:0,wrong:0,guess:0});
+  mgQs().forEach(q=>{ const x=mgQSt(q.id);
+    (q.kps||[]).forEach(id=>{ const s=st[id]; if(!s) return; s.total++;
+      if(x&&x.ans){ s.done++; const u=mgIsUns(x);
+        if(x.ok){ s.right++; if(u) s.guess++; } else s.wrong++; } }); });
+  Object.keys(st).forEach(k=>{ const s=st[k]; s.score=s.done?(s.wrong*2+s.guess)/s.done:-1; });
+  return st;
+}
+/* 选项说明里的 **xx** 渲染成加粗(先转义再替换,不引入注入风险) */
+function mgBold(s){ return esc(s).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>"); }
+function mgKpBox(ids,prefix,text){
+  const P=mgPMap();
+  const tags=(ids||[]).map(id=>'<button class="mg-nm" data-mgkp="'+esc(id)+'">'+esc(P[id]?P[id].name:id)+'</button>').join("");
+  const body=text?mgBold(text):(ids||[]).map(id=>P[id]?esc(P[id].hint):"").filter(Boolean).join("；");
+  return '<div class="mg-okp">'+tags+(prefix?esc(prefix):"")+body+'</div>';
+}
+
+/* ---------- 模块入口 ---------- */
+function mountMg(main){
+  const wrap=document.createElement("div"); wrap.className="lw";
+  const nBook=mgQs().filter(q=>mgInBook(q)).length;
+  const tabs=[["quiz","📝 刷题"],["weak","📊 薄弱点"],["book","🗂️ 错题本"],["log","📄 记录"]];
+  wrap.innerHTML='<div class="lw-tabs">'+tabs.map(([k,t])=>
+    '<button class="lw-tab'+(mg.tab===k?" on":"")+'" data-t="'+k+'">'+t+
+    (k==="book"&&nBook?' <b>'+nBook+'</b>':"")+'</button>').join("")+'</div><div id="mgBody"></div>';
+  main.appendChild(wrap);
+  wrap.querySelectorAll(".lw-tab").forEach(b=>b.onclick=()=>{ mgCancel(); mg.tab=b.dataset.t; render(); });
+  const body=wrap.querySelector("#mgBody");
+  if(!mgQs().length){
+    body.innerHTML='<div class="empty">管理题库还是空的。<br><span class="lw-hint">载入「管理题库.json」（140 题 · 单选65／多选20／判断55，含逐选项知识点）。只写入题目与知识点，不影响日历、背诵库等其它数据。</span></div>'+
+      '<div class="lw-actions"><button class="lw-go" id="mgImp">导入管理题库</button></div>';
+    body.querySelector("#mgImp").onclick=mgImport; return; }
+  if(mg.tab==="quiz") mgQuiz(body);
+  else if(mg.tab==="weak") mgWeak(body);
+  else if(mg.tab==="book") mgBook(body);
+  else mgLog(body);
+  body.querySelectorAll("[data-mgkp]").forEach(b=>b.onclick=()=>{
+    mgCancel(); mg.kp=b.dataset.mgkp; mg.sec="全部"; mg.scope="全部"; mg.qi=0; mg.tab="quiz"; render(); });
+}
+
+/* ---------- 刷题 ---------- */
+function mgQuiz(body){
+  const list=mgList();
+  if(mg.qi>=list.length) mg.qi=Math.max(0,list.length-1);
+  const P=mgPMap();
+  const chip=(k,v,cur,extra)=>'<button class="lw-chip'+(cur===v?" on":"")+'" data-'+k+'="'+esc(v)+'">'+esc(v)+(extra||"")+'</button>';
+  let done=0,right=0,uns=0;
+  list.forEach(q=>{ const x=mgQSt(q.id); if(x&&x.ans){ done++; if(x.ok) right++; if(mgIsUns(x)) uns++; } });
+  const autoOn=mgS().ui.autoNext!==false;
+
+  let h='<div class="mg-help">🖐 <b>不确定标记</b>：选项右边的 <b>?</b> —— 拿不准就点亮；下面还有「整题拿不准」。'+
+    '标了 ? 的题<b>即使做对也计入薄弱统计</b>，专门揪出「蒙对的」知识点。<br>'+
+    '⚡ <b>答对且没标不确定 → 自动跳下一题</b>；答错或蒙对就停下来看解析。<br>'+
+    '💡 <b>判分之后</b>点任意选项，展开这一项考的是什么（对的错的都有）；判分前点击只是选答案，不会误触。</div>';
+  h+='<div class="lw-chips"><span class="lw-lb">题型</span>'+
+    ["全部"].concat(MG_SECS).map(s=>chip("mgsec",s,mg.sec,
+      ' <span style="opacity:.6">'+(s==="全部"?mgQs().length:mgQs().filter(q=>q.sec===s).length)+'</span>')).join("")+'</div>';
+  h+='<div class="lw-chips"><span class="lw-lb">范围</span>'+
+    ["全部","未做","做错","不确定","做对"].map(s=>chip("mgsc",s,mg.scope)).join("")+
+    (mg.kp?'<button class="lw-chip on" id="mgKpClr">知识点：'+esc(P[mg.kp]?P[mg.kp].name:mg.kp)+' ✕</button>':"")+'</div>';
+  h+='<div class="lw-stat">共 <b>'+list.length+'</b> 题 · 已做 <b>'+done+'</b> · 答对 <b class="g">'+right+'</b> · 不确定 <b>'+uns+'</b>'+
+    (done?' · 正确率 <b>'+mgPct(right,done)+'%</b>':"")+
+    ' <button class="lw-chip sm" id="mgAuto" style="margin-left:8px">答对自动下一题：'+(autoOn?"开":"关")+'</button>'+
+    ' <button class="lw-chip sm" id="mgJump">跳到未做 ▸</button></div>';
+
+  const q=list[mg.qi];
+  if(!q){ h+='<div class="empty">这个筛选下没有题目</div>'; body.innerHTML=h; mgQuizBind(body,list,null,null); return; }
+  const x=mgQEnsure(q.id);
+  if(mg.revKey!==q.id){ mg.revKey=q.id; mg.rev={}; }
+  const okp=q.okp||{};
+  const isTF=q.sec==="判断题", isMulti=q.sec==="多选题";
+  const picks=(x.pick||"").split("").filter(Boolean);
+
+  h+='<div class="lw-card"><div class="lw-meta"><span class="lw-tag t-x">'+esc(q.sec)+'</span>'+
+    '<span class="lw-num">第 '+q.num+' 题</span><span class="lw-num">· 教材 p'+esc(q.page)+'</span>'+
+    (q.tip?'<span class="lw-tag t-y">选非题</span>':"")+
+    (isMulti?'<span class="lw-tag t-h">可多选</span>':"")+
+    (x.ans?(x.ok?(mgIsUns(x)?'<span class="lw-tag t-y">蒙对</span>':'<span class="lw-tag t-g">答对</span>'):'<span class="lw-tag t-r">答错</span>'):"")+
+    '<span class="lw-pos">'+(mg.qi+1)+' / '+list.length+'</span></div>';
+  h+='<div class="lw-stem">'+esc(q.stem)+'</div>';
+
+  if(isTF){
+    h+='<div class="lw-opts tf">'+["√","×"].map(v=>{
+      let c="lw-opt";
+      if(x.ans){ c+=" locked"; if(v===q.answer)c+=" hit"; else if(v===x.pick)c+=" miss"; }
+      else if(picks.indexOf(v)>=0) c+=" sel";
+      return '<button class="'+c+'" data-mgp="'+v+'">'+v+'</button>'; }).join("")+'</div>';
+    if(x.ans&&mg.rev["_"]) h+=mgKpBox(q.kps,"这道判断题考的是：");
+    if(x.ans) h+='<div class="mg-tap">💡 点 √／× 看这道题的考点</div>';
+  }else{
+    h+='<div class="lw-opts">'+MG_LET.filter(L=>q.options&&q.options[L]!=null).map(L=>{
+      let c="lw-opt";
+      if(x.ans){ c+=" locked"; if(q.answer.indexOf(L)>=0)c+=" hit"; else if(picks.indexOf(L)>=0)c+=" miss"; }
+      else{ if(picks.indexOf(L)>=0) c+=" sel"; if(x.unsure.indexOf(L)>=0) c+=" unsure"; }
+      const mk=x.unsure.indexOf(L)>=0, one=okp[L], rev=x.ans&&mg.rev[L]&&one;
+      return '<div class="mg-ow"><div class="'+c+'" data-mgp="'+L+'"'+(x.ans&&one?' title="点一下看这一项考的是什么"':"")+'>'+
+        '<i>'+L+'.</i><span style="flex:1">'+esc(q.options[L])+'</span>'+
+        '<button class="mg-qm'+(mk?" on":"")+'" data-mgm="'+L+'" title="标记这一项拿不准">?</button></div>'+
+        (rev?mgKpBox([one[0]],"",one[1]):"")+'</div>'; }).join("")+'</div>';
+    if(x.ans) h+='<div class="mg-tap">💡 点任意选项，看这一项到底在考什么（对的错的都有）</div>';
+  }
+  h+='<button class="mg-uns'+(x.qUns?" on":"")+'" id="mgQU"><i>'+(x.qUns?"✓":"")+'</i>整题拿不准（说不清为什么选它）</button>';
+  if(!x.ans) h+='<div class="lw-actions"><button class="lw-go" id="mgSub"'+(picks.length?"":" disabled")+'>提交判分</button></div>';
+  else{
+    h+='<div class="lw-verdict '+(x.ok?(mgIsUns(x)?"warn":"ok"):"no")+'">'+(x.ok?(mgIsUns(x)?"✅ 答对了，但你标了不确定 —— 已计入薄弱统计":"✅ 答对了"):"❌ 答错了")+
+      '　你选 <b>'+esc(x.pick||"—")+'</b>　正确 <b>'+esc(q.answer)+'</b>　（做 '+x.n+' 次 / 错 '+x.w+' 次）</div>';
+    h+='<div class="mg-exp"><b>【金标尺解析】</b>'+(q.tip?'　⚠️ '+esc(q.tip):"")+'<br>'+esc(q.explain)+'</div>';
+    if(q.note) h+='<div class="mg-exp"><b>📌 备注</b><br>'+esc(q.note)+'</div>';
+    if(q.hand) h+='<div class="mg-tap">📝 试卷上原有笔迹：<b>'+esc(q.hand)+'</b>'+(q.handNote?"　"+esc(q.handNote):"")+'</div>';
+  }
+  h+='<div class="lw-chips" style="margin-top:11px"><span class="lw-lb">知识点</span>'+
+    (q.kps||[]).map(id=>'<button class="lw-chip sm" data-mgkp="'+esc(id)+'">'+esc(P[id]?P[id].name:id)+'</button>').join("")+'</div>';
+  h+='<textarea id="mgNote" class="lw-ta" style="height:56px;margin-top:9px" placeholder="给这道题写批注：为什么错、和哪道题像、书上哪一页…">'+esc(mgS().note[q.id]||"")+'</textarea>';
+  h+='<div class="lw-actions"><button class="lw-go alt" id="mgPrev"'+(mg.qi<=0?" disabled":"")+'>← 上一题</button>'+
+    (x.ans?'<button class="lw-go alt" id="mgRedo">重做本题</button>':"")+
+    '<button class="lw-go" id="mgNext"'+(mg.qi>=list.length-1?" disabled":"")+'>下一题 →</button></div></div>';
+
+  h+='<div class="lw-lb2">题目总览（绿＝对，红＝错，右上橙点＝有不确定标记）</div><div class="mg-grid">'+
+    MG_SECS.map(sec=>{ const arr=list.filter(qq=>qq.sec===sec); if(!arr.length) return "";
+      return '<div style="width:100%;font-size:11.5px;color:var(--text3);margin:6px 0 2px">'+sec+'</div>'+
+        arr.map(qq=>{ const xx=mgQSt(qq.id); let c="mg-cell";
+          if(xx&&xx.ans) c+=xx.ok?" ok":" no";
+          if(q&&qq.id===q.id) c+=" cur";
+          return '<button class="'+c+'" data-mgg="'+esc(qq.id)+'">'+qq.num+(mgIsUns(xx)?"<s></s>":"")+'</button>'; }).join(""); }).join("")+'</div>';
+
+  body.innerHTML=h;
+  mgQuizBind(body,list,q,x);
+}
+function mgQuizBind(body,list,q,x){
+  body.querySelectorAll("[data-mgsec]").forEach(b=>b.onclick=()=>{ mgCancel(); mg.sec=b.dataset.mgsec; mg.qi=0; render(); });
+  body.querySelectorAll("[data-mgsc]").forEach(b=>b.onclick=()=>{ mgCancel(); mg.scope=b.dataset.mgsc; mg.qi=0; render(); });
+  const clr=body.querySelector("#mgKpClr"); if(clr) clr.onclick=()=>{ mg.kp=""; mg.qi=0; render(); };
+  const au=body.querySelector("#mgAuto");
+  if(au) au.onclick=()=>{ const u=mgS().ui; u.autoNext=(u.autoNext===false); mgCancel(); save(); render(); };
+  const jp=body.querySelector("#mgJump");
+  if(jp) jp.onclick=()=>{ const i=list.findIndex(qq=>{ const xx=mgQSt(qq.id); return !(xx&&xx.ans); });
+    if(i<0){ toast("这个范围内都做完啦"); return; } mgCancel(); mg.qi=i; render(); };
+  body.querySelectorAll("[data-mgg]").forEach(b=>b.onclick=()=>{
+    const i=list.findIndex(qq=>qq.id===b.dataset.mgg); if(i>=0){ mgCancel(); mg.qi=i; render(); } });
+  if(!q) return;
+  body.querySelectorAll("[data-mgp]").forEach(b=>b.onclick=(ev)=>{
+    if(ev.target.closest("[data-mgm]")) return;
+    const v=b.dataset.mgp;
+    if(x.ans){ const k=(q.sec==="判断题")?"_":v; mg.rev[k]=!mg.rev[k]; render(); return; }
+    if(q.sec==="多选题"){ let cur=(x.pick||"").split("").filter(Boolean);
+      const i=cur.indexOf(v); if(i>=0) cur.splice(i,1); else cur.push(v);
+      x.pick=cur.sort().join(""); }
+    else x.pick=v;
+    save(); render(); });
+  body.querySelectorAll("[data-mgm]").forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation();
+    const L=b.dataset.mgm, i=x.unsure.indexOf(L);
+    if(i>=0) x.unsure.splice(i,1); else x.unsure.push(L);
+    x.unsure.sort(); save(); render(); });
+  const qu=body.querySelector("#mgQU"); if(qu) qu.onclick=()=>{ x.qUns=!x.qUns; save(); render(); };
+  const nt=body.querySelector("#mgNote");
+  if(nt) nt.onchange=()=>{ const v=nt.value.trim(); const s=mgS();
+    if(v) s.note[q.id]=v; else delete s.note[q.id]; save(); };
+  const sb=body.querySelector("#mgSub");
+  if(sb) sb.onclick=()=>{
+    if(!x.pick){ toast("还没选答案"); return; }
+    mgGrade(q,x); render();
+    if(x.ok && !mgIsUns(x) && mgS().ui.autoNext!==false && mg.qi<list.length-1){
+      toast("✅ 正确，下一题"); mgCancel();
+      const id=q.id;
+      mgTimer=setTimeout(()=>{ mgTimer=null;
+        const l2=mgList(); if(l2[mg.qi]&&l2[mg.qi].id===id) mgGo(1,l2); },700);   /* 期间自己翻走了就不抢 */
+    } };
+  const rd=body.querySelector("#mgRedo");
+  if(rd) rd.onclick=()=>{ mgCancel(); x.ans=false; x.pick=""; x.ok=null; save(); render(); };
+  const pv=body.querySelector("#mgPrev"); if(pv) pv.onclick=()=>mgGo(-1,list);
+  const nx=body.querySelector("#mgNext"); if(nx) nx.onclick=()=>mgGo(1,list);
+}
+
+/* ---------- 薄弱点 ---------- */
+function mgWeak(body){
+  const st=mgKpStats(), P=mgPts();
+  let h='<div class="mg-help">薄弱指数 ＝（错题数 × 2 ＋ 蒙对题数 × 1）÷ 已做题数。「蒙对」＝答对了但标了不确定。<br>条越长越薄弱。点知识点名字可以只刷这个知识点下的题。</div>';
+  h+='<div class="lw-chips">'+[["weak","按薄弱排序"],["mod","按模块分组"]].map(([k,t])=>
+    '<button class="lw-chip'+(mg.wsort===k?" on":"")+'" data-mgws="'+k+'">'+t+'</button>').join("")+
+    '<button class="lw-chip'+(mg.wdone?" on":"")+'" id="mgWOnly">只看已做</button></div>';
+  const row=p=>{ const s=st[p.id]; if(mg.wdone&&!s.done) return "";
+    const rate=s.done?mgPct(s.right,s.done):null;
+    const w=s.score<0?0:Math.min(100,s.score/2*100);
+    const col=s.score<0?"var(--fill2)":(s.score>=1?"var(--red)":s.score>=.5?"var(--orange)":s.score>0?"#d0a000":"var(--green)");
+    return '<tr><td><button class="mg-kn" data-mgkp="'+esc(p.id)+'">'+esc(p.name)+'</button><div class="mg-kh">'+esc(p.hint)+'</div></td>'+
+      '<td class="mg-n">'+s.done+'/'+s.total+'</td>'+
+      '<td class="mg-n'+(s.wrong?" r":"")+'">'+(s.wrong||"")+'</td>'+
+      '<td class="mg-n'+(s.guess?" o":"")+'">'+(s.guess||"")+'</td>'+
+      '<td class="mg-n">'+(rate===null?"—":rate+"%")+'</td>'+
+      '<td><div class="mg-pb"><i style="width:'+w+'%;background:'+col+'"></i></div></td></tr>'; };
+  let rows='<tr><th style="width:42%">知识点</th><th class="mg-n">已做/总</th><th class="mg-n">错</th><th class="mg-n">蒙对</th><th class="mg-n">正确率</th><th style="width:20%">薄弱指数</th></tr>';
+  if(mg.wsort==="weak"){
+    rows+=P.slice().sort((a,b)=>{ const A=st[a.id],B=st[b.id];
+      return (B.score!==A.score)?B.score-A.score:B.wrong-A.wrong; }).map(row).join("");
+  }else{
+    mgMods().forEach(m=>{ const r=P.filter(p=>p.m===m.id).map(row).join(""); if(!r) return;
+      rows+='<tr class="mod"><td colspan="6">'+esc(m.name)+'　<span style="font-weight:400;color:var(--text3)">'+esc(m.desc||"")+'</span></td></tr>'+r; });
+  }
+  h+='<div class="lw-card" style="padding:10px 13px"><table class="mg-kb">'+rows+'</table></div>';
+  body.innerHTML=h;
+  body.querySelectorAll("[data-mgws]").forEach(b=>b.onclick=()=>{ mg.wsort=b.dataset.mgws; render(); });
+  body.querySelector("#mgWOnly").onclick=()=>{ mg.wdone=!mg.wdone; render(); };
+}
+
+/* ---------- 错题本 ---------- */
+function mgBook(body){
+  const P=mgPMap();
+  let arr=mgQs().filter(q=>mgInBook(q));
+  if(mg.book==="只看错题")   arr=arr.filter(q=>!mgQSt(q.id).ok);
+  if(mg.book==="只看不确定") arr=arr.filter(q=>mgIsUns(mgQSt(q.id)));
+  if(mg.book==="只看蒙对")   arr=arr.filter(q=>{ const x=mgQSt(q.id); return x.ok&&mgIsUns(x); });
+  let h='<div class="lw-chips">'+["全部","只看错题","只看不确定","只看蒙对"].map(s=>
+    '<button class="lw-chip'+(mg.book===s?" on":"")+'" data-mgbk="'+esc(s)+'">'+s+'</button>').join("")+'</div>';
+  if(!arr.length){ h+='<div class="empty">还没有错题或不确定的题<br><span class="lw-hint">去「刷题」做几道吧</span></div>'; }
+  arr.forEach(q=>{ const x=mgQSt(q.id);
+    h+='<div class="lw-card"><div class="lw-meta"><span class="lw-tag t-x">'+esc(q.sec)+'</span>'+
+      '<span class="lw-num">第 '+q.num+' 题</span><span class="lw-num">· p'+esc(q.page)+'</span>'+
+      (q.tip?'<span class="lw-tag t-y">选非题</span>':"")+
+      (!x.ok?'<span class="lw-tag t-r">做错</span>':"")+
+      (mgIsUns(x)?'<span class="lw-tag t-y">'+(x.ok?"蒙对":"不确定")+'</span>':"")+
+      '<button class="lw-chip sm lw-pos" data-mgq="'+esc(q.id)+'">去重做 ▸</button></div>'+
+      '<div class="lw-stem" style="font-size:15px">'+esc(q.stem)+'</div>';
+    if(q.sec!=="判断题"&&q.options){
+      h+='<div class="lw-opts">'+MG_LET.filter(L=>q.options[L]!=null).map(L=>{
+        let c="lw-opt"; if(q.answer.indexOf(L)>=0)c+=" hit"; else if((x.pick||"").indexOf(L)>=0)c+=" miss";
+        return '<div class="'+c+'"><i>'+L+'.</i><span style="flex:1">'+esc(q.options[L])+'</span>'+
+          (x.unsure.indexOf(L)>=0?'<span class="mg-qm on">?</span>':"")+'</div>'; }).join("")+'</div>';
+    }
+    h+='<div class="lw-verdict no" style="margin-top:10px">你选 <b>'+esc(x.pick)+'</b>　正确 <b>'+esc(q.answer)+'</b>'+
+      (x.qUns?"　· 整题拿不准":"")+'　（做 '+x.n+' 次 / 错 '+x.w+' 次）</div>'+
+      '<div class="mg-exp"><b>【金标尺解析】</b><br>'+esc(q.explain)+'</div>'+
+      (mgS().note[q.id]?'<div class="mg-exp"><b>📌 我的批注</b><br>'+esc(mgS().note[q.id])+'</div>':"")+
+      '<div class="lw-chips" style="margin-top:10px"><span class="lw-lb">知识点</span>'+
+      (q.kps||[]).map(id=>'<button class="lw-chip sm" data-mgkp="'+esc(id)+'">'+esc(P[id]?P[id].name:id)+'</button>').join("")+'</div></div>';
+  });
+  body.innerHTML=h;
+  body.querySelectorAll("[data-mgbk]").forEach(b=>b.onclick=()=>{ mg.book=b.dataset.mgbk; render(); });
+  body.querySelectorAll("[data-mgq]").forEach(b=>b.onclick=()=>{
+    mg.sec="全部"; mg.scope="全部"; mg.kp=""; mg.tab="quiz";
+    const i=mgList().findIndex(qq=>qq.id===b.dataset.mgq); if(i>=0) mg.qi=i; render(); });
+}
+
+/* ---------- 记录 ---------- */
+function mgLog(body){
+  const s=mgS(), from=addDays(today(),-29);
+  const recent=s.log.filter(o=>o.d>=from);
+  const tot=recent.length, wr=recent.filter(o=>!o.ok).length;
+  const byQ={}; recent.filter(o=>!o.ok).forEach(o=>byQ[o.q]=(byQ[o.q]||0)+1);
+  const list=Object.keys(byQ).map(id=>({q:mgQs().find(x=>x.id===id),n:byQ[id]}))
+    .filter(o=>o.q).sort((a,b)=>b.n-a.n);
+  let done=0,right=0,uns=0,guess=0;
+  mgQs().forEach(q=>{ const x=mgQSt(q.id); if(!x||!x.ans) return; done++;
+    if(x.ok) right++; if(mgIsUns(x)){ uns++; if(x.ok) guess++; } });
+  const st=mgKpStats();
+  const weak=mgPts().filter(p=>st[p.id].done&&st[p.id].score>0)
+    .sort((a,b)=>st[b.id].score-st[a.id].score).slice(0,8);
+  let h='<div class="lw-stat">总题 <b>'+mgQs().length+'</b> · 已做 <b>'+done+'</b> · 答对 <b class="g">'+right+'</b> · 答错 <b class="r">'+(done-right)+'</b>'+
+    (done?' · 正确率 <b>'+mgPct(right,done)+'%</b>':"")+'<br>标了不确定 <b>'+uns+'</b> 题，其中蒙对 <b>'+guess+'</b> 题'+
+    '<br>近 30 天：做题 <b>'+tot+'</b> 次，做错 <b class="r">'+wr+'</b> 次</div>';
+  h+='<div class="lw-lb2">最薄弱的知识点（前 8）</div>';
+  h+=weak.length?('<div class="lw-card" style="padding:10px 13px"><table class="mg-kb">'+
+    weak.map(p=>{ const o=st[p.id];
+      return '<tr><td><button class="mg-kn" data-mgkp="'+esc(p.id)+'">'+esc(p.name)+'</button><div class="mg-kh">'+esc(p.hint)+'</div></td>'+
+        '<td class="mg-n">错 '+o.wrong+' 蒙对 '+o.guess+'</td><td class="mg-n">'+mgPct(o.right,o.done)+'%</td></tr>'; }).join("")+
+    '</table></div>'):'<div class="empty">还没有足够数据</div>';
+  h+='<div class="lw-actions"><button class="lw-go" id="mgExp">导出近 30 天错题 .md</button>'+
+    '<button class="lw-go alt" id="mgImp2">导入 / 更新题库</button></div>';
+  h+='<div class="lw-lb2">近 30 天错过的题（'+list.length+'）</div>'+
+    (list.length?list.map(o=>{ const x=mgQSt(o.q.id)||{w:0};
+      return '<div class="lw-row h'+Math.min(4,o.n)+' static"><span class="lw-rn">'+o.q.sec[0]+o.q.num+'</span>'+
+        '<span class="lw-rs">'+esc(o.q.stem.slice(0,40))+'…</span><span class="lw-rw">本月错'+o.n+'次</span></div>'; }).join("")
+      :'<div class="empty">近 30 天没有错题记录</div>');
+  body.innerHTML=h;
+  body.querySelector("#mgExp").onclick=()=>mgExport(list,tot,wr,from,st);
+  body.querySelector("#mgImp2").onclick=mgImport;
+}
+function mgExport(list,tot,wr,from,st){
+  let md="# 管理错题记录 "+from+" ~ "+today()+"\n\n";
+  md+="近30天：做题 "+tot+" 次，做错 "+wr+" 次，正确率 "+(tot?Math.round((tot-wr)/tot*100):0)+"%\n\n";
+  md+="## 知识点薄弱排行（错×2 ＋ 蒙对×1 ÷ 已做）\n\n";
+  mgPts().filter(p=>st[p.id].done).sort((a,b)=>st[b.id].score-st[a.id].score).forEach(p=>{ const o=st[p.id];
+    md+="- **"+p.name+"**　已做 "+o.done+"/"+o.total+"，错 "+o.wrong+"，蒙对 "+o.guess+"，正确率 "+mgPct(o.right,o.done)+"%　薄弱 "+o.score.toFixed(2)+"\n"; });
+  md+="\n## 近一个月错过的题\n\n";
+  list.forEach(o=>{ const x=mgQSt(o.q.id)||{w:0,pick:"",unsure:[]};
+    md+="### "+o.q.sec+" 第"+o.q.num+"题（本月错 "+o.n+" 次 / 累计错 "+x.w+" 次）\n";
+    md+=o.q.stem+"\n";
+    if(o.q.options) Object.keys(o.q.options).forEach(k=>{ md+=k+". "+o.q.options[k]+"\n"; });
+    md+="**你选：**"+(x.pick||"—")+"　**答案：**"+o.q.answer+"\n";
+    const um=[]; if((x.unsure||[]).length) um.push("选项 "+x.unsure.join("、")); if(x.qUns) um.push("整题拿不准");
+    if(um.length) md+="**不确定标记：**"+um.join("；")+"\n";
+    md+="**知识点：**"+(o.q.kps||[]).map(id=>{ const p=mgPts().find(y=>y.id===id); return p?p.name:id; }).join("、")+"\n";
+    md+="**解析：**"+(o.q.explain||"")+"\n";
+    if(mgS().note[o.q.id]) md+="**我的批注：**"+mgS().note[o.q.id]+"\n";
+    md+="\n"; });
+  const blob=new Blob([md],{type:"text/markdown;charset=utf-8"}), url=URL.createObjectURL(blob);
+  const h=openModal("导出管理错题记录",
+    '<p class="lw-hint">近一个月的错题明细 + 知识点薄弱排行（含题干、你的选择、不确定标记、解析、批注）。可直接发给 Claude 生成卡片。</p>'+
+    '<textarea id="mgTa" class="lw-ta" readonly>'+esc(md)+'</textarea>'+
+    '<div class="lw-actions"><button class="lw-go" id="mgCopy">复制全部</button>'+
+    '<a class="lw-go alt" id="mgDl" download="管理错题-'+today()+'.md">下载 .md 文件</a></div>');
+  h.querySelector("#mgDl").href=url;
+  h.querySelector("#mgCopy").onclick=()=>{ const ta=h.querySelector("#mgTa"); ta.select(); ta.setSelectionRange(0,999999);
+    try{ document.execCommand("copy"); toast("已复制 ✓"); }catch(e){ toast("请手动长按选择复制"); } };
+}
+/* 只覆盖 mgBank(题目+知识点),不动做题记录,更不动日历/背诵库/卡片背诵等其它数据 */
+async function mgAdopt(o){
+  const qs=Array.isArray(o.questions)?o.questions:null;
+  if(!qs||!qs.length) throw new Error("文件里没有 questions");
+  const bad=qs.filter(q=>!q.id||!q.sec||!q.answer);
+  if(bad.length) throw new Error("有 "+bad.length+" 条缺 id/sec/answer");
+  db.mgBank={version:o.version||1, chapter:o.chapter||"", source:o.source||"",
+    modules:Array.isArray(o.modules)?o.modules:[], points:Array.isArray(o.points)?o.points:[], questions:qs};
+  await save(); closeModal(); mg.qi=0; mg.revKey=""; render();
+  toast("管理题库已更新："+qs.length+" 题 / "+db.mgBank.points.length+" 个知识点");
+}
+function mgImport(){
+  const online=/^https?:/.test(location.protocol);
+  const h=openModal("导入 / 更新管理题库",
+    '<p class="lw-hint">载入「管理题库.json」。<b>只写入题目与知识点</b>；你的做题记录、错题本、批注，以及日历/背诵库/课程等数据都不受影响。</p>'+
+    (online?'<div class="lw-actions" style="margin-bottom:11px"><button class="lw-go" id="mgNet">📶 从网上载入（手机推荐）</button></div>':"")+
+    '<p class="lw-hint">或者自己选文件：</p>'+
+    '<input type="file" id="mgFile" accept=".json,application/json">'+
+    '<div id="mgMsg" class="lw-hint" style="margin-top:9px"></div>');
+  const net=h.querySelector("#mgNet");
+  if(net) net.onclick=async()=>{
+    const msg=h.querySelector("#mgMsg"); msg.textContent="下载中…";
+    try{ const rs=await fetch("./管理题库.json",{cache:"no-store"});
+      if(!rs.ok) throw new Error("HTTP "+rs.status);
+      await mgAdopt(await rs.json());
+    }catch(err){ msg.textContent="服务器上没有题库文件（"+err.message+"）。请用下面的「选择文件」，或在已开云同步的设备上导入一次，其它设备会自动同步过来。"; }
+  };
+  h.querySelector("#mgFile").onchange=(e)=>{
+    const f=e.target.files&&e.target.files[0]; if(!f) return;
+    const msg=h.querySelector("#mgMsg"); msg.textContent="读取中…";
+    const rd=new FileReader();
+    rd.onload=async()=>{ try{ await mgAdopt(JSON.parse(rd.result)); }
+      catch(err){ msg.textContent="导入失败："+err.message; } };
+    rd.readAsText(f);
+  };
 }
 /* ===== 11. 设置 ===== */
 function mountSettings(main){
