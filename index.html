@@ -4386,8 +4386,11 @@ function mountWr(main){
 }
 
 function wrEmpty(main){
+  /* 线上版会自动拉；本地打开的桌面版没有同域文件，直接引导选文件 */
+  const online=/^https?:/.test(location.protocol);
   main.innerHTML='<div class="wr-hd"><button class="qz-back" id="wrBack">‹ 刷题</button><h2>公文写作</h2></div>'+
-    '<div class="empty">正在载入写作资料…<br><span class="qz-sub">如果一直不出来，点下面的按钮手动载入。</span></div>'+
+    '<div class="empty">'+(online?'正在载入写作资料…<br><span class="qz-sub">如果一直不出来，点下面的按钮手动载入。</span>'
+      :'还没载入写作资料。<br><span class="qz-sub">点下面的按钮，选「计划软件\pwa发布\公文写作.json」。<br>手机上的网页版会自动载入，不用管这一步。</span>')+'</div>'+
     '<div class="qz-actions"><button class="qz-btn pri" id="wrLoad">载入公文写作资料</button></div>';
   main.querySelector("#wrBack").onclick=()=>go("quiz");
   main.querySelector("#wrLoad").onclick=wrImport;
