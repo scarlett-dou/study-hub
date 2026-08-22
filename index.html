@@ -644,7 +644,7 @@
   .qz-nav{display:flex;gap:9px;margin-top:16px;padding-top:13px;border-top:1px solid var(--sep)}
   .qz-nav .qz-btn{flex:1}
   /* 答题卡 */
-  .qz-side{flex:0 0 214px;border-left:1px solid var(--sep);background:var(--bg);padding:14px 12px}
+  .qz-side{flex:0 0 232px;border-right:1px solid var(--sep);background:var(--bg);padding:14px 12px;max-height:76vh;overflow-y:auto}
   .qz-slb{font-size:13px;font-weight:600;margin-bottom:10px}
   .qz-sheet{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
   .qz-cell{height:32px;border:1px solid var(--sep);background:var(--card);color:var(--text2);
@@ -687,9 +687,10 @@
   .qz-rvb b{color:var(--tint)}
   @media (max-width:760px){
     .qz-body{flex-direction:column}
-    .qz-side{flex:none;border-left:none;border-top:1px solid var(--sep);display:none}
+    .qz-side{flex:none;border-right:none;border-bottom:1px solid var(--sep);display:none;max-height:44vh}
     .qz-side.open{display:block}
     .qz-sheet{grid-template-columns:repeat(8,1fr)}
+    .only-narrow{display:inline-block}
     .qz-main{padding:14px}
     .qz-srow>span:first-child{flex:0 0 96px}
   }
@@ -702,6 +703,22 @@
   .qz-fzbtn.on.fz{border-color:var(--orange);background:rgba(255,149,0,.18);color:#b06800}
   .qz-fzo{border:1px solid var(--sep);background:var(--card);color:var(--text2);border-radius:7px;min-width:34px;padding:5px 9px;font-size:13px;font-weight:600;font-family:inherit}
   .qz-fzo.on{border-color:var(--orange);background:rgba(255,149,0,.2);color:#b06800}
+  /* 答题卡分组 */
+  .qz-sheet-wrap{display:flex;flex-direction:column;gap:13px}
+  .qz-sgrp{}
+  .qz-sgh{display:flex;align-items:baseline;gap:5px;font-size:12px;color:var(--text2);margin-bottom:6px}
+  .qz-sgh b{color:var(--text);font-weight:600}
+  .qz-sgh span{margin-left:auto;color:var(--text3)}
+  .only-narrow{display:none}
+  .qz-qpt{background:var(--fill);border-radius:4px;padding:1px 7px;font-size:11.5px;color:var(--text2)}
+  /* 组卷预览行 */
+  .qz-plan{display:flex;gap:14px;flex-wrap:wrap;align-items:baseline;margin-top:11px;padding-top:10px;
+    border-top:1px dashed var(--sep);font-size:12.5px;color:var(--text2)}
+  .qz-plan b{color:var(--text);font-size:14px}
+  .qz-plan .warn{color:var(--orange)}
+  .qz-plan .warn em{font-style:normal;font-size:11.5px}
+  .qz-plan .qz-total{margin-left:auto;color:var(--text)}
+  .qz-num input:disabled{opacity:.55}
   /* ===== 10.10 刷题中心 CSS END ===== */
 </style>
 
@@ -3616,11 +3633,13 @@ function mgImport(){
    自己只存一份 qzState：当前试卷 + 上次组卷配置 + 历史成绩。 */
 const QZ_MODE={practice:"练习",exam:"模拟考试"};
 const QZ_SECS=["单选题","多选题","判断题"];          // 机考卷面顺序
-/* 默认题型配比（可在组卷页改，改完记住）。按《综合测试》客观题常见结构给的起始值。 */
-const QZ_DEF_RATIO={"单选题":50,"多选题":20,"判断题":30};
-const QZ_DEF_MIN=60;                                  // 模拟考试默认时长(分钟)
-let qz={ view:"home", pick:{}, scope:"全部", ratio:null, count:40, mode:"practice", mins:QZ_DEF_MIN,
-         byRatio:true, cur:0, showExp:false, cardOpen:false };
+/* 真题结构（2027四川急需紧缺《综合测试》）：判断20×0.5 + 单选60×0.8 + 多选10×1.2 = 客观题70分，
+   另有写作1题30分（本题库没有写作题，所以卷面满分按客观题 70 分算）。 */
+const QZ_REAL={"单选题":60,"多选题":10,"判断题":20};   // 各题型题数
+const QZ_PTS ={"单选题":0.8,"多选题":1.2,"判断题":0.5}; // 各题型分值
+const QZ_DEF_MIN=120;                                 // 模拟考试默认时长(分钟)
+let qz={ view:"home", pick:{}, scope:"全部", nums:null, take:"real", mode:"practice", mins:QZ_DEF_MIN,
+         cur:0, showExp:false, cardOpen:false };
 let qzTimer=null;
 
 /* ---------- 题库适配层：把两个题库摊平成一套结构 ---------- */
@@ -3673,25 +3692,25 @@ function qzShuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.ra
 function qzBuild(){
   const pool=qzPool(); if(!pool.length) return null;
   let items=[];
-  if(qz.byRatio){
-    const r=qz.ratio||QZ_DEF_RATIO, tot=QZ_SECS.reduce((s,k)=>s+(+r[k]||0),0)||1;
+  if(qz.take==="all"){                       /* 全部：把选中范围内的题全列出来 */
+    items=QZ_SECS.reduce((a,sec)=>a.concat(qzShuffle(pool.filter(q=>q.sec===sec))),[]);
+  } else {                                   /* 按题型题数抽 */
+    const n=qz.nums||QZ_REAL;
     QZ_SECS.forEach(sec=>{
-      const want=Math.round(qz.count*(+r[sec]||0)/tot);
-      const bySec=qzShuffle(pool.filter(q=>q.sec===sec));
-      items=items.concat(bySec.slice(0,want));
+      const want=Math.max(0,+n[sec]||0);
+      items=items.concat(qzShuffle(pool.filter(q=>q.sec===sec)).slice(0,want));
     });
-    /* 某题型不够就用其它题型补足 */
-    if(items.length<qz.count){
-      const used=new Set(items.map(q=>q.src+q.id));
-      items=items.concat(qzShuffle(pool.filter(q=>!used.has(q.src+q.id))).slice(0,qz.count-items.length));
-    }
-  } else items=qzShuffle(pool.slice()).slice(0,qz.count);
-  /* 卷面按 单选→多选→判断 排序 */
-  items.sort((a,b)=>QZ_SECS.indexOf(a.sec)-QZ_SECS.indexOf(b.sec));
+  }
+  items.sort((a,b)=>QZ_SECS.indexOf(a.sec)-QZ_SECS.indexOf(b.sec));   /* 卷面：单选→多选→判断 */
+  if(!items.length) return null;
   return { id:uid(), mode:qz.mode, mins:qz.mins, createdAt:new Date().toISOString(),
-           startAt:Date.now(), items:items.map(q=>({src:q.src,id:q.id})),
+           usedMs:0, resumeAt:Date.now(), items:items.map(q=>({src:q.src,id:q.id})),
            picks:{}, marks:{}, cur:0, submitted:false, score:null };
 }
+/* 卷面满分 & 得分（按真题分值） */
+function qzFull(qs){ return qs.reduce((s,q)=>s+(QZ_PTS[q.sec]||1),0); }
+function qzGot(qs,p){ return qs.reduce((s,q)=>s+((p.picks[q.src+"|"+q.id]===q.answer)?(QZ_PTS[q.sec]||1):0),0); }
+function qzR1(n){ return Math.round(n*10)/10; }
 function qzState(){ const s=db.qzState||(db.qzState={paper:null,last:null,exams:[]});
   if(!Array.isArray(s.exams)) s.exams=[]; return s; }
 function qzPaper(){ return qzState().paper; }
@@ -3755,69 +3774,108 @@ function qzHome(main){
 /* ---------- 组卷页 ---------- */
 function qzBuilder(main){
   const t=qzTree();
-  if(!qz.ratio) qz.ratio=Object.assign({},QZ_DEF_RATIO);
+  if(!qz.nums) qz.nums=Object.assign({},QZ_REAL);
   const pool=qzPool();
+  const avail={}; QZ_SECS.forEach(k=>avail[k]=pool.filter(q=>q.sec===k).length);
+  /* 本次实际会出多少题 */
+  const plan={}; QZ_SECS.forEach(k=>plan[k]= qz.take==="all" ? avail[k] : Math.min(avail[k], Math.max(0,+qz.nums[k]||0)));
+  const total=QZ_SECS.reduce((a,k)=>a+plan[k],0);
+  const pts=qzR1(QZ_SECS.reduce((a,k)=>a+plan[k]*QZ_PTS[k],0));
   let h='<div class="qz-hd"><button class="qz-back" id="qzBack">‹ 返回</button><h2>组卷</h2></div>';
-  /* 1 科目 */
+  /* ① 科目 */
   h+='<div class="qz-sec"><div class="qz-lb">① 选科目（可多选）</div><div class="qz-subs">';
   Object.keys(t).forEach(g=>{ h+='<div class="qz-grp"><span class="qz-gname">'+esc(g)+'</span>';
-    Object.keys(t[g].subs).forEach(sn=>{ const s=t[g].subs[sn];
-      h+='<button class="qz-chip'+(qz.pick[sn]?" on":"")+'" data-subj="'+esc(sn)+'">'+esc(sn)+' <b>'+s.n+'</b></button>'; });
+    Object.keys(t[g].subs).forEach(sn=>{ const s2=t[g].subs[sn];
+      h+='<button class="qz-chip'+(qz.pick[sn]?" on":"")+'" data-subj="'+esc(sn)+'">'+esc(sn)+' <b>'+s2.n+'</b></button>'; });
     h+='</div>'; });
   h+='</div></div>';
-  /* 2 范围 */
+  /* ② 范围 */
   h+='<div class="qz-sec"><div class="qz-lb">② 范围</div><div class="qz-row">'+
      ["全部","未做","做错过","模糊","原书标记"].map(v=>'<button class="qz-chip'+(qz.scope===v?" on":"")+'" data-scope="'+v+'">'+v+'</button>').join("")+'</div></div>';
-  /* 3 题型比例 */
-  h+='<div class="qz-sec"><div class="qz-lb">③ 题型配比 <span class="qz-sub">（默认按考试结构，可改；关掉就按题库自然比例随机抽）</span></div>'+
-     '<div class="qz-row"><label class="qz-sw"><input type="checkbox" id="qzByRatio"'+(qz.byRatio?" checked":"")+'> 按配比</label>'+
-     QZ_SECS.map(s=>'<span class="qz-num"><i>'+s+'</i><input type="number" min="0" max="100" value="'+(qz.ratio[s]||0)+'" data-ratio="'+s+'"><em>%</em></span>').join("")+'</div>'+
-     '<div class="qz-avail">可用题量：'+QZ_SECS.map(s=>s+" "+pool.filter(q=>q.sec===s).length).join(" · ")+'　合计 <b>'+pool.length+'</b></div></div>';
-  /* 4 题量 + 模式 */
-  h+='<div class="qz-sec"><div class="qz-lb">④ 题量与模式</div><div class="qz-row">'+
-     '<span class="qz-num"><i>题量</i><input type="number" min="1" max="200" value="'+qz.count+'" id="qzCount"></span>'+
+  /* ③ 出题方式 */
+  const takes=[["real","按真题（单选60·多选10·判断20，70分）"],["custom","自定题数"],["all","全部题目（选中范围内的题全出）"]];
+  h+='<div class="qz-sec"><div class="qz-lb">③ 出多少题</div><div class="qz-row">'+
+     takes.map(([k,n])=>'<button class="qz-chip'+(qz.take===k?" on":"")+'" data-take="'+k+'">'+n+'</button>').join("")+'</div>';
+  if(qz.take!=="all"){
+    h+='<div class="qz-row" style="margin-top:10px">'+QZ_SECS.map(k=>
+      '<span class="qz-num"><i>'+k+'</i><input type="number" min="0" max="300" value="'+(qz.nums[k]||0)+'" data-num="'+esc(k)+'"'+(qz.take==="real"?" disabled":"")+'><em>题</em></span>').join("")+'</div>'; }
+  h+='<div class="qz-plan">'+QZ_SECS.map(k=>{
+      const short=avail[k]<((qz.take==="all")?0:(+qz.nums[k]||0));
+      return '<span'+(short?' class="warn"':'')+'>'+k+' <b>'+plan[k]+'</b>'+(short?' <em>（库里只有 '+avail[k]+' 题）</em>':'')+'</span>'; }).join("")+
+     '<span class="qz-total">合计 <b>'+total+'</b> 题 · 满分 <b>'+pts+'</b> 分</span></div></div>';
+  /* ④ 模式 */
+  h+='<div class="qz-sec"><div class="qz-lb">④ 模式</div><div class="qz-row">'+
      '<button class="qz-chip'+(qz.mode==="practice"?" on":"")+'" data-mode="practice">练习（答完就出解析）</button>'+
      '<button class="qz-chip'+(qz.mode==="exam"?" on":"")+'" data-mode="exam">模拟考试（限时·交卷才判分）</button>'+
-     '<span class="qz-num'+(qz.mode==="exam"?"":" off")+'"><i>时长</i><input type="number" min="5" max="240" value="'+qz.mins+'" id="qzMins"><em>分钟</em></span>'+
+     '<span class="qz-num'+(qz.mode==="exam"?"":" off")+'"><i>时长</i><input type="number" min="5" max="300" value="'+qz.mins+'" id="qzMins"><em>分钟</em></span>'+
      '</div></div>';
-  h+='<div class="qz-actions"><button class="qz-btn pri big" id="qzStart"'+(pool.length?"":" disabled")+'>开始（'+Math.min(qz.count,pool.length)+' 题）</button></div>';
+  h+='<div class="qz-actions"><button class="qz-btn pri big" id="qzStart"'+(total?"":" disabled")+'>开始（'+total+' 题）</button></div>';
   main.innerHTML=h;
   main.querySelector("#qzBack").onclick=()=>{ qz.view="home"; render(); };
   main.querySelectorAll("[data-subj]").forEach(b=>b.onclick=()=>{
     const k=b.dataset.subj; if(qz.pick[k]) delete qz.pick[k]; else qz.pick[k]=true; render(); });
   main.querySelectorAll("[data-scope]").forEach(b=>b.onclick=()=>{ qz.scope=b.dataset.scope; render(); });
+  main.querySelectorAll("[data-take]").forEach(b=>b.onclick=()=>{
+    qz.take=b.dataset.take; if(qz.take==="real") qz.nums=Object.assign({},QZ_REAL); render(); });
   main.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{ qz.mode=b.dataset.mode; render(); });
-  main.querySelector("#qzByRatio").onchange=e=>{ qz.byRatio=e.target.checked; render(); };
-  main.querySelectorAll("[data-ratio]").forEach(inp=>inp.onchange=e=>{ qz.ratio[inp.dataset.ratio]=+e.target.value||0; render(); });
-  main.querySelector("#qzCount").onchange=e=>{ qz.count=Math.max(1,+e.target.value||1); render(); };
+  main.querySelectorAll("[data-num]").forEach(inp=>inp.onchange=e=>{ qz.nums[inp.dataset.num]=Math.max(0,+e.target.value||0); render(); });
   const mi=main.querySelector("#qzMins"); if(mi) mi.onchange=e=>{ qz.mins=Math.max(5,+e.target.value||60); };
   main.querySelector("#qzStart").onclick=()=>{
     const p=qzBuild(); if(!p){ toast("这个筛选下没有题"); return; }
-    const s=qzState(); s.paper=p; s.last={pick:Object.assign({},qz.pick),scope:qz.scope,ratio:Object.assign({},qz.ratio),count:qz.count,mode:qz.mode,mins:qz.mins,byRatio:qz.byRatio};
-    qz.cur=0; qz.showExp=false; qz.view="run"; save(); render(); };
+    const st=qzState(); st.paper=p;
+    st.last={pick:Object.assign({},qz.pick),scope:qz.scope,nums:Object.assign({},qz.nums),take:qz.take,mode:qz.mode,mins:qz.mins};
+    qz.cur=0; qz.view="run"; save(); render(); };
 }
 
 /* ---------- 机考界面 ---------- */
 function qzFmtTime(ms){ if(ms<0) ms=0; const s=Math.floor(ms/1000);
   return String(Math.floor(s/3600)).padStart(2,"0")+":"+String(Math.floor(s%3600/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0"); }
-function qzLeft(p){ return p.mins*60000-(Date.now()-p.startAt); }
+function qzUsed(p){ return (p.usedMs||0)+(p.resumeAt?Date.now()-p.resumeAt:0); }
+function qzPause(){ const p=qzPaper(); if(!p||p.submitted) return;
+  p.usedMs=qzUsed(p); p.resumeAt=null;
+  if(qzTimer){ clearInterval(qzTimer); qzTimer=null; } }
+function qzResume(){ const p=qzPaper(); if(!p||p.submitted) return; if(!p.resumeAt) p.resumeAt=Date.now(); }
+function qzLeft(p){ return p.mins*60000-qzUsed(p); }
 function qzRun(main){
   const p=qzPaper(), qs=qzItems();
   if(!p||!qs.length){ qz.view="home"; render(); return; }
+  qzResume();
   if(qz.cur>=qs.length) qz.cur=0;
   const q=qs[qz.cur], key=q.src+"|"+q.id, pick=p.picks[key]||"", marked=!!p.marks[key];
   const exam=(p.mode==="exam"), answered=!!pick;
-  /* 卷面题号：按题型分节 */
-  const secIdx={}; let n=0; const nums=qs.map(x=>{ secIdx[x.sec]=(secIdx[x.sec]||0)+1; return ++n; });
+  /* 按题型分节，卷内连续编号 */
+  const groups=[]; let n=0;
+  QZ_SECS.forEach(sec=>{ const list=[];
+    qs.forEach((x,i)=>{ if(x.sec===sec) list.push({i:i,no:0}); });
+    if(list.length) groups.push({sec:sec,list:list}); });
+  groups.forEach(g=>g.list.forEach(it=>{ it.no=++n; }));
+  const noOf={}; groups.forEach(g=>g.list.forEach(it=>{ noOf[it.i]=it.no; }));
+  const curSec=q.sec, curNo=noOf[qz.cur];
+
   let h='<div class="qz-exam">';
-  /* 顶栏 */
-  h+='<div class="qz-top"><div class="qz-tl"><b>综合测试</b><span class="qz-tag">'+QZ_MODE[p.mode]+'</span></div>'+
-     '<div class="qz-tc">'+(exam?'<span class="qz-clock" id="qzClock">'+qzFmtTime(qzLeft(p))+'</span>':'<span class="qz-prog">第 '+(qz.cur+1)+' / '+qs.length+' 题</span>')+'</div>'+
-     '<div class="qz-tr"><button class="qz-btn sm" id="qzCardBtn">答题卡</button><button class="qz-btn sm warn" id="qzSubmit">交卷</button></div></div>';
+  /* 顶栏：返回 / 考试名 / 计时 / 交卷 */
+  h+='<div class="qz-top"><div class="qz-tl"><button class="qz-btn sm" id="qzExit">‹ 返回</button>'+
+     '<b>综合测试</b><span class="qz-tag">'+QZ_MODE[p.mode]+'</span></div>'+
+     '<div class="qz-tc">'+(exam?'<span class="qz-clock" id="qzClock">'+qzFmtTime(qzLeft(p))+'</span>':
+        '<span class="qz-prog">已答 '+Object.keys(p.picks).filter(k=>k.indexOf("_tmp")!==0).length+' / '+qs.length+'</span>')+'</div>'+
+     '<div class="qz-tr"><button class="qz-btn sm only-narrow" id="qzCardBtn">答题卡</button>'+
+     '<button class="qz-btn sm warn" id="qzSubmit">交卷</button></div></div>';
   h+='<div class="qz-body">';
-  /* 左：题目 */
+  /* 左：答题卡（按题型分组） */
+  h+='<div class="qz-side'+(qz.cardOpen?" open":"")+'"><div class="qz-slb">答题卡</div><div class="qz-sheet-wrap">';
+  groups.forEach(g=>{
+    const dn=g.list.filter(it=>p.picks[qs[it.i].src+"|"+qs[it.i].id]).length;
+    h+='<div class="qz-sgrp"><div class="qz-sgh">'+esc(g.sec)+' <b>'+g.list.length+'</b> 题<span>'+dn+'/'+g.list.length+'</span></div><div class="qz-sheet">';
+    g.list.forEach(it=>{ const x=qs[it.i], k2=x.src+"|"+x.id; let c="qz-cell";
+      if(p.picks[k2]) c+=" done"; if(p.marks[k2]) c+=" mk"; if(it.i===qz.cur) c+=" cur";
+      if(!exam&&p.picks[k2]) c+=(p.picks[k2]===x.answer)?" right":" wrong";
+      h+='<button class="'+c+'" data-i="'+it.i+'">'+it.no+'</button>'; });
+    h+='</div></div>'; });
+  h+='</div><div class="qz-legend"><span><i class="done"></i>已答</span><span><i></i>未答</span><span><i class="mk"></i>标记</span></div></div>';
+  /* 右：题目 */
   h+='<div class="qz-main"><div class="qz-qhd">'+
-     '<span class="qz-qsec">'+esc(q.sec)+'</span><span class="qz-qno">第 '+(qz.cur+1)+' 题</span>'+
+     '<span class="qz-qsec">'+esc(curSec)+'</span><span class="qz-qno">第 '+curNo+' 题</span>'+
+     '<span class="qz-qpt">'+QZ_PTS[curSec]+' 分</span>'+
      '<span class="qz-qsrc">'+esc(q.subject)+' · 原书第'+esc(String(q.page||"-"))+'页</span>'+
      (marked?'<span class="qz-qmark">▲ 已标记</span>':"")+'</div>';
   h+='<div class="qz-stem">'+esc(q.stem)+'</div>';
@@ -3840,21 +3898,12 @@ function qzRun(main){
   h+='<div class="qz-nav"><button class="qz-btn" id="qzPrev">上一题</button>'+
      '<button class="qz-btn'+(marked?" on":"")+'" id="qzMark">▲ '+(marked?"取消标记":"标记本题")+'</button>'+
      '<button class="qz-btn pri" id="qzNext">下一题</button></div>';
-  h+='</div>';
-  /* 右：答题卡 */
-  h+='<div class="qz-side'+(qz.cardOpen?" open":"")+'"><div class="qz-slb">答题卡</div><div class="qz-sheet">';
-  qs.forEach((x,i)=>{ const k2=x.src+"|"+x.id; let c="qz-cell";
-    if(p.picks[k2]) c+=" done"; if(p.marks[k2]) c+=" mk"; if(i===qz.cur) c+=" cur";
-    if(!exam&&p.picks[k2]) c+=(p.picks[k2]===x.answer)?" right":" wrong";
-    h+='<button class="'+c+'" data-i="'+i+'">'+(i+1)+'</button>'; });
-  h+='</div><div class="qz-legend"><span><i class="done"></i>已答</span><span><i></i>未答</span><span><i class="mk"></i>标记</span></div>'+
-     '<div class="qz-scount">已答 <b>'+Object.keys(p.picks).length+'</b> / '+qs.length+'</div></div>';
-  h+='</div></div>';
+  h+='</div></div></div>';
   main.innerHTML=h;
 
   const rerender=()=>{ p.cur=qz.cur; save(); render(); };
   main.querySelectorAll(".qz-opt").forEach(b=>b.onclick=()=>{
-    if(!exam&&answered) return;                      /* 练习模式判过分就锁定 */
+    if(!exam&&answered) return;
     const k=b.dataset.k;
     if(q.sec==="多选题"){ let cur=(p.picks["_tmp"+key]||"").split("").filter(Boolean);
       const i=cur.indexOf(k); if(i>=0) cur.splice(i,1); else cur.push(k);
@@ -3872,13 +3921,13 @@ function qzRun(main){
   main.querySelector("#qzPrev").onclick=()=>{ if(qz.cur>0){ qz.cur--; rerender(); } };
   main.querySelector("#qzNext").onclick=()=>{ if(qz.cur<qs.length-1){ qz.cur++; rerender(); } else toast("已是最后一题"); };
   main.querySelector("#qzMark").onclick=()=>{ if(p.marks[key]) delete p.marks[key]; else p.marks[key]=1; rerender(); };
-  main.querySelector("#qzCardBtn").onclick=()=>{ qz.cardOpen=!qz.cardOpen; render(); };
+  const cb=main.querySelector("#qzCardBtn"); if(cb) cb.onclick=()=>{ qz.cardOpen=!qz.cardOpen; render(); };
   main.querySelectorAll(".qz-cell").forEach(c=>c.onclick=()=>{ qz.cur=+c.dataset.i; qz.cardOpen=false; rerender(); });
   main.querySelector("#qzSubmit").onclick=()=>qzSubmit(qs);
-  /* 练习模式下的「把握程度」条（两个题库都能用，各写各自的 state） */
+  /* 中途返回：进度和计时都保留，首页可「继续」 */
+  main.querySelector("#qzExit").onclick=()=>{ p.cur=qz.cur; qzPause(); qz.view="home"; save(); render(); };
   const fz=main.querySelector("#qzFz");
   if(fz) qzFuzzyBar(fz,q);
-  /* 考试倒计时 */
   if(qzTimer){ clearInterval(qzTimer); qzTimer=null; }
   if(exam){ qzTimer=setInterval(()=>{ const el=document.getElementById("qzClock"); if(!el){ clearInterval(qzTimer); qzTimer=null; return; }
     const left=qzLeft(p); el.textContent=qzFmtTime(left);
@@ -3918,10 +3967,12 @@ function qzSubmit(qs){
     if(pick===undefined) return;
     if(p.mode==="exam") { if(qzGrade(x,pick)) right++; }        /* 考试模式交卷时才判分入错题本 */
     else if(pick===x.answer) right++; });
-  p.submitted=true; p.endAt=Date.now();
-  p.score={right:right,n:qs.length,pct:qs.length?Math.round(right/qs.length*100):0,unanswered:un};
+  p.submitted=true; p.endAt=Date.now(); qzPause();
+  const full=qzFull(qs), got=qzGot(qs,p);
+  p.score={right:right,n:qs.length,pct:qs.length?Math.round(right/qs.length*100):0,unanswered:un,
+           pts:qzR1(got),full:qzR1(full),ppct:full?Math.round(got/full*100):0};
   const s=qzState();
-  s.exams.push({date:today(),n:qs.length,right:right,pct:p.score.pct,mode:p.mode});
+  s.exams.push({date:today(),n:qs.length,right:right,pct:p.score.pct,pts:qzR1(got),full:qzR1(full),mode:p.mode});
   if(s.exams.length>60) s.exams=s.exams.slice(-60);
   qz.view="result"; save(); render();
 }
@@ -3932,8 +3983,11 @@ function qzResult(main){
   if(!p||!p.score){ qz.view="home"; render(); return; }
   const sc=p.score, used=p.endAt&&p.startAt?Math.round((p.endAt-p.startAt)/60000):0;
   let h='<div class="qz-hd"><h2>成绩单</h2><span class="qz-sub">'+QZ_MODE[p.mode]+' · 用时 '+used+' 分钟</span></div>';
-  h+='<div class="qz-score"><div class="qz-big '+(sc.pct>=80?"g":(sc.pct>=60?"":"r"))+'">'+sc.pct+'<em>%</em></div>'+
-     '<div class="qz-sinfo">答对 <b>'+sc.right+'</b> / '+sc.n+' 题'+(sc.unanswered?'　未作答 '+sc.unanswered+' 题':"")+'</div></div>';
+  const pp=sc.ppct!=null?sc.ppct:sc.pct;
+  h+='<div class="qz-score"><div class="qz-big '+(pp>=80?"g":(pp>=60?"":"r"))+'">'+(sc.pts!=null?sc.pts:sc.right)+'<em>/'+(sc.full!=null?sc.full:sc.n)+' 分</em></div>'+
+     '<div class="qz-sinfo">答对 <b>'+sc.right+'</b> / '+sc.n+' 题 · 正确率 '+sc.pct+'%'+
+     (sc.unanswered?'　未作答 '+sc.unanswered+' 题':"")+
+     '<br><span class="qz-sub">按真题分值计：判断 0.5 · 单选 0.8 · 多选 1.2（多选需全对得分）。真考另有写作 1 题 30 分，本卷不含。</span></div></div>';
   /* 分科目/题型统计 */
   const by={}; qs.forEach(x=>{ const k=x.subject+" · "+x.sec, o=by[k]||(by[k]={n:0,r:0});
     o.n++; if(p.picks[x.src+"|"+x.id]===x.answer) o.r++; });
