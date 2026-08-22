@@ -548,6 +548,161 @@
   .mg-exp{margin-top:10px;padding:12px 14px;border-radius:11px;background:var(--fill);font-size:14px;line-height:1.85;white-space:pre-wrap}
   .mg-exp b{color:var(--tint)}
   .lw-go:disabled{opacity:.4}
+  /* ===== 10.10 刷题中心（机考风格） ===== */
+  .qz-hd{display:flex;align-items:baseline;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+  .qz-hd h2{font-size:20px;margin:0}
+  .qz-sub{font-size:12.5px;color:var(--text2)}
+  .qz-lb{font-size:12.5px;color:var(--text2);margin:16px 2px 8px}
+  .qz-back{border:none;background:none;color:var(--tint);font-size:15px;font-family:inherit;padding:0 6px 0 0}
+  .qz-btn{border:1px solid var(--sep);background:var(--card);color:var(--text);border-radius:10px;
+    padding:8px 15px;font-size:14px;font-family:inherit}
+  .qz-btn.pri{background:var(--tint);border-color:var(--tint);color:#fff;font-weight:600}
+  .qz-btn.warn{background:var(--red);border-color:var(--red);color:#fff;font-weight:600}
+  .qz-btn.sm{padding:5px 11px;font-size:13px}
+  .qz-btn.big{width:100%;padding:13px 0;font-size:15.5px}
+  .qz-btn.on{border-color:var(--orange);background:rgba(255,149,0,.16);color:#b06800}
+  .qz-btn:disabled{opacity:.4}
+  .qz-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}
+  /* 首页卡片 */
+  .qz-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:11px}
+  .qz-card{text-align:left;border:1px solid var(--sep);background:var(--card);color:var(--text);
+    border-radius:var(--r-lg);padding:14px;box-shadow:var(--shadow);font-family:inherit}
+  .qz-cname{font-size:16px;font-weight:600}
+  .qz-cnum{font-size:12.5px;color:var(--text2);margin:2px 0 9px}
+  .qz-cmeta{font-size:12px;color:var(--text2);margin-top:6px}
+  .qz-cmeta .r{color:var(--red)}
+  .qz-bar{height:5px;border-radius:3px;background:var(--fill);overflow:hidden}
+  .qz-bar i{display:block;height:100%;background:var(--tint);border-radius:3px}
+  .qz-bar i.g{background:var(--green)} .qz-bar i.r{background:var(--red)}
+  .qz-resume{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+    background:rgba(255,149,0,.12);border:1px solid rgba(255,149,0,.35);border-radius:var(--r);padding:12px 14px;margin-bottom:14px}
+  .qz-resume .qz-sub{display:block}
+  .qz-ract{display:flex;gap:8px}
+  .qz-jump{margin-top:18px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .qz-hist{display:flex;flex-direction:column;gap:5px}
+  .qz-hrow{display:flex;justify-content:space-between;font-size:13px;padding:7px 12px;border:1px solid var(--sep);border-radius:9px;background:var(--card)}
+  .qz-hrow .g{color:var(--green)} .qz-hrow .r{color:var(--red)}
+  /* 组卷 */
+  .qz-sec{background:var(--card);border:1px solid var(--sep);border-radius:var(--r);padding:12px 14px;margin-bottom:11px}
+  .qz-sec .qz-lb{margin-top:0}
+  .qz-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .qz-subs{display:flex;flex-direction:column;gap:9px}
+  .qz-grp{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+  .qz-gname{font-size:12.5px;color:var(--text2);min-width:34px}
+  .qz-chip{border:1px solid var(--sep);background:var(--bg2);color:var(--text);border-radius:999px;
+    padding:6px 14px;font-size:13.5px;font-family:inherit}
+  .qz-chip b{color:var(--text3);font-weight:600;margin-left:3px}
+  .qz-chip.on{background:var(--tint-soft);border-color:var(--tint);color:var(--tint);font-weight:600}
+  .qz-chip.on b{color:var(--tint)}
+  .qz-num{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--text2)}
+  .qz-num.off{opacity:.35}
+  .qz-num i{font-style:normal}
+  .qz-num em{font-style:normal;font-size:12px}
+  .qz-num input{width:64px;padding:6px 8px;font-size:14px;text-align:center}
+  .qz-sw{display:inline-flex;align-items:center;gap:6px;font-size:13.5px}
+  .qz-avail{font-size:12px;color:var(--text3);margin-top:9px}
+  /* ===== 机考界面 ===== */
+  .qz-exam{margin:-6px -2px 0}
+  .qz-top{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:linear-gradient(180deg,#2b5aa8,#23497f);color:#fff;border-radius:10px 10px 0 0;padding:10px 14px}
+  .qz-tl{display:flex;align-items:center;gap:9px;font-size:15px}
+  .qz-tag{background:rgba(255,255,255,.22);border-radius:999px;padding:2px 9px;font-size:11.5px}
+  .qz-clock{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:19px;font-weight:700;letter-spacing:1px}
+  .qz-prog{font-size:13.5px;opacity:.92}
+  .qz-tr{display:flex;gap:7px}
+  .qz-top .qz-btn{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.3);color:#fff}
+  .qz-top .qz-btn.warn{background:#e5484d;border-color:#e5484d}
+  .qz-body{display:flex;gap:0;border:1px solid var(--sep);border-top:none;border-radius:0 0 10px 10px;overflow:hidden;background:var(--card)}
+  .qz-main{flex:1;min-width:0;padding:16px 18px}
+  .qz-qhd{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:12px;color:var(--text2);
+    padding-bottom:9px;border-bottom:1px solid var(--sep);margin-bottom:13px}
+  .qz-qsec{background:var(--tint-soft);color:var(--tint);font-weight:600;border-radius:5px;padding:2px 9px;font-size:12.5px}
+  .qz-qno{font-weight:600;color:var(--text)}
+  .qz-qsrc{color:var(--text3)}
+  .qz-qmark{margin-left:auto;color:var(--orange);font-weight:600}
+  .qz-stem{font-size:16.5px;line-height:1.9;margin-bottom:15px;white-space:pre-wrap}
+  .qz-opts{display:flex;flex-direction:column;gap:9px}
+  .qz-opts.tf{flex-direction:row}
+  .qz-opts.tf .qz-opt{flex:1;justify-content:center}
+  .qz-opt{display:flex;gap:10px;align-items:flex-start;text-align:left;width:100%;
+    border:1px solid var(--sep);background:var(--bg2);color:var(--text);border-radius:8px;
+    padding:11px 13px;font-size:15px;line-height:1.6;font-family:inherit}
+  .qz-ok{flex:0 0 auto;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--sep2);
+    display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;color:var(--text2)}
+  .qz-opt.on{border-color:var(--tint);background:var(--tint-soft)}
+  .qz-opt.on .qz-ok{background:var(--tint);border-color:var(--tint);color:#fff}
+  .qz-opt.hit{border-color:var(--green);background:rgba(52,199,89,.12)}
+  .qz-opt.hit .qz-ok{background:var(--green);border-color:var(--green);color:#fff}
+  .qz-opt.miss{border-color:var(--red);background:rgba(255,59,48,.1)}
+  .qz-opt.miss .qz-ok{background:var(--red);border-color:var(--red);color:#fff}
+  .qz-hintbar{font-size:12.5px;color:var(--text2);margin:10px 0 6px}
+  .qz-vd{margin-top:13px;padding:11px 13px;border-radius:9px;font-size:14px}
+  .qz-vd.ok{background:rgba(52,199,89,.13);color:#128a3d}
+  .qz-vd.no{background:rgba(255,59,48,.11);color:#c62b21}
+  .qz-exp{margin-top:9px;padding:12px 14px;border-radius:9px;background:var(--fill);font-size:14px;line-height:1.85}
+  .qz-exp b{color:var(--tint)}
+  .qz-nav{display:flex;gap:9px;margin-top:16px;padding-top:13px;border-top:1px solid var(--sep)}
+  .qz-nav .qz-btn{flex:1}
+  /* 答题卡 */
+  .qz-side{flex:0 0 214px;border-left:1px solid var(--sep);background:var(--bg);padding:14px 12px}
+  .qz-slb{font-size:13px;font-weight:600;margin-bottom:10px}
+  .qz-sheet{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+  .qz-cell{height:32px;border:1px solid var(--sep);background:var(--card);color:var(--text2);
+    border-radius:6px;font-size:12.5px;font-family:inherit;padding:0;position:relative}
+  .qz-cell.done{background:#2b5aa8;border-color:#2b5aa8;color:#fff}
+  .qz-cell.right{background:rgba(52,199,89,.85);border-color:rgba(52,199,89,.9);color:#fff}
+  .qz-cell.wrong{background:rgba(229,72,77,.85);border-color:rgba(229,72,77,.9);color:#fff}
+  .qz-cell.cur{outline:2px solid var(--orange);outline-offset:1px}
+  .qz-cell.mk::after{content:"";position:absolute;top:2px;right:2px;width:0;height:0;
+    border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:7px solid var(--orange)}
+  .qz-legend{display:flex;gap:11px;margin-top:11px;font-size:11.5px;color:var(--text2);flex-wrap:wrap}
+  .qz-legend i{display:inline-block;width:11px;height:11px;border-radius:3px;border:1px solid var(--sep);
+    background:var(--card);margin-right:4px;vertical-align:-1px}
+  .qz-legend i.done{background:#2b5aa8;border-color:#2b5aa8}
+  .qz-legend i.mk{background:var(--orange);border-color:var(--orange)}
+  .qz-scount{font-size:12px;color:var(--text2);margin-top:9px}
+  /* 成绩单 */
+  .qz-score{display:flex;align-items:center;gap:18px;background:var(--card);border:1px solid var(--sep);
+    border-radius:var(--r-lg);padding:18px;box-shadow:var(--shadow)}
+  .qz-big{font-size:46px;font-weight:700;line-height:1;color:var(--tint)}
+  .qz-big.g{color:var(--green)} .qz-big.r{color:var(--red)}
+  .qz-big em{font-style:normal;font-size:19px;margin-left:2px}
+  .qz-sinfo{font-size:14px;color:var(--text2)}
+  .qz-stats{display:flex;flex-direction:column;gap:7px}
+  .qz-srow{display:flex;align-items:center;gap:11px;font-size:13px}
+  .qz-srow>span:first-child{flex:0 0 128px}
+  .qz-srow .qz-bar{flex:1}
+  .qz-review{display:flex;flex-direction:column;gap:6px}
+  .qz-rv{border:1px solid var(--sep);border-radius:9px;overflow:hidden;background:var(--card)}
+  .qz-rv.ok{border-color:rgba(52,199,89,.4)} .qz-rv.no{border-color:rgba(229,72,77,.45)}
+  .qz-rv.un{opacity:.75}
+  .qz-rvh{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:none;background:none;
+    color:var(--text);padding:10px 12px;font-size:13.5px;font-family:inherit}
+  .qz-rvn{flex:0 0 24px;font-weight:700;color:var(--text2)}
+  .qz-rvs{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .qz-rvr{flex:0 0 auto;font-size:12.5px;color:var(--text2)}
+  .qz-rv.ok .qz-rvr{color:var(--green)} .qz-rv.no .qz-rvr{color:var(--red)}
+  .qz-rvb{display:none;padding:0 12px 12px;font-size:13.5px;line-height:1.8;color:var(--text2)}
+  .qz-rvb.open{display:block}
+  .qz-rvb b{color:var(--tint)}
+  @media (max-width:760px){
+    .qz-body{flex-direction:column}
+    .qz-side{flex:none;border-left:none;border-top:1px solid var(--sep);display:none}
+    .qz-side.open{display:block}
+    .qz-sheet{grid-template-columns:repeat(8,1fr)}
+    .qz-main{padding:14px}
+    .qz-srow>span:first-child{flex:0 0 96px}
+  }
+  /* 把握程度条 */
+  .qz-fz{margin-top:12px;padding:11px 13px;border-radius:9px;background:var(--fill);display:flex;flex-direction:column;gap:8px}
+  .qz-fzrow{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+  .qz-fzlb{font-size:12.5px;color:var(--text2);min-width:70px}
+  .qz-fzbtn{border:1px solid var(--sep);background:var(--card);color:var(--text);border-radius:999px;padding:5px 13px;font-size:13px;font-family:inherit}
+  .qz-fzbtn.on{border-color:var(--green);background:rgba(52,199,89,.14);color:#128a3d;font-weight:600}
+  .qz-fzbtn.on.fz{border-color:var(--orange);background:rgba(255,149,0,.18);color:#b06800}
+  .qz-fzo{border:1px solid var(--sep);background:var(--card);color:var(--text2);border-radius:7px;min-width:34px;padding:5px 9px;font-size:13px;font-weight:600;font-family:inherit}
+  .qz-fzo.on{border-color:var(--orange);background:rgba(255,149,0,.2);color:#b06800}
+  /* ===== 10.10 刷题中心 CSS END ===== */
 </style>
 
 <div class="wrap">
@@ -1167,8 +1322,9 @@ const BUILTIN_MODULES=[
   { id:"home", name:"日历", mount:mountHome },
   { id:"library", name:"背诵库", mount:mountLibrary },
   { id:"flash", name:"卡片", mount:mountFlash },
-  { id:"law", name:"法律", mount:mountLaw },
-  { id:"mg", name:"管理", mount:mountMg },
+  { id:"quiz", name:"刷题", mount:mountQuiz },
+  { id:"law", name:"法律", mount:mountLaw, hidden:true },
+  { id:"mg", name:"管理", mount:mountMg, hidden:true },
   { id:"exam", name:"考试", mount:mountExam, hidden:true },
   { id:"courses", name:"课程", mount:mountCourses },
   { id:"settings", name:"设置", mount:mountSettings },
@@ -3454,6 +3610,355 @@ function mgImport(){
     rd.readAsText(f);
   };
 }
+/* ===== 10.10 · 刷题中心 (统一入口 + 自由组卷 + 机考界面) =====
+   不新增题库：题目从 lawBank / mgBank 读，做题状态写回各自的 lawState / mgState，
+   所以错题本、模糊标记、知识点薄弱度这些既有进度全部延续，不会因为换界面而丢。
+   自己只存一份 qzState：当前试卷 + 上次组卷配置 + 历史成绩。 */
+const QZ_MODE={practice:"练习",exam:"模拟考试"};
+const QZ_SECS=["单选题","多选题","判断题"];          // 机考卷面顺序
+/* 默认题型配比（可在组卷页改，改完记住）。按《综合测试》客观题常见结构给的起始值。 */
+const QZ_DEF_RATIO={"单选题":50,"多选题":20,"判断题":30};
+const QZ_DEF_MIN=60;                                  // 模拟考试默认时长(分钟)
+let qz={ view:"home", pick:{}, scope:"全部", ratio:null, count:40, mode:"practice", mins:QZ_DEF_MIN,
+         byRatio:true, cur:0, showExp:false, cardOpen:false };
+let qzTimer=null;
+
+/* ---------- 题库适配层：把两个题库摊平成一套结构 ---------- */
+function qzSrcs(){ return [
+  { key:"law", group:"法律", qs:()=>((db.lawBank&&db.lawBank.questions)||[]), subj:q=>q.subject||"法律",
+    type:q=>q.type||(q.sec==="判断题"?"tf":"mc") },
+  { key:"mg",  group:"管理", qs:()=>((db.mgBank&&db.mgBank.questions)||[]),  subj:()=>"管理",
+    type:q=>(q.sec==="判断题"?"tf":"mc") },
+]; }
+function qzAll(){ const out=[];
+  qzSrcs().forEach(s=>s.qs().forEach(q=>out.push({
+    src:s.key, id:q.id, group:s.group, subject:s.subj(q), sec:q.sec, num:q.num,
+    type:s.type(q), stem:q.stem, options:q.options, answer:q.answer, explain:q.explain,
+    mark:q.mark||"", page:q.page, _raw:q })));
+  return out; }
+/* 统一的做题状态视图（各自读各自的 state） */
+function qzSt(q){
+  if(q.src==="law"){ const x=lawQSt(q.id);
+    return x?{done:x.n>0,wrong:x.w>0,inBook:lawInBook(q.id),fuzzy:!!x.fuzzy,mastered:!!x.mastered,w:x.w||0}:null; }
+  const x=mgQSt(q.id);
+  return x&&x.ans?{done:true,wrong:!x.ok,inBook:mgInBook(q._raw),fuzzy:mgIsUns(x),mastered:false,w:x.w||0}:null;
+}
+/* 判分并写回原模块的状态（错题本规则完全沿用各自模块的） */
+function qzGrade(q,pick){
+  const ok=(pick===q.answer);
+  if(q.src==="law"){ lawGrade(q.id,ok); }
+  else { const x=mgQEnsure(q.id); x.pick=pick; mgGrade(q._raw,x); }
+  return ok;
+}
+/* 层级：科目组 → 子科目 */
+function qzTree(){ const t={};
+  qzAll().forEach(q=>{ const g=t[q.group]||(t[q.group]={name:q.group,subs:{},n:0});
+    g.n++; const s=g.subs[q.subject]||(g.subs[q.subject]={name:q.subject,n:0,done:0,wrong:0});
+    s.n++; const st=qzSt(q); if(st){ s.done++; if(st.inBook) s.wrong++; } });
+  return t; }
+function qzScopeOk(q){
+  const st=qzSt(q);
+  switch(qz.scope){
+    case "未做":   return !st;
+    case "做错过": return !!st&&st.inBook;
+    case "模糊":   return !!st&&st.fuzzy;
+    case "原书标记": return !!q.mark;
+    default: return true;
+  } }
+function qzPool(){ const sel=qz.pick;
+  return qzAll().filter(q=>sel[q.subject]&&qzScopeOk(q)); }
+
+/* ---------- 组卷 ---------- */
+function qzShuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=a[i];a[i]=a[j];a[j]=t; } return a; }
+function qzBuild(){
+  const pool=qzPool(); if(!pool.length) return null;
+  let items=[];
+  if(qz.byRatio){
+    const r=qz.ratio||QZ_DEF_RATIO, tot=QZ_SECS.reduce((s,k)=>s+(+r[k]||0),0)||1;
+    QZ_SECS.forEach(sec=>{
+      const want=Math.round(qz.count*(+r[sec]||0)/tot);
+      const bySec=qzShuffle(pool.filter(q=>q.sec===sec));
+      items=items.concat(bySec.slice(0,want));
+    });
+    /* 某题型不够就用其它题型补足 */
+    if(items.length<qz.count){
+      const used=new Set(items.map(q=>q.src+q.id));
+      items=items.concat(qzShuffle(pool.filter(q=>!used.has(q.src+q.id))).slice(0,qz.count-items.length));
+    }
+  } else items=qzShuffle(pool.slice()).slice(0,qz.count);
+  /* 卷面按 单选→多选→判断 排序 */
+  items.sort((a,b)=>QZ_SECS.indexOf(a.sec)-QZ_SECS.indexOf(b.sec));
+  return { id:uid(), mode:qz.mode, mins:qz.mins, createdAt:new Date().toISOString(),
+           startAt:Date.now(), items:items.map(q=>({src:q.src,id:q.id})),
+           picks:{}, marks:{}, cur:0, submitted:false, score:null };
+}
+function qzState(){ const s=db.qzState||(db.qzState={paper:null,last:null,exams:[]});
+  if(!Array.isArray(s.exams)) s.exams=[]; return s; }
+function qzPaper(){ return qzState().paper; }
+function qzItems(){ const p=qzPaper(); if(!p) return [];
+  const map={}; qzAll().forEach(q=>map[q.src+"|"+q.id]=q);
+  return p.items.map(it=>map[it.src+"|"+it.id]).filter(Boolean); }
+
+/* ---------- 模块入口 ---------- */
+function mountQuiz(main){
+  const p=qzPaper();
+  if(p&&!p.submitted&&qz.view==="run") return qzRun(main);
+  if(qz.view==="result") return qzResult(main);
+  if(qz.view==="build")  return qzBuilder(main);
+  qzHome(main);
+}
+
+/* ---------- 首页：科目卡片 ---------- */
+function qzHome(main){
+  const t=qzTree(), groups=Object.keys(t);
+  const p=qzPaper();
+  let h='<div class="qz-hd"><h2>刷题</h2><span class="qz-sub">选一个科目直接练，或自由组卷做一套模拟卷</span></div>';
+  if(p&&!p.submitted){
+    const done=Object.keys(p.picks).length;
+    h+='<div class="qz-resume"><div><b>有一套没做完的'+QZ_MODE[p.mode]+'</b><span class="qz-sub">共 '+p.items.length+' 题 · 已答 '+done+' 题</span></div>'+
+       '<div class="qz-ract"><button class="qz-btn pri" id="qzGo">继续</button><button class="qz-btn" id="qzDrop">放弃</button></div></div>';
+  }
+  if(!groups.length){
+    h+='<div class="empty">还没有任何题库。<br><span class="qz-sub">先到「法律」或「管理」模块里导入题库，这里就会出现。</span></div>';
+    main.innerHTML=h; return;
+  }
+  h+='<div class="qz-cards">';
+  groups.forEach(g=>{ const sub=t[g].subs;
+    Object.keys(sub).forEach(sn=>{ const s=sub[sn];
+      const pct=s.n?Math.round(s.done/s.n*100):0;
+      h+='<button class="qz-card" data-subj="'+esc(sn)+'"><div class="qz-cname">'+esc(sn)+'</div>'+
+         '<div class="qz-cnum">'+s.n+' 题</div>'+
+         '<div class="qz-bar"><i style="width:'+pct+'%"></i></div>'+
+         '<div class="qz-cmeta">已做 '+s.done+' · <span class="r">错题 '+s.wrong+'</span></div></button>';
+    }); });
+  h+='</div>';
+  h+='<div class="qz-actions"><button class="qz-btn pri big" id="qzNew">✏️ 自由组卷（可跨科目、按比例、限时模考）</button></div>';
+  h+='<div class="qz-jump"><span class="qz-sub">各科目的错题本 / 卡片 / 知识点薄弱度，仍在原来的模块里：</span>'+
+     '<button class="qz-btn sm" data-go="law">法律模块</button><button class="qz-btn sm" data-go="mg">管理模块</button></div>';
+  const ex=qzState().exams;
+  if(ex.length){ h+='<div class="qz-lb">最近的模拟卷</div><div class="qz-hist">'+
+    ex.slice(-6).reverse().map(e=>'<div class="qz-hrow"><span>'+e.date+'</span><span>'+e.n+' 题</span>'+
+      '<span class="'+(e.pct>=80?"g":(e.pct>=60?"":"r"))+'">'+e.right+"/"+e.n+" · "+e.pct+'%</span></div>').join("")+'</div>'; }
+  main.innerHTML=h;
+  main.querySelectorAll(".qz-card").forEach(b=>b.onclick=()=>{
+    qz.pick={}; qz.pick[b.dataset.subj]=true; qz.view="build"; render(); });
+  const nb=main.querySelector("#qzNew"); if(nb) nb.onclick=()=>{ qz.view="build"; render(); };
+  main.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
+  const gb=main.querySelector("#qzGo"); if(gb) gb.onclick=()=>{ qz.view="run"; qz.cur=qzPaper().cur||0; render(); };
+  const db_=main.querySelector("#qzDrop"); if(db_) db_.onclick=()=>{ if(confirm("放弃这套卷子？已答的记录会保留。")){ qzState().paper=null; save(); render(); } };
+}
+
+/* ---------- 组卷页 ---------- */
+function qzBuilder(main){
+  const t=qzTree();
+  if(!qz.ratio) qz.ratio=Object.assign({},QZ_DEF_RATIO);
+  const pool=qzPool();
+  let h='<div class="qz-hd"><button class="qz-back" id="qzBack">‹ 返回</button><h2>组卷</h2></div>';
+  /* 1 科目 */
+  h+='<div class="qz-sec"><div class="qz-lb">① 选科目（可多选）</div><div class="qz-subs">';
+  Object.keys(t).forEach(g=>{ h+='<div class="qz-grp"><span class="qz-gname">'+esc(g)+'</span>';
+    Object.keys(t[g].subs).forEach(sn=>{ const s=t[g].subs[sn];
+      h+='<button class="qz-chip'+(qz.pick[sn]?" on":"")+'" data-subj="'+esc(sn)+'">'+esc(sn)+' <b>'+s.n+'</b></button>'; });
+    h+='</div>'; });
+  h+='</div></div>';
+  /* 2 范围 */
+  h+='<div class="qz-sec"><div class="qz-lb">② 范围</div><div class="qz-row">'+
+     ["全部","未做","做错过","模糊","原书标记"].map(v=>'<button class="qz-chip'+(qz.scope===v?" on":"")+'" data-scope="'+v+'">'+v+'</button>').join("")+'</div></div>';
+  /* 3 题型比例 */
+  h+='<div class="qz-sec"><div class="qz-lb">③ 题型配比 <span class="qz-sub">（默认按考试结构，可改；关掉就按题库自然比例随机抽）</span></div>'+
+     '<div class="qz-row"><label class="qz-sw"><input type="checkbox" id="qzByRatio"'+(qz.byRatio?" checked":"")+'> 按配比</label>'+
+     QZ_SECS.map(s=>'<span class="qz-num"><i>'+s+'</i><input type="number" min="0" max="100" value="'+(qz.ratio[s]||0)+'" data-ratio="'+s+'"><em>%</em></span>').join("")+'</div>'+
+     '<div class="qz-avail">可用题量：'+QZ_SECS.map(s=>s+" "+pool.filter(q=>q.sec===s).length).join(" · ")+'　合计 <b>'+pool.length+'</b></div></div>';
+  /* 4 题量 + 模式 */
+  h+='<div class="qz-sec"><div class="qz-lb">④ 题量与模式</div><div class="qz-row">'+
+     '<span class="qz-num"><i>题量</i><input type="number" min="1" max="200" value="'+qz.count+'" id="qzCount"></span>'+
+     '<button class="qz-chip'+(qz.mode==="practice"?" on":"")+'" data-mode="practice">练习（答完就出解析）</button>'+
+     '<button class="qz-chip'+(qz.mode==="exam"?" on":"")+'" data-mode="exam">模拟考试（限时·交卷才判分）</button>'+
+     '<span class="qz-num'+(qz.mode==="exam"?"":" off")+'"><i>时长</i><input type="number" min="5" max="240" value="'+qz.mins+'" id="qzMins"><em>分钟</em></span>'+
+     '</div></div>';
+  h+='<div class="qz-actions"><button class="qz-btn pri big" id="qzStart"'+(pool.length?"":" disabled")+'>开始（'+Math.min(qz.count,pool.length)+' 题）</button></div>';
+  main.innerHTML=h;
+  main.querySelector("#qzBack").onclick=()=>{ qz.view="home"; render(); };
+  main.querySelectorAll("[data-subj]").forEach(b=>b.onclick=()=>{
+    const k=b.dataset.subj; if(qz.pick[k]) delete qz.pick[k]; else qz.pick[k]=true; render(); });
+  main.querySelectorAll("[data-scope]").forEach(b=>b.onclick=()=>{ qz.scope=b.dataset.scope; render(); });
+  main.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{ qz.mode=b.dataset.mode; render(); });
+  main.querySelector("#qzByRatio").onchange=e=>{ qz.byRatio=e.target.checked; render(); };
+  main.querySelectorAll("[data-ratio]").forEach(inp=>inp.onchange=e=>{ qz.ratio[inp.dataset.ratio]=+e.target.value||0; render(); });
+  main.querySelector("#qzCount").onchange=e=>{ qz.count=Math.max(1,+e.target.value||1); render(); };
+  const mi=main.querySelector("#qzMins"); if(mi) mi.onchange=e=>{ qz.mins=Math.max(5,+e.target.value||60); };
+  main.querySelector("#qzStart").onclick=()=>{
+    const p=qzBuild(); if(!p){ toast("这个筛选下没有题"); return; }
+    const s=qzState(); s.paper=p; s.last={pick:Object.assign({},qz.pick),scope:qz.scope,ratio:Object.assign({},qz.ratio),count:qz.count,mode:qz.mode,mins:qz.mins,byRatio:qz.byRatio};
+    qz.cur=0; qz.showExp=false; qz.view="run"; save(); render(); };
+}
+
+/* ---------- 机考界面 ---------- */
+function qzFmtTime(ms){ if(ms<0) ms=0; const s=Math.floor(ms/1000);
+  return String(Math.floor(s/3600)).padStart(2,"0")+":"+String(Math.floor(s%3600/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0"); }
+function qzLeft(p){ return p.mins*60000-(Date.now()-p.startAt); }
+function qzRun(main){
+  const p=qzPaper(), qs=qzItems();
+  if(!p||!qs.length){ qz.view="home"; render(); return; }
+  if(qz.cur>=qs.length) qz.cur=0;
+  const q=qs[qz.cur], key=q.src+"|"+q.id, pick=p.picks[key]||"", marked=!!p.marks[key];
+  const exam=(p.mode==="exam"), answered=!!pick;
+  /* 卷面题号：按题型分节 */
+  const secIdx={}; let n=0; const nums=qs.map(x=>{ secIdx[x.sec]=(secIdx[x.sec]||0)+1; return ++n; });
+  let h='<div class="qz-exam">';
+  /* 顶栏 */
+  h+='<div class="qz-top"><div class="qz-tl"><b>综合测试</b><span class="qz-tag">'+QZ_MODE[p.mode]+'</span></div>'+
+     '<div class="qz-tc">'+(exam?'<span class="qz-clock" id="qzClock">'+qzFmtTime(qzLeft(p))+'</span>':'<span class="qz-prog">第 '+(qz.cur+1)+' / '+qs.length+' 题</span>')+'</div>'+
+     '<div class="qz-tr"><button class="qz-btn sm" id="qzCardBtn">答题卡</button><button class="qz-btn sm warn" id="qzSubmit">交卷</button></div></div>';
+  h+='<div class="qz-body">';
+  /* 左：题目 */
+  h+='<div class="qz-main"><div class="qz-qhd">'+
+     '<span class="qz-qsec">'+esc(q.sec)+'</span><span class="qz-qno">第 '+(qz.cur+1)+' 题</span>'+
+     '<span class="qz-qsrc">'+esc(q.subject)+' · 原书第'+esc(String(q.page||"-"))+'页</span>'+
+     (marked?'<span class="qz-qmark">▲ 已标记</span>':"")+'</div>';
+  h+='<div class="qz-stem">'+esc(q.stem)+'</div>';
+  const keys=(q.type==="tf")?["√","×"]:Object.keys(q.options||{});
+  h+='<div class="qz-opts'+(q.type==="tf"?" tf":"")+'">';
+  keys.forEach(k=>{ const on=pick.indexOf(k)>=0;
+    let cls="qz-opt"+(on?" on":"");
+    if(!exam&&answered){ const inA=q.answer.indexOf(k)>=0;
+      if(inA) cls+=" hit"; else if(on) cls+=" miss"; }
+    h+='<button class="'+cls+'" data-k="'+esc(k)+'"><span class="qz-ok">'+esc(k)+'</span><span class="qz-ot">'+
+       (q.type==="tf"?(k==="√"?"正确":"错误"):esc(q.options[k]))+'</span></button>'; });
+  h+='</div>';
+  if(q.sec==="多选题"&&!(!exam&&answered)) h+='<div class="qz-hintbar">多选题：选完后点「确认作答」</div><button class="qz-btn pri" id="qzOk">确认作答</button>';
+  if(!exam&&answered){
+    const ok=(pick===q.answer);
+    h+='<div class="qz-vd '+(ok?"ok":"no")+'">'+(ok?"✅ 回答正确":'❌ 回答错误：你选了「'+esc(pick)+'」，正确答案「<b>'+esc(q.answer)+'</b>」')+'</div>'+
+       '<div class="qz-exp"><b>【答案】'+esc(q.answer)+'</b><br>'+esc(q.explain||"（无解析）").replace(/\n/g,"<br>")+'</div>';
+    h+='<div id="qzFz"></div>';
+  }
+  h+='<div class="qz-nav"><button class="qz-btn" id="qzPrev">上一题</button>'+
+     '<button class="qz-btn'+(marked?" on":"")+'" id="qzMark">▲ '+(marked?"取消标记":"标记本题")+'</button>'+
+     '<button class="qz-btn pri" id="qzNext">下一题</button></div>';
+  h+='</div>';
+  /* 右：答题卡 */
+  h+='<div class="qz-side'+(qz.cardOpen?" open":"")+'"><div class="qz-slb">答题卡</div><div class="qz-sheet">';
+  qs.forEach((x,i)=>{ const k2=x.src+"|"+x.id; let c="qz-cell";
+    if(p.picks[k2]) c+=" done"; if(p.marks[k2]) c+=" mk"; if(i===qz.cur) c+=" cur";
+    if(!exam&&p.picks[k2]) c+=(p.picks[k2]===x.answer)?" right":" wrong";
+    h+='<button class="'+c+'" data-i="'+i+'">'+(i+1)+'</button>'; });
+  h+='</div><div class="qz-legend"><span><i class="done"></i>已答</span><span><i></i>未答</span><span><i class="mk"></i>标记</span></div>'+
+     '<div class="qz-scount">已答 <b>'+Object.keys(p.picks).length+'</b> / '+qs.length+'</div></div>';
+  h+='</div></div>';
+  main.innerHTML=h;
+
+  const rerender=()=>{ p.cur=qz.cur; save(); render(); };
+  main.querySelectorAll(".qz-opt").forEach(b=>b.onclick=()=>{
+    if(!exam&&answered) return;                      /* 练习模式判过分就锁定 */
+    const k=b.dataset.k;
+    if(q.sec==="多选题"){ let cur=(p.picks["_tmp"+key]||"").split("").filter(Boolean);
+      const i=cur.indexOf(k); if(i>=0) cur.splice(i,1); else cur.push(k);
+      p.picks["_tmp"+key]=cur.sort().join("");
+      b.classList.toggle("on"); return; }
+    p.picks[key]=k;
+    if(!exam) qzGrade(q,k);
+    rerender(); });
+  const okb=main.querySelector("#qzOk");
+  if(okb) okb.onclick=()=>{ const v=p.picks["_tmp"+key]||"";
+    if(!v){ toast("还没选"); return; }
+    p.picks[key]=v; delete p.picks["_tmp"+key];
+    if(!exam) qzGrade(q,v);
+    rerender(); };
+  main.querySelector("#qzPrev").onclick=()=>{ if(qz.cur>0){ qz.cur--; rerender(); } };
+  main.querySelector("#qzNext").onclick=()=>{ if(qz.cur<qs.length-1){ qz.cur++; rerender(); } else toast("已是最后一题"); };
+  main.querySelector("#qzMark").onclick=()=>{ if(p.marks[key]) delete p.marks[key]; else p.marks[key]=1; rerender(); };
+  main.querySelector("#qzCardBtn").onclick=()=>{ qz.cardOpen=!qz.cardOpen; render(); };
+  main.querySelectorAll(".qz-cell").forEach(c=>c.onclick=()=>{ qz.cur=+c.dataset.i; qz.cardOpen=false; rerender(); });
+  main.querySelector("#qzSubmit").onclick=()=>qzSubmit(qs);
+  /* 练习模式下的「把握程度」条（两个题库都能用，各写各自的 state） */
+  const fz=main.querySelector("#qzFz");
+  if(fz) qzFuzzyBar(fz,q);
+  /* 考试倒计时 */
+  if(qzTimer){ clearInterval(qzTimer); qzTimer=null; }
+  if(exam){ qzTimer=setInterval(()=>{ const el=document.getElementById("qzClock"); if(!el){ clearInterval(qzTimer); qzTimer=null; return; }
+    const left=qzLeft(p); el.textContent=qzFmtTime(left);
+    if(left<=0){ clearInterval(qzTimer); qzTimer=null; toast("时间到，自动交卷"); qzSubmit(qzItems()); } },1000); }
+}
+
+/* 答完题后的「把握程度」条：答对了也能标模糊 + 逐个标不确定的选项。
+   法律题写 lawState(fuzzy/fzo)，管理题写 mgState(qUns/unsure)，两边的错题本规则各自沿用。 */
+function qzFuzzyBar(host,q){
+  const read=()=>{ if(q.src==="law"){ const x=lawQEnsure(q.id); return {on:!!x.fuzzy,opt:x.fzo||[],n:x.fz||0}; }
+                   const x=mgQEnsure(q.id); return {on:!!x.qUns,opt:x.unsure||[],n:0}; };
+  const setAll=on=>{ if(q.src==="law") lawSetFuzzy(q.id,on);
+                     else { const x=mgQEnsure(q.id); x.qUns=!!on; if(!on) x.unsure=[]; save(); } };
+  const setOpt=k=>{ if(q.src==="law") lawToggleOpt(q.id,k);
+                    else { const x=mgQEnsure(q.id); const i=x.unsure.indexOf(k);
+                           if(i>=0) x.unsure.splice(i,1); else { x.unsure.push(k); x.qUns=true; } save(); } };
+  const draw=()=>{ const s=read(), keys=(q.type==="tf")?["√","×"]:Object.keys(q.options||{});
+    host.innerHTML='<div class="qz-fz"><div class="qz-fzrow"><span class="qz-fzlb">把握程度</span>'+
+      '<button class="qz-fzbtn'+(s.on?"":" on")+'" data-v="0">✅ 有把握</button>'+
+      '<button class="qz-fzbtn'+(s.on?" on fz":"")+'" data-v="1">🤔 模糊</button>'+
+      (s.n>1?'<span class="qz-sub">（累计标过 '+s.n+' 次）</span>':"")+'</div>'+
+      '<div class="qz-fzrow"><span class="qz-fzlb">不确定的选项</span>'+
+      keys.map(k=>'<button class="qz-fzo'+(s.opt.indexOf(k)>=0?" on":"")+'" data-k="'+esc(k)+'">'+esc(k)+'</button>').join("")+
+      '<span class="qz-sub">点一下标记，再点取消</span></div></div>';
+    host.querySelectorAll(".qz-fzbtn").forEach(b=>b.onclick=()=>{ setAll(b.dataset.v==="1"); draw(); });
+    host.querySelectorAll(".qz-fzo").forEach(b=>b.onclick=()=>{ setOpt(b.dataset.k); draw(); }); };
+  draw();
+}
+
+function qzSubmit(qs){
+  const p=qzPaper(); if(!p) return;
+  const un=qs.filter(x=>!p.picks[x.src+"|"+x.id]).length;
+  if(un&&!confirm("还有 "+un+" 题没答，确定交卷？")) return;
+  if(qzTimer){ clearInterval(qzTimer); qzTimer=null; }
+  let right=0;
+  qs.forEach(x=>{ const k=x.src+"|"+x.id, pick=p.picks[k];
+    if(pick===undefined) return;
+    if(p.mode==="exam") { if(qzGrade(x,pick)) right++; }        /* 考试模式交卷时才判分入错题本 */
+    else if(pick===x.answer) right++; });
+  p.submitted=true; p.endAt=Date.now();
+  p.score={right:right,n:qs.length,pct:qs.length?Math.round(right/qs.length*100):0,unanswered:un};
+  const s=qzState();
+  s.exams.push({date:today(),n:qs.length,right:right,pct:p.score.pct,mode:p.mode});
+  if(s.exams.length>60) s.exams=s.exams.slice(-60);
+  qz.view="result"; save(); render();
+}
+
+/* ---------- 成绩单 ---------- */
+function qzResult(main){
+  const p=qzPaper(), qs=qzItems();
+  if(!p||!p.score){ qz.view="home"; render(); return; }
+  const sc=p.score, used=p.endAt&&p.startAt?Math.round((p.endAt-p.startAt)/60000):0;
+  let h='<div class="qz-hd"><h2>成绩单</h2><span class="qz-sub">'+QZ_MODE[p.mode]+' · 用时 '+used+' 分钟</span></div>';
+  h+='<div class="qz-score"><div class="qz-big '+(sc.pct>=80?"g":(sc.pct>=60?"":"r"))+'">'+sc.pct+'<em>%</em></div>'+
+     '<div class="qz-sinfo">答对 <b>'+sc.right+'</b> / '+sc.n+' 题'+(sc.unanswered?'　未作答 '+sc.unanswered+' 题':"")+'</div></div>';
+  /* 分科目/题型统计 */
+  const by={}; qs.forEach(x=>{ const k=x.subject+" · "+x.sec, o=by[k]||(by[k]={n:0,r:0});
+    o.n++; if(p.picks[x.src+"|"+x.id]===x.answer) o.r++; });
+  h+='<div class="qz-lb">分项</div><div class="qz-stats">'+Object.keys(by).map(k=>{
+    const o=by[k], pct=Math.round(o.r/o.n*100);
+    return '<div class="qz-srow"><span>'+esc(k)+'</span><div class="qz-bar"><i style="width:'+pct+'%" class="'+(pct>=80?"g":(pct>=60?"":"r"))+'"></i></div><span>'+o.r+"/"+o.n+'</span></div>'; }).join("")+'</div>';
+  h+='<div class="qz-lb">逐题回顾（点开看解析）</div><div class="qz-review">';
+  qs.forEach((x,i)=>{ const k=x.src+"|"+x.id, pick=p.picks[k]||"", ok=(pick===x.answer);
+    h+='<div class="qz-rv'+(pick?(ok?" ok":" no"):" un")+'"><button class="qz-rvh" data-i="'+i+'">'+
+       '<span class="qz-rvn">'+(i+1)+'</span><span class="qz-rvs">'+esc(x.stem.slice(0,40))+(x.stem.length>40?"…":"")+'</span>'+
+       '<span class="qz-rvr">'+(pick?(ok?"✓":"✗ 你选"+esc(pick)):"未答")+'</span></button>'+
+       '<div class="qz-rvb" id="qzrv'+i+'"><b>【答案】'+esc(x.answer)+'</b><br>'+esc(x.explain||"").replace(/\n/g,"<br>")+'</div></div>'; });
+  h+='</div>';
+  h+='<div class="qz-actions"><button class="qz-btn pri" id="qzAgain">再来一套</button>'+
+     '<button class="qz-btn" id="qzWrong">只练这套里的错题</button><button class="qz-btn" id="qzHome">回首页</button></div>';
+  main.innerHTML=h;
+  main.querySelectorAll(".qz-rvh").forEach(b=>b.onclick=()=>{
+    const el=main.querySelector("#qzrv"+b.dataset.i); el.classList.toggle("open"); });
+  main.querySelector("#qzAgain").onclick=()=>{ qzState().paper=null; qz.view="build"; save(); render(); };
+  main.querySelector("#qzHome").onclick=()=>{ qzState().paper=null; qz.view="home"; save(); render(); };
+  main.querySelector("#qzWrong").onclick=()=>{
+    const bad=qs.filter(x=>p.picks[x.src+"|"+x.id]!==x.answer);
+    if(!bad.length){ toast("这套全对 🎉"); return; }
+    const s=qzState();
+    s.paper={ id:uid(), mode:"practice", mins:qz.mins, createdAt:new Date().toISOString(), startAt:Date.now(),
+              items:bad.map(x=>({src:x.src,id:x.id})), picks:{}, marks:{}, cur:0, submitted:false, score:null };
+    qz.cur=0; qz.view="run"; save(); render(); };
+}
+/* ===== 10.10 刷题中心 END ===== */
 /* ===== 11. 设置 ===== */
 function mountSettings(main){
   const s=db.settings;
