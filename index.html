@@ -3719,8 +3719,12 @@ function qzHome(main){
        '<div class="qz-ract"><button class="qz-btn pri" id="qzGo">继续</button><button class="qz-btn" id="qzDrop">放弃</button></div></div>';
   }
   if(!groups.length){
-    h+='<div class="empty">还没有任何题库。<br><span class="qz-sub">先到「法律」或「管理」模块里导入题库，这里就会出现。</span></div>';
-    main.innerHTML=h; return;
+    h+='<div class="empty">还没有任何题库。<br><span class="qz-sub">点下面的按钮把题库载入进来，科目卡片就会出现。</span></div>'+
+       '<div class="qz-actions"><button class="qz-btn pri" data-go="law">载入法律题库</button>'+
+       '<button class="qz-btn pri" data-go="mg">载入管理题库</button></div>';
+    main.innerHTML=h;
+    main.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
+    return;
   }
   h+='<div class="qz-cards">';
   groups.forEach(g=>{ const sub=t[g].subs;
