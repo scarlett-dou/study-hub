@@ -604,7 +604,7 @@
   /* ===== 机考界面 ===== */
   .qz-exam{margin:-6px -2px 0}
   .qz-top{display:flex;align-items:center;justify-content:space-between;gap:10px;
-    background:linear-gradient(180deg,#2b5aa8,#23497f);color:#fff;border-radius:10px 10px 0 0;padding:10px 14px}
+    background:#2b7cf0;color:#fff;border-radius:10px 10px 0 0;padding:10px 14px}
   .qz-tl{display:flex;align-items:center;gap:9px;font-size:15px}
   .qz-tag{background:rgba(255,255,255,.22);border-radius:999px;padding:2px 9px;font-size:11.5px}
   .qz-clock{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:19px;font-weight:700;letter-spacing:1px}
@@ -719,6 +719,38 @@
   .qz-plan .warn em{font-style:normal;font-size:11.5px}
   .qz-plan .qz-total{margin-left:auto;color:var(--text)}
   .qz-num input:disabled{opacity:.55}
+  /* 顶栏右侧 */
+  .qz-done{font-size:13px;opacity:.95}
+  .qz-clock{background:rgba(255,255,255,.2);border-radius:999px;padding:3px 12px;font-size:14.5px}
+  /* 左栏底部交卷 */
+  .qz-submit{width:100%;margin-top:12px}
+  /* 答题卡新增状态 */
+  .qz-cell.part{background:linear-gradient(90deg,#2b5aa8 50%,var(--card) 50%);border-color:#2b5aa8;color:var(--text)}
+  .qz-cell.hist{background:var(--fill);border-style:dashed}
+  .qz-legend i.cur{background:#2b5aa8;border-color:#2b5aa8}
+  .qz-legend i.part{background:linear-gradient(90deg,#2b5aa8 50%,#fff 50%);border-color:#2b5aa8}
+  /* 历史提示条 */
+  .qz-hist-tip{font-size:12.5px;padding:7px 11px;border-radius:8px;margin-bottom:12px}
+  .qz-hist-tip.good{background:rgba(52,199,89,.1);color:#128a3d}
+  .qz-hist-tip.bad{background:rgba(255,149,0,.14);color:#a35f00}
+  .qz-hist-tip b{font-weight:700}
+  .qz-hist-tip .g{color:var(--green)} .qz-hist-tip .o{color:var(--orange)}
+  /* 备注框 */
+  .qz-note{margin-top:11px;padding:11px 13px;border-radius:9px;background:var(--fill)}
+  .qz-nlb{font-size:12.5px;font-weight:600;margin-bottom:7px}
+  .qz-nlb .qz-sub{font-weight:400;margin-left:5px}
+  .qz-nta{width:100%;font-size:14px;line-height:1.7;padding:9px 11px;resize:vertical;min-height:56px}
+  .qz-nfoot{display:flex;justify-content:flex-end;min-height:16px}
+  .qz-nsave{font-size:11.5px;color:var(--green)}
+  /* 底部导航 */
+  .qz-navsp{flex:1}
+  .qz-nav .qz-btn{flex:none;min-width:104px}
+  .qz-card.mock{border-style:dashed;border-color:var(--tint)}
+  .qz-mocks{display:flex;flex-direction:column;gap:8px}
+  .qz-mrow{text-align:left;border:1px solid var(--sep);background:var(--card);color:var(--text);
+    border-radius:11px;padding:13px 15px;font-family:inherit}
+  .qz-mname{font-size:15.5px;font-weight:600}
+  .qz-mmeta{font-size:12.5px;color:var(--text2);margin-top:3px}
   /* ===== 10.10 刷题中心 CSS END ===== */
 </style>
 
@@ -3641,7 +3673,7 @@ const QZ_REAL={"单选题":60,"多选题":10,"判断题":20};   // 各题型题�
 const QZ_PTS ={"单选题":0.8,"多选题":1.2,"判断题":0.5}; // 各题型分值
 const QZ_DEF_MIN=120;                                 // 模拟考试默认时长(分钟)
 let qz={ view:"home", pick:{}, scope:"全部", nums:null, take:"real", mode:"practice", mins:QZ_DEF_MIN,
-         cur:0, showExp:false, cardOpen:false };
+         cur:0, showExp:false, cardOpen:false, showHist:true };
 let qzTimer=null;
 
 /* ---------- 题库适配层：把两个题库摊平成一套结构 ---------- */
@@ -3664,6 +3696,16 @@ function qzSt(q){
   const x=mgQSt(q.id);
   return x&&x.ans?{done:true,wrong:!x.ok,inBook:mgInBook(q._raw),fuzzy:mgIsUns(x),mastered:false,w:x.w||0}:null;
 }
+/* 备注：我对这道题的思考 / 不懂的地方。法律存 lawState.q[id].note，管理存 mgState.note[id]。 */
+function qzNoteGet(q){ if(q.src==="law"){ const x=lawQSt(q.id); return (x&&x.note)||""; }
+  return (mgS().note||{})[q.id]||""; }
+function qzNoteSet(q,t){ t=String(t||"");
+  if(q.src==="law"){ const x=lawQEnsure(q.id); if(t) x.note=t; else delete x.note; }
+  else { const s2=mgS(); if(!s2.note) s2.note={}; if(t) s2.note[q.id]=t; else delete s2.note[q.id]; }
+  save(); }
+/* 有备注的题（给薄弱点整理用） */
+function qzNoted(){ return qzAll().filter(q=>qzNoteGet(q)); }
+
 /* 判分并写回原模块的状态（错题本规则完全沿用各自模块的） */
 function qzGrade(q,pick){
   const ok=(pick===q.answer);
@@ -3671,6 +3713,16 @@ function qzGrade(q,pick){
   else { const x=mgQEnsure(q.id); x.pick=pick; mgGrade(q._raw,x); }
   return ok;
 }
+/* 这道题以前做过没有、对还是错——组卷时「显示历史」用 */
+function qzHist(q){
+  if(q.src==="law"){ const x=lawQSt(q.id); if(!x||!x.n) return null;
+    return {n:x.n, w:x.w||0, r:x.r||0, mastered:!!x.mastered, fuzzy:!!x.fuzzy,
+            last: x.w>0&&!x.mastered ? "错" : (x.r>0?"对":"") , date:x.last||""}; }
+  const x=mgQSt(q.id); if(!x||!x.ans) return null;
+  return {n:x.n||1, w:x.w||0, r:x.ok?1:0, mastered:false, fuzzy:mgIsUns(x),
+          last: x.ok?"对":"错", date:x.last||""};
+}
+
 /* 层级：科目组 → 子科目 */
 function qzTree(){ const t={};
   qzAll().forEach(q=>{ const g=t[q.group]||(t[q.group]={name:q.group,subs:{},n:0});
@@ -3688,6 +3740,16 @@ function qzScopeOk(q){
   } }
 function qzPool(){ const sel=qz.pick;
   return qzAll().filter(q=>sel[q.subject]&&qzScopeOk(q)); }
+
+/* ---------- 模考卷（整套固定卷，含写作题）----------
+   数据放 db.mockBank = { version, papers:[{ id, name, mins, note,
+     items:[ {sec:"判断题"|"单选题"|"多选题", stem, options, answer, explain, point},
+             {sec:"写作题", material, stem, point, minWords, ref} ] }] }
+   与科目题库不同：卷面固定、不抽题、含写作；做题记录单独存在 qzState.mock 里，
+   不写进 lawState/mgState（模考是整卷成绩，不该污染分科目的错题本）。 */
+function qzMocks(){ return ((db.mockBank&&db.mockBank.papers)||[]); }
+function qzMockById(id){ return qzMocks().find(p=>p.id===id)||null; }
+function qzMockState(){ const s=qzState(); if(!s.mock) s.mock={}; return s.mock; }
 
 /* ---------- 组卷 ---------- */
 function qzShuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=a[i];a[i]=a[j];a[j]=t; } return a; }
@@ -3726,6 +3788,7 @@ function mountQuiz(main){
   if(p&&!p.submitted&&qz.view==="run") return qzRun(main);
   if(qz.view==="result") return qzResult(main);
   if(qz.view==="build")  return qzBuilder(main);
+  if(qz.view==="mock")   return qzMockList(main);
   qzHome(main);
 }
 
@@ -3756,8 +3819,16 @@ function qzHome(main){
          '<div class="qz-bar"><i style="width:'+pct+'%"></i></div>'+
          '<div class="qz-cmeta">已做 '+s.done+' · <span class="r">错题 '+s.wrong+'</span></div></button>';
     }); });
+  /* 模考题：整套真题卷，含写作 */
+  const mk=qzMocks();
+  h+='<button class="qz-card mock" id="qzMock"><div class="qz-cname">📄 模考题</div>'+
+     '<div class="qz-cnum">'+(mk.length?mk.length+' 套整卷':'还没有卷子')+'</div>'+
+     '<div class="qz-bar"><i style="width:0%"></i></div>'+
+     '<div class="qz-cmeta">'+(mk.length?'含写作题 · 按真题结构':'把模考题给我，我做进来')+'</div></button>';
   h+='</div>';
   h+='<div class="qz-actions"><button class="qz-btn pri big" id="qzNew">✏️ 自由组卷（可跨科目、按比例、限时模考）</button></div>';
+  const noted=qzNoted().length, wrongN=qzAll().filter(q=>{const st=qzSt(q);return st&&st.inBook;}).length;
+  if(wrongN||noted) h+='<div class="qz-actions"><button class="qz-btn" id="qzExp">📤 导出错题＋我的备注（'+wrongN+' 错题'+(noted?' · '+noted+' 条备注':"")+'）</button></div>';
   h+='<div class="qz-jump"><span class="qz-sub">各科目的错题本 / 卡片 / 知识点薄弱度，仍在原来的模块里：</span>'+
      '<button class="qz-btn sm" data-go="law">法律模块</button><button class="qz-btn sm" data-go="mg">管理模块</button></div>';
   const ex=qzState().exams;
@@ -3768,9 +3839,71 @@ function qzHome(main){
   main.querySelectorAll(".qz-card").forEach(b=>b.onclick=()=>{
     qz.pick={}; qz.pick[b.dataset.subj]=true; qz.view="build"; render(); });
   const nb=main.querySelector("#qzNew"); if(nb) nb.onclick=()=>{ qz.view="build"; render(); };
+  const mb=main.querySelector("#qzMock"); if(mb) mb.onclick=()=>{ qz.view="mock"; render(); };
+  const eb=main.querySelector("#qzExp"); if(eb) eb.onclick=qzExport;
   main.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
   const gb=main.querySelector("#qzGo"); if(gb) gb.onclick=()=>{ qz.view="run"; qz.cur=qzPaper().cur||0; render(); };
   const db_=main.querySelector("#qzDrop"); if(db_) db_.onclick=()=>{ if(confirm("放弃这套卷子？已答的记录会保留。")){ qzState().paper=null; save(); render(); } };
+}
+
+/* 导出错题 + 备注：给 Claude 整理薄弱点用 */
+function qzExport(){
+  const NL = "\n";
+  const bad = qzAll().filter(q=>{ const st=qzSt(q); return st && st.inBook; });
+  const noted = qzNoted();
+  const seen = {}; bad.forEach(q=>seen[q.src+"|"+q.id]=1);
+  const onlyNote = noted.filter(q=>!seen[q.src+"|"+q.id]);
+  const dump = (q, extra)=>{
+    const note = qzNoteGet(q);
+    let t = "### " + q.subject + "·" + (QZ_SECNAME[q.sec]||q.sec) + " 第" + q.num + "题" + (extra||"") + NL;
+    t += q.stem + NL;
+    if(q.options) Object.keys(q.options).forEach(k=>{ t += k + ". " + q.options[k] + NL; });
+    t += "**答案：**" + q.answer + NL + "**解析：**" + (q.explain||"") + NL;
+    if(note) t += "**🙋 我的备注：**" + note + NL;
+    return t + NL;
+  };
+  let md = "# 错题与备注导出 " + today() + NL + NL;
+  md += "错题 " + bad.length + " 题；写了备注的 " + noted.length + " 题。" + NL + NL;
+  md += "> 「我的备注」是我做题时写下的思考和疑问，请重点根据这些判断我哪些知识点没掌握，并把那些知识点讲清楚。" + NL + NL;
+  md += "## 一、错题（做错且还没连对2次）" + NL + NL;
+  bad.forEach(q=>{ const st=qzSt(q)||{};
+    md += dump(q, "（累计错 " + (st.w||0) + " 次" + (st.fuzzy?" · 标过模糊":"") + "）"); });
+  if(onlyNote.length){
+    md += "## 二、做对了但写了备注的题" + NL + NL;
+    onlyNote.forEach(q=>{ md += dump(q, ""); });
+  }
+  const blob = new Blob([md], {type:"text/markdown;charset=utf-8"});
+  const h = openModal("导出错题与备注",
+    '<p class="qz-sub">复制下面全部内容发给 Claude，让它根据你的备注和错题整理薄弱知识点。</p>'+
+    '<textarea id="qzTa" class="lw-ta" readonly>' + esc(md) + '</textarea>'+
+    '<div class="qz-actions"><button class="qz-btn pri" id="qzCopy">复制全部</button>'+
+    '<a class="qz-btn" id="qzDl" download="错题与备注-' + today() + '.md">下载 .md</a></div>');
+  h.querySelector("#qzDl").href = URL.createObjectURL(blob);
+  h.querySelector("#qzCopy").onclick = ()=>{
+    const ta = h.querySelector("#qzTa"); ta.select(); ta.setSelectionRange(0,999999);
+    try{ document.execCommand("copy"); toast("已复制 ✓"); }catch(e){ toast("请手动长按复制"); }
+  };
+}
+
+/* ---------- 模考卷列表 ---------- */
+function qzMockList(main){
+  const ms=qzMocks();
+  let h='<div class="qz-hd"><button class="qz-back" id="qzBack">‹ 返回</button><h2>模考题</h2>'+
+        '<span class="qz-sub">整套卷、按真题结构、含写作题</span></div>';
+  if(!ms.length){
+    h+='<div class="empty">还没有模考卷。<br><span class="qz-sub">把模考题（题目＋答案，有写作材料的话也一起）发给我，'+
+       '我按真题结构做成整卷放进来：判断→单选→多选→写作，选「模拟考试」就是限时、交卷才出分。</span></div>';
+    main.innerHTML=h; main.querySelector("#qzBack").onclick=()=>{ qz.view="home"; render(); }; return;
+  }
+  h+='<div class="qz-mocks">'+ms.map(p=>{
+    const st=qzMockState()[p.id];
+    const n=(p.items||[]).length, w=(p.items||[]).filter(i=>i.sec==="写作题").length;
+    return '<button class="qz-mrow" data-id="'+esc(p.id)+'"><div class="qz-mname">'+esc(p.name)+'</div>'+
+      '<div class="qz-mmeta">'+n+' 题'+(w?' · 含写作':"")+' · '+(p.mins||120)+' 分钟'+
+      (st&&st.score?' · 上次 '+st.score.pts+'/'+st.score.full+' 分':"")+'</div></button>'; }).join("")+'</div>';
+  main.innerHTML=h;
+  main.querySelector("#qzBack").onclick=()=>{ qz.view="home"; render(); };
+  main.querySelectorAll(".qz-mrow").forEach(b=>b.onclick=()=>{ toast("模考卷数据还没导入"); });
 }
 
 /* ---------- 组卷页 ---------- */
@@ -3810,7 +3943,9 @@ function qzBuilder(main){
      '<button class="qz-chip'+(qz.mode==="practice"?" on":"")+'" data-mode="practice">练习（答完就出解析）</button>'+
      '<button class="qz-chip'+(qz.mode==="exam"?" on":"")+'" data-mode="exam">模拟考试（限时·交卷才判分）</button>'+
      '<span class="qz-num'+(qz.mode==="exam"?"":" off")+'"><i>时长</i><input type="number" min="5" max="300" value="'+qz.mins+'" id="qzMins"><em>分钟</em></span>'+
-     '</div></div>';
+     '</div><div class="qz-row" style="margin-top:9px">'+
+     '<label class="qz-sw"><input type="checkbox" id="qzHistSw"'+(qz.showHist?" checked":"")+'> 显示以前的做题记录'+
+     '<span class="qz-sub">（做过的题会标出上次对错；想当新题重做就关掉）</span></label></div></div>';
   h+='<div class="qz-actions"><button class="qz-btn pri big" id="qzStart"'+(total?"":" disabled")+'>开始（'+total+' 题）</button></div>';
   main.innerHTML=h;
   main.querySelector("#qzBack").onclick=()=>{ qz.view="home"; render(); };
@@ -3822,10 +3957,11 @@ function qzBuilder(main){
   main.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{ qz.mode=b.dataset.mode; render(); });
   main.querySelectorAll("[data-num]").forEach(inp=>inp.onchange=e=>{ qz.nums[inp.dataset.num]=Math.max(0,+e.target.value||0); render(); });
   const mi=main.querySelector("#qzMins"); if(mi) mi.onchange=e=>{ qz.mins=Math.max(5,+e.target.value||60); };
+  const hs=main.querySelector("#qzHistSw"); if(hs) hs.onchange=e=>{ qz.showHist=e.target.checked; };
   main.querySelector("#qzStart").onclick=()=>{
     const p=qzBuild(); if(!p){ toast("这个筛选下没有题"); return; }
     const st=qzState(); st.paper=p;
-    st.last={pick:Object.assign({},qz.pick),scope:qz.scope,nums:Object.assign({},qz.nums),take:qz.take,mode:qz.mode,mins:qz.mins};
+    st.last={pick:Object.assign({},qz.pick),scope:qz.scope,nums:Object.assign({},qz.nums),take:qz.take,mode:qz.mode,mins:qz.mins,showHist:qz.showHist};
     qz.cur=0; qz.view="run"; save(); render(); };
 }
 
@@ -3856,12 +3992,12 @@ function qzRun(main){
 
   let h='<div class="qz-exam">';
   /* 顶栏：返回 / 考试名 / 计时 / 交卷 */
+  const doneN=Object.keys(p.picks).filter(k=>k.indexOf("_tmp")!==0).length;
   h+='<div class="qz-top"><div class="qz-tl"><button class="qz-btn sm" id="qzExit">‹ 返回</button>'+
      '<b>综合测试</b><span class="qz-tag">'+QZ_MODE[p.mode]+'</span></div>'+
-     '<div class="qz-tc">'+(exam?'<span class="qz-clock" id="qzClock">'+qzFmtTime(qzLeft(p))+'</span>':
-        '<span class="qz-prog">已答 '+Object.keys(p.picks).filter(k=>k.indexOf("_tmp")!==0).length+' / '+qs.length+'</span>')+'</div>'+
-     '<div class="qz-tr"><button class="qz-btn sm only-narrow" id="qzCardBtn">答题卡</button>'+
-     '<button class="qz-btn sm warn" id="qzSubmit">交卷</button></div></div>';
+     '<div class="qz-tr"><span class="qz-done">已完成 '+doneN+'/'+qs.length+' 题</span>'+
+     (exam?'<span class="qz-clock" id="qzClock">剩余 '+qzFmtTime(qzLeft(p))+'</span>':"")+
+     '<button class="qz-btn sm only-narrow" id="qzCardBtn">答题卡</button></div></div>';
   h+='<div class="qz-body">';
   /* 左：答题卡（按题型分组） */
   h+='<div class="qz-side'+(qz.cardOpen?" open":"")+'"><div class="qz-slb">答题卡</div><div class="qz-sheet-wrap">';
@@ -3869,17 +4005,32 @@ function qzRun(main){
     const dn=g.list.filter(it=>p.picks[qs[it.i].src+"|"+qs[it.i].id]).length;
     h+='<div class="qz-sgrp"><div class="qz-sgh">'+esc(QZ_SECNAME[g.sec]||g.sec)+' <b>'+g.list.length+'</b> 题<span>'+dn+'/'+g.list.length+'</span></div><div class="qz-sheet">';
     g.list.forEach(it=>{ const x=qs[it.i], k2=x.src+"|"+x.id; let c="qz-cell";
-      if(p.picks[k2]) c+=" done"; if(p.marks[k2]) c+=" mk"; if(it.i===qz.cur) c+=" cur";
+      const tmp=p.picks["_tmp"+k2];
+      if(p.picks[k2]) c+=" done";
+      else if(tmp) c+=" part";                       /* 多选选了一半 = 部分完成 */
+      else if(qz.showHist&&qzHist(x)) c+=" hist";    /* 以前做过：浅色底 */
+      if(p.marks[k2]) c+=" mk"; if(it.i===qz.cur) c+=" cur";
       if(!exam&&p.picks[k2]) c+=(p.picks[k2]===x.answer)?" right":" wrong";
-      h+='<button class="'+c+'" data-i="'+it.i+'">'+it.no+'</button>'; });
+      const hi=qz.showHist?qzHist(x):null;
+      h+='<button class="'+c+'" data-i="'+it.i+'" title="'+(hi?"以前做过，上次"+hi.last:"")+'">'+it.no+'</button>'; });
     h+='</div></div>'; });
-  h+='</div><div class="qz-legend"><span><i class="done"></i>已答</span><span><i></i>未答</span><span><i class="mk"></i>标记</span></div></div>';
+  h+='</div><div class="qz-legend">'+
+     '<span><i class="cur"></i>当前</span><span><i></i>未完成</span>'+
+     '<span><i class="part"></i>部分完成</span><span><i class="done"></i>已完成</span>'+
+     '<span><i class="mk"></i>标记</span></div>'+
+     '<button class="qz-btn pri qz-submit" id="qzSubmit">交卷</button></div>';
   /* 右：题目 */
   h+='<div class="qz-main"><div class="qz-qhd">'+
      '<span class="qz-qsec">'+esc(QZ_SECNAME[curSec]||curSec)+'</span><span class="qz-qno">第 '+curNo+' 题</span>'+
      '<span class="qz-qpt">'+QZ_PTS[curSec]+' 分</span>'+
      '<span class="qz-qsrc">'+esc(q.subject)+' · 原书第'+esc(String(q.page||"-"))+'页</span>'+
      (marked?'<span class="qz-qmark">▲ 已标记</span>':"")+'</div>';
+  /* 以前做过的话，把历史亮出来（组卷时可关掉） */
+  if(qz.showHist&&!answered){ const hi=qzHist(q);
+    if(hi) h+='<div class="qz-hist-tip'+(hi.last==="错"?" bad":" good")+'">以前做过 '+hi.n+' 次 · 上次<b>'+hi.last+'</b>'+
+      (hi.w?' · 累计错 '+hi.w+' 次':"")+(hi.mastered?' · <span class="g">已掌握</span>':"")+
+      (hi.fuzzy?' · <span class="o">标过模糊</span>':"")+
+      (qzNoteGet(q)?' · 有备注':"")+'</div>'; }
   h+='<div class="qz-stem">'+esc(q.stem)+'</div>';
   const keys=(q.type==="tf")?["√","×"]:Object.keys(q.options||{});
   h+='<div class="qz-opts'+(q.type==="tf"?" tf":"")+'">';
@@ -3897,9 +4048,10 @@ function qzRun(main){
        '<div class="qz-exp"><b>【答案】'+esc(q.answer)+'</b><br>'+esc(q.explain||"（无解析）").replace(/\n/g,"<br>")+'</div>';
     h+='<div id="qzFz"></div>';
   }
-  h+='<div class="qz-nav"><button class="qz-btn" id="qzPrev">上一题</button>'+
-     '<button class="qz-btn'+(marked?" on":"")+'" id="qzMark">▲ '+(marked?"取消标记":"标记本题")+'</button>'+
-     '<button class="qz-btn pri" id="qzNext">下一题</button></div>';
+  h+='<div class="qz-nav"><button class="qz-btn'+(marked?" on":"")+'" id="qzMark">🚩 '+(marked?"取消标记":"标记本题")+'</button>'+
+     '<span class="qz-navsp"></span>'+
+     '<button class="qz-btn" id="qzPrev">上一页</button>'+
+     '<button class="qz-btn pri" id="qzNext">下一页</button></div>';
   h+='</div></div></div>';
   main.innerHTML=h;
 
@@ -3929,10 +4081,10 @@ function qzRun(main){
   /* 中途返回：进度和计时都保留，首页可「继续」 */
   main.querySelector("#qzExit").onclick=()=>{ p.cur=qz.cur; qzPause(); qz.view="home"; save(); render(); };
   const fz=main.querySelector("#qzFz");
-  if(fz) qzFuzzyBar(fz,q);
+  if(fz){ qzFuzzyBar(fz,q); qzNoteBox(fz,q); }
   if(qzTimer){ clearInterval(qzTimer); qzTimer=null; }
   if(exam){ qzTimer=setInterval(()=>{ const el=document.getElementById("qzClock"); if(!el){ clearInterval(qzTimer); qzTimer=null; return; }
-    const left=qzLeft(p); el.textContent=qzFmtTime(left);
+    const left=qzLeft(p); el.textContent="剩余 "+qzFmtTime(left);
     if(left<=0){ clearInterval(qzTimer); qzTimer=null; toast("时间到，自动交卷"); qzSubmit(qzItems()); } },1000); }
 }
 
@@ -3957,6 +4109,22 @@ function qzFuzzyBar(host,q){
     host.querySelectorAll(".qz-fzbtn").forEach(b=>b.onclick=()=>{ setAll(b.dataset.v==="1"); draw(); });
     host.querySelectorAll(".qz-fzo").forEach(b=>b.onclick=()=>{ setOpt(b.dataset.k); draw(); }); };
   draw();
+}
+
+/* 备注框：写下我的思考 / 不懂的地方，后续整理薄弱点时用 */
+function qzNoteBox(host,q){
+  const cur=qzNoteGet(q);
+  const box=document.createElement("div"); box.className="qz-note";
+  box.innerHTML='<div class="qz-nlb">📝 我的备注<span class="qz-sub">（写下你的思考、卡在哪、想问的问题——整理薄弱点时我会看这些）</span></div>'+
+    '<textarea class="qz-nta" rows="2" placeholder="例：不理解为什么这里算间接故意，跟过失怎么分？">'+esc(cur)+'</textarea>'+
+    '<div class="qz-nfoot"><span class="qz-nsave"></span></div>';
+  host.appendChild(box);
+  const ta=box.querySelector(".qz-nta"), tip=box.querySelector(".qz-nsave");
+  let t=null;
+  ta.oninput=()=>{ clearTimeout(t); tip.textContent="输入中…";
+    t=setTimeout(()=>{ qzNoteSet(q,ta.value.trim()); tip.textContent="已保存 ✓";
+      setTimeout(()=>{ if(tip) tip.textContent=""; },1500); },600); };
+  ta.onblur=()=>{ clearTimeout(t); qzNoteSet(q,ta.value.trim()); };
 }
 
 function qzSubmit(qs){
