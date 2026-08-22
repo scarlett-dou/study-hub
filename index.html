@@ -3632,7 +3632,9 @@ function mgImport(){
    所以错题本、模糊标记、知识点薄弱度这些既有进度全部延续，不会因为换界面而丢。
    自己只存一份 qzState：当前试卷 + 上次组卷配置 + 历史成绩。 */
 const QZ_MODE={practice:"练习",exam:"模拟考试"};
-const QZ_SECS=["单选题","多选题","判断题"];          // 机考卷面顺序
+/* 卷面顺序与真系统一致：判断题 → 单项选择题 → 多项选择题（→ 写作题，本题库暂无） */
+const QZ_SECS=["判断题","单选题","多选题"];
+const QZ_SECNAME={"判断题":"判断题","单选题":"单项选择题","多选题":"多项选择题"};
 /* 真题结构（2027四川急需紧缺《综合测试》）：判断20×0.5 + 单选60×0.8 + 多选10×1.2 = 客观题70分，
    另有写作1题30分（本题库没有写作题，所以卷面满分按客观题 70 分算）。 */
 const QZ_REAL={"单选题":60,"多选题":10,"判断题":20};   // 各题型题数
@@ -3798,10 +3800,10 @@ function qzBuilder(main){
      takes.map(([k,n])=>'<button class="qz-chip'+(qz.take===k?" on":"")+'" data-take="'+k+'">'+n+'</button>').join("")+'</div>';
   if(qz.take!=="all"){
     h+='<div class="qz-row" style="margin-top:10px">'+QZ_SECS.map(k=>
-      '<span class="qz-num"><i>'+k+'</i><input type="number" min="0" max="300" value="'+(qz.nums[k]||0)+'" data-num="'+esc(k)+'"'+(qz.take==="real"?" disabled":"")+'><em>题</em></span>').join("")+'</div>'; }
+      '<span class="qz-num"><i>'+(QZ_SECNAME[k]||k)+'</i><input type="number" min="0" max="300" value="'+(qz.nums[k]||0)+'" data-num="'+esc(k)+'"'+(qz.take==="real"?" disabled":"")+'><em>题</em></span>').join("")+'</div>'; }
   h+='<div class="qz-plan">'+QZ_SECS.map(k=>{
       const short=avail[k]<((qz.take==="all")?0:(+qz.nums[k]||0));
-      return '<span'+(short?' class="warn"':'')+'>'+k+' <b>'+plan[k]+'</b>'+(short?' <em>（库里只有 '+avail[k]+' 题）</em>':'')+'</span>'; }).join("")+
+      return '<span'+(short?' class="warn"':'')+'>'+(QZ_SECNAME[k]||k)+' <b>'+plan[k]+'</b>'+(short?' <em>（库里只有 '+avail[k]+' 题）</em>':'')+'</span>'; }).join("")+
      '<span class="qz-total">合计 <b>'+total+'</b> 题 · 满分 <b>'+pts+'</b> 分</span></div></div>';
   /* ④ 模式 */
   h+='<div class="qz-sec"><div class="qz-lb">④ 模式</div><div class="qz-row">'+
@@ -3865,7 +3867,7 @@ function qzRun(main){
   h+='<div class="qz-side'+(qz.cardOpen?" open":"")+'"><div class="qz-slb">答题卡</div><div class="qz-sheet-wrap">';
   groups.forEach(g=>{
     const dn=g.list.filter(it=>p.picks[qs[it.i].src+"|"+qs[it.i].id]).length;
-    h+='<div class="qz-sgrp"><div class="qz-sgh">'+esc(g.sec)+' <b>'+g.list.length+'</b> 题<span>'+dn+'/'+g.list.length+'</span></div><div class="qz-sheet">';
+    h+='<div class="qz-sgrp"><div class="qz-sgh">'+esc(QZ_SECNAME[g.sec]||g.sec)+' <b>'+g.list.length+'</b> 题<span>'+dn+'/'+g.list.length+'</span></div><div class="qz-sheet">';
     g.list.forEach(it=>{ const x=qs[it.i], k2=x.src+"|"+x.id; let c="qz-cell";
       if(p.picks[k2]) c+=" done"; if(p.marks[k2]) c+=" mk"; if(it.i===qz.cur) c+=" cur";
       if(!exam&&p.picks[k2]) c+=(p.picks[k2]===x.answer)?" right":" wrong";
@@ -3874,7 +3876,7 @@ function qzRun(main){
   h+='</div><div class="qz-legend"><span><i class="done"></i>已答</span><span><i></i>未答</span><span><i class="mk"></i>标记</span></div></div>';
   /* 右：题目 */
   h+='<div class="qz-main"><div class="qz-qhd">'+
-     '<span class="qz-qsec">'+esc(curSec)+'</span><span class="qz-qno">第 '+curNo+' 题</span>'+
+     '<span class="qz-qsec">'+esc(QZ_SECNAME[curSec]||curSec)+'</span><span class="qz-qno">第 '+curNo+' 题</span>'+
      '<span class="qz-qpt">'+QZ_PTS[curSec]+' 分</span>'+
      '<span class="qz-qsrc">'+esc(q.subject)+' · 原书第'+esc(String(q.page||"-"))+'页</span>'+
      (marked?'<span class="qz-qmark">▲ 已标记</span>':"")+'</div>';
