@@ -752,6 +752,145 @@
   .qz-mname{font-size:15.5px;font-weight:600}
   .qz-mmeta{font-size:12.5px;color:var(--text2);margin-top:3px}
   /* ===== 10.10 刷题中心 CSS END ===== */
+  /* ===== 10.11 公文写作 ===== */
+  .wr-hd{display:flex;align-items:baseline;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+  .wr-hd h2{font-size:20px;margin:0}
+  .wr-lb{font-size:12.5px;color:var(--text2);margin:18px 2px 8px;font-weight:600}
+  .wr-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .wr-tab{border:1px solid var(--sep2);background:var(--card);color:var(--text2);border-radius:9px;
+    padding:7px 13px;font-size:13.5px;font-family:inherit;font-weight:600}
+  .wr-tab.on{background:var(--tint);border-color:var(--tint);color:#fff}
+  .wr-seg{display:flex;gap:6px;margin-bottom:11px}
+  .wr-seg button{flex:1;border:1px solid var(--sep2);background:var(--card);color:var(--text2);
+    border-radius:9px;padding:8px 0;font-size:13.5px;font-family:inherit;font-weight:600}
+  .wr-seg button.on{background:var(--tint);border-color:var(--tint);color:#fff}
+
+  /* 练笔列表 */
+  .wr-plist{display:flex;flex-direction:column;gap:9px}
+  .wr-prow{text-align:left;border:1px solid var(--sep);background:var(--card);color:var(--text);
+    border-radius:var(--r);padding:13px 15px;box-shadow:var(--shadow);font-family:inherit;width:100%}
+  .wr-pt{font-size:15.5px;font-weight:600;margin-bottom:6px}
+  .wr-pm{display:flex;gap:10px;flex-wrap:wrap;font-size:12.5px;color:var(--text2);align-items:center}
+  .wr-type{background:rgba(0,122,255,.13);color:var(--tint);border-radius:6px;padding:2px 8px;font-weight:600}
+  .wr-tg{margin-left:auto;font-size:12px;border-radius:6px;padding:2px 8px;background:var(--sep);color:var(--text2)}
+  .wr-tg.go{background:rgba(255,149,0,.18);color:#b06800}
+  .wr-tg.ok{background:rgba(52,199,89,.18);color:#1c7a3a}
+
+  /* 写作页 */
+  .wr-top{display:flex;align-items:center;gap:12px;background:#2b7cf0;color:#fff;
+    border-radius:var(--r);padding:11px 15px;margin-bottom:14px;flex-wrap:wrap}
+  .wr-x{border:none;background:rgba(255,255,255,.18);color:#fff;border-radius:8px;
+    padding:5px 11px;font-size:13.5px;font-family:inherit}
+  .wr-tt{font-size:15.5px;font-weight:600;flex:1;min-width:120px}
+  .wr-meta{display:flex;gap:12px;font-size:13.5px;font-variant-numeric:tabular-nums}
+  .wr-meta .g{color:#b8f7c8;font-weight:600}
+  .wr-meta .r{color:#ffd0d0;font-weight:600}
+  .wr-q{background:var(--card);border:1px solid var(--sep);border-radius:var(--r);
+    padding:15px 17px;box-shadow:var(--shadow);margin-bottom:12px}
+  .wr-mat{font-size:14.5px;line-height:1.85;white-space:normal}
+  .wr-task{margin-top:13px;padding-top:12px;border-top:1px solid var(--sep);font-size:14.5px;line-height:1.8}
+  .wr-req{margin:8px 0 0;padding-left:22px;font-size:13.5px;color:var(--text2);line-height:1.75}
+  .wr-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:11px 0}
+  .wr-bar .qz-sub{flex:1;min-width:100px}
+  .wr-acts{display:flex;gap:8px;flex-wrap:wrap}
+  .wr-acts.big{margin-top:16px}
+  .wr-acts.big .qz-btn{flex:1;min-width:130px;padding:11px 0}
+  .wr-ta{width:100%;min-height:400px;padding:15px 17px;border:1px solid var(--sep2);border-radius:var(--r);
+    background:var(--card);color:var(--text);font-family:inherit;font-size:15px;line-height:2;resize:vertical}
+  .wr-tips{background:rgba(255,149,0,.09);border:1px solid rgba(255,149,0,.3);border-radius:var(--r);
+    padding:13px 16px;margin-bottom:11px;font-size:13.5px;line-height:1.85}
+  .wr-tips b{display:block;margin-bottom:6px;color:#b06800}
+  .wr-tips ul{margin:0;padding-left:20px}
+  .wr-tips li{margin:5px 0}
+
+  /* 对照 */
+  .wr-cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+  .wr-col{background:var(--card);border:1px solid var(--sep);border-radius:var(--r);
+    padding:13px 15px;box-shadow:var(--shadow);min-width:0}
+  .wr-clb{font-size:12.5px;color:var(--text2);font-weight:600;margin-bottom:8px;
+    padding-bottom:7px;border-bottom:1px solid var(--sep)}
+  .wr-mine,.wr-model{font-size:14px;line-height:1.95;max-height:520px;overflow:auto;word-break:break-word}
+  .wr-model{color:var(--text)}
+  .wr-sec{background:var(--card);border:1px solid var(--sep);border-radius:var(--r);
+    padding:14px 17px;box-shadow:var(--shadow);margin-bottom:12px;font-size:14px;line-height:1.85}
+  .wr-sec>b{display:block;margin-bottom:9px;font-size:15px}
+  .wr-sec ul{margin:0;padding-left:20px}
+  .wr-sec li{margin:5px 0}
+  .wr-ol{margin:9px 0;padding-left:11px;border-left:3px solid var(--tint)}
+  .wr-olh{font-weight:600;font-size:14px;margin-bottom:4px}
+  .wr-chk{display:flex;flex-direction:column;gap:7px}
+  .wr-ck{display:flex;gap:9px;align-items:flex-start;border:1px solid var(--sep);border-radius:9px;
+    padding:9px 12px;font-size:13.5px;line-height:1.6}
+  .wr-ck.on{border-color:rgba(52,199,89,.55);background:rgba(52,199,89,.1)}
+  .wr-ck input{margin-top:3px;flex:none;width:16px;height:16px}
+  .wr-ck b{display:block;font-weight:600}
+  .wr-ck i{display:block;font-style:normal;font-size:12.5px;color:var(--text2);margin-top:2px}
+  .wr-score{margin-top:10px;font-size:13.5px;font-weight:600;color:var(--tint)}
+
+  /* 文种 / 辨析 */
+  .wr-dl{display:flex;flex-direction:column;gap:8px}
+  .wr-d{border:1px solid var(--sep);background:var(--card);border-radius:var(--r);
+    box-shadow:var(--shadow);overflow:hidden}
+  .wr-d.on{border-color:var(--tint)}
+  .wr-dh{display:flex;align-items:center;gap:9px;width:100%;text-align:left;border:none;
+    background:none;color:var(--text);padding:12px 15px;font-family:inherit;font-size:14px}
+  .wr-dn{font-size:15px;font-weight:600;flex:none}
+  .wr-dir{font-size:11.5px;background:var(--sep);color:var(--text2);border-radius:5px;padding:2px 7px;flex:none}
+  .wr-hot{font-size:11.5px;background:rgba(255,59,48,.14);color:var(--red);border-radius:5px;padding:2px 7px;flex:none}
+  .wr-dd{font-size:12.5px;color:var(--text2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .wr-dh i{font-style:normal;color:var(--text3);flex:none}
+  .wr-db{padding:0 15px 14px;font-size:13.5px;line-height:1.85;border-top:1px solid var(--sep);padding-top:12px}
+  .wr-db p{margin:0 0 8px}
+  .wr-db p:last-child{margin-bottom:0}
+  .wr-warn{background:rgba(255,59,48,.07);border-left:3px solid var(--red);border-radius:0 8px 8px 0;
+    padding:9px 12px;color:var(--text)}
+  .wr-tb{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px}
+  .wr-tb th,.wr-tb td{border:1px solid var(--sep);padding:7px 9px;text-align:left;vertical-align:top;line-height:1.6}
+  .wr-tb th{background:var(--bg);color:var(--text2);font-weight:600;white-space:nowrap;width:1%}
+
+  /* 格式 */
+  .wr-fl{display:flex;flex-direction:column;gap:8px}
+  .wr-f{display:flex;gap:12px;background:var(--card);border:1px solid var(--sep);
+    border-radius:var(--r);padding:12px 15px;box-shadow:var(--shadow)}
+  .wr-fn{font-size:14px;font-weight:600;flex:none;width:96px}
+  .wr-fd{font-size:13.5px;line-height:1.8;flex:1;min-width:0}
+  .wr-fw{margin-top:6px;font-size:13px;color:var(--text2);background:var(--bg);
+    border-radius:8px;padding:7px 10px;line-height:1.75}
+  .wr-el{display:flex;flex-direction:column;gap:8px}
+  .wr-e{background:var(--card);border:1px solid var(--sep);border-radius:var(--r);
+    padding:12px 15px;box-shadow:var(--shadow)}
+  .wr-et{font-size:14px;font-weight:600;color:var(--red);margin-bottom:7px}
+  .wr-ed{display:flex;flex-direction:column;gap:5px;font-size:13.5px;line-height:1.75}
+  .wr-ed .bad{color:var(--text2)}
+  .wr-ed .good{color:#1c7a3a;font-weight:600}
+
+  /* 模板 */
+  .wr-pre{margin:0;font-family:inherit;font-size:13.5px;line-height:1.95;white-space:pre-wrap;word-break:break-word}
+  .wr-ph{background:var(--card);border:1px solid var(--sep);border-radius:var(--r);
+    padding:12px 15px;box-shadow:var(--shadow);margin-bottom:8px}
+  .wr-phg{font-size:13.5px;font-weight:600;margin-bottom:6px}
+  .wr-ph ul{margin:0;padding-left:20px;font-size:13.5px;line-height:1.85;color:var(--text2)}
+  .wr-ph li{margin:4px 0}
+
+  /* 我的习作 */
+  .wr-ml{display:flex;flex-direction:column;gap:9px}
+  .wr-mrow{background:var(--card);border:1px solid var(--sep);border-radius:var(--r);
+    padding:13px 15px;box-shadow:var(--shadow)}
+  .wr-mh{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:15px}
+  .wr-mm{font-size:12.5px;color:var(--text2);margin:5px 0 9px}
+  .wr-mtx{font-size:13.5px;line-height:1.9;max-height:200px;overflow:auto;
+    background:var(--bg);border-radius:9px;padding:11px 13px}
+
+  @media(max-width:720px){
+    .wr-cmp{grid-template-columns:1fr}
+    .wr-mine,.wr-model{max-height:340px}
+    .wr-f{flex-direction:column;gap:5px}
+    .wr-fn{width:auto}
+    .wr-dd{display:none}
+    .wr-ta{min-height:320px;font-size:16px}
+    .wr-acts.big .qz-btn{min-width:100%}
+  }
+  /* ===== 10.11 公文写作 CSS END ===== */
 </style>
 
 <div class="wrap">
@@ -866,7 +1005,7 @@ function spDImg(d){ return "decks/"+d.id+"-images.json"; }
 /* db → { 路径:json字符串 }。文件名用 id(稳定、纯 ASCII),中文名放进 index.meta 供仓库网页查阅。 */
 function splitDb(){
   const files={}, meta={};
-  const state={}; Object.keys(db).forEach(k=>{ if(k!=="contents"&&k!=="flashDecks"&&k!=="lawBank"&&k!=="mgBank") state[k]=db[k]; });
+  const state={}; Object.keys(db).forEach(k=>{ if(k!=="contents"&&k!=="flashDecks"&&k!=="lawBank"&&k!=="mgBank"&&k!=="wrBank") state[k]=db[k]; });
   files["state.json"]=JSON.stringify(state);
   (db.contents||[]).forEach(c=>{ const p=spCPath(c); files[p]=JSON.stringify(c); meta[p]={name:c.name||""}; });
   (db.flashDecks||[]).forEach(d=>{ const p=spDPath(d), body={};
@@ -876,6 +1015,8 @@ function splitDb(){
   if(db.lawBank&&(((db.lawBank.questions||[]).length)||((db.lawBank.cards||[]).length))) files["law/bank.json"]=JSON.stringify(db.lawBank);
   /* 管理题库:题目+逐选项知识点体积大且极少变,同样单独成文件 */
   if(db.mgBank&&((db.mgBank.questions||[]).length)) files["mg/bank.json"]=JSON.stringify(db.mgBank);
+  /* 公文写作:范文/文种/格式资料体积大且极少变,同样单独成文件 */
+  if(db.wrBank&&((db.wrBank.papers||[]).length)) files["wr/bank.json"]=JSON.stringify(db.wrBank);
   const hashes={}; Object.keys(files).forEach(p=>{ hashes[p]=spHash(files[p]); });
   files["index.json"]=JSON.stringify({ _split:SPLIT_VER, savedAt:db.savedAt||null, files:hashes, meta },null,1);
   return files;
@@ -890,7 +1031,8 @@ function spWriteOrder(files){
   const cont=all.filter(p=>p.indexOf("content/")===0);
   const law=all.filter(p=>p.indexOf("law/")===0);
   const mgb=all.filter(p=>p.indexOf("mg/")===0);
-  return img.concat(deck,cont,law,mgb,["state.json","index.json"]);
+  const wrf=all.filter(p=>p.indexOf("wr/")===0);
+  return img.concat(deck,cont,law,mgb,wrf,["state.json","index.json"]);
 }
 /* { 路径:json字符串 } → db(未 normalize)。任一被 index 引用的文件缺失/解析失败 → 返回 null。
    **调用方拿到 null 必须整体放弃采用**,绝不能拿残缺数据覆盖本机。这是最关键的安全边界。 */
@@ -910,6 +1052,7 @@ function mergeFiles(files){
       out.flashDecks.push(d); });
     if(typeof files["law/bank.json"]==="string") out.lawBank=JSON.parse(files["law/bank.json"]);
     if(typeof files["mg/bank.json"]==="string") out.mgBank=JSON.parse(files["mg/bank.json"]);
+    if(typeof files["wr/bank.json"]==="string") out.wrBank=JSON.parse(files["wr/bank.json"]);
     return out;
   }catch(e){ return null; }
 }
@@ -1374,6 +1517,7 @@ const BUILTIN_MODULES=[
   { id:"quiz", name:"刷题", mount:mountQuiz },
   { id:"law", name:"法律", mount:mountLaw, hidden:true },
   { id:"mg", name:"管理", mount:mountMg, hidden:true },
+  { id:"wr", name:"公文写作", mount:mountWr, hidden:true },
   { id:"exam", name:"考试", mount:mountExam, hidden:true },
   { id:"courses", name:"课程", mount:mountCourses },
   { id:"settings", name:"设置", mount:mountSettings },
@@ -3825,6 +3969,13 @@ function qzHome(main){
      '<div class="qz-cnum">'+(mk.length?mk.length+' 套整卷':'还没有卷子')+'</div>'+
      '<div class="qz-bar"><i style="width:0%"></i></div>'+
      '<div class="qz-cmeta">'+(mk.length?'含写作题 · 按真题结构':'把模考题给我，我做进来')+'</div></button>';
+  /* 公文写作：独立版块，进入第 10.11 节 */
+  const wb=db.wrBank, wn=((wb&&wb.papers)||[]).length;
+  const wdn=Object.keys(((db.wrState||{}).done)||{}).length;
+  h+='<button class="qz-card wr" id="qzWr"><div class="qz-cname">✍️ 公文写作</div>'+
+     '<div class="qz-cnum">'+(wn?wn+' 道练笔':'点开载入')+'</div>'+
+     '<div class="qz-bar"><i style="width:'+(wn?Math.round(wdn/wn*100):0)+'%"></i></div>'+
+     '<div class="qz-cmeta">'+(wn?'写完了 '+wdn+' 道 · 文种/格式/范文':'文种 · 格式 · 范文 · 习作批改')+'</div></button>';
   h+='</div>';
   h+='<div class="qz-actions"><button class="qz-btn pri big" id="qzNew">✏️ 自由组卷（可跨科目、按比例、限时模考）</button></div>';
   const noted=qzNoted().length, wrongN=qzAll().filter(q=>{const st=qzSt(q);return st&&st.inBook;}).length;
@@ -3840,6 +3991,7 @@ function qzHome(main){
     qz.pick={}; qz.pick[b.dataset.subj]=true; qz.view="build"; render(); });
   const nb=main.querySelector("#qzNew"); if(nb) nb.onclick=()=>{ qz.view="build"; render(); };
   const mb=main.querySelector("#qzMock"); if(mb) mb.onclick=()=>{ qz.view="mock"; render(); };
+  const wrb=main.querySelector("#qzWr"); if(wrb) wrb.onclick=()=>go("wr");
   const eb=main.querySelector("#qzExp"); if(eb) eb.onclick=qzExport;
   main.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
   const gb=main.querySelector("#qzGo"); if(gb) gb.onclick=()=>{ qz.view="run"; qz.cur=qzPaper().cur||0; render(); };
@@ -4187,6 +4339,295 @@ function qzResult(main){
     qz.cur=0; qz.view="run"; save(); render(); };
 }
 /* ===== 10.10 刷题中心 END ===== */
+/* ===== 10.11 · 公文写作（从刷题首页进入） ===== */
+const WR_TABS=[["p","✍️ 练笔"],["d","📋 文种"],["f","📐 格式"],["t","🧩 模板"],["m","🗂 我的习作"]];
+let wr={ view:"home", tab:"p", pid:null, stage:"w", dcat:"法定", open:{}, pairOpen:{} };
+let wrTimer=null;
+
+/* ---------- 数据 ---------- */
+function wrBank(){ return db.wrBank||null; }
+function wrState(){ const s=db.wrState||(db.wrState={drafts:{},done:{},ui:{}});
+  if(!s.drafts) s.drafts={}; if(!s.done) s.done={}; if(!s.ui) s.ui={}; return s; }
+function wrPapers(){ const b=wrBank(); return (b&&b.papers)||[]; }
+function wrPaper(id){ return wrPapers().find(p=>p.id===id)||null; }
+function wrDraft(id){ const s=wrState();
+  if(!s.drafts[id]) s.drafts[id]={text:"",ms:0,peek:false,savedAt:null,runAt:null};
+  return s.drafts[id]; }
+function wrDone(id){ const s=wrState(); return s.done[id]||(s.done[id]=[]); }
+function wrCount(t){ return String(t==null?"":t).replace(/\s/g,"").length; }
+function wrP(t){ return esc(t).replace(/\n/g,"<br>"); }
+function wrMs(ms){ if(!ms||ms<0) ms=0; const s=Math.floor(ms/1000);
+  return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0"); }
+/* 计时：runAt 存着「本次开始计时的时刻」，离开页面时结算进 ms */
+function wrElapsed(d){ return (d.ms||0)+(d.runAt?Date.now()-d.runAt:0); }
+function wrStop(){ const s=db.wrState; if(!s||!s.drafts) return;
+  Object.keys(s.drafts).forEach(k=>{ const d=s.drafts[k];
+    if(d.runAt){ d.ms=(d.ms||0)+(Date.now()-d.runAt); d.runAt=null; } });
+  if(wrTimer){ clearInterval(wrTimer); wrTimer=null; } }
+
+/* ---------- 模块入口 ---------- */
+function mountWr(main){
+  if(!wrBank()){ wrEmpty(main); return; }
+  if(wr.view==="write"){ wrWrite(main); return; }
+  wrStop();
+  let h='<div class="wr-hd"><button class="qz-back" id="wrBack">‹ 刷题</button><h2>公文写作</h2>'+
+        '<span class="qz-sub">'+wrPapers().length+' 道练笔 · '+((wrBank().docs||[]).length)+' 个文种</span></div>';
+  h+='<div class="wr-tabs">'+WR_TABS.map(t=>'<button class="wr-tab'+(wr.tab===t[0]?" on":"")+'" data-t="'+t[0]+'">'+t[1]+'</button>').join("")+'</div>';
+  h+='<div id="wrBody"></div>';
+  main.innerHTML=h;
+  main.querySelector("#wrBack").onclick=()=>go("quiz");
+  main.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{ wr.tab=b.dataset.t; wrState().ui.tab=b.dataset.t; save(); render(); });
+  const body=main.querySelector("#wrBody");
+  if(wr.tab==="p") wrList(body);
+  else if(wr.tab==="d") wrDocs(body);
+  else if(wr.tab==="f") wrFmt(body);
+  else if(wr.tab==="t") wrTpl(body);
+  else wrMine(body);
+}
+
+function wrEmpty(main){
+  main.innerHTML='<div class="wr-hd"><button class="qz-back" id="wrBack">‹ 刷题</button><h2>公文写作</h2></div>'+
+    '<div class="empty">正在载入写作资料…<br><span class="qz-sub">如果一直不出来，点下面的按钮手动载入。</span></div>'+
+    '<div class="qz-actions"><button class="qz-btn pri" id="wrLoad">载入公文写作资料</button></div>';
+  main.querySelector("#wrBack").onclick=()=>go("quiz");
+  main.querySelector("#wrLoad").onclick=wrImport;
+  wrAutoLoad();
+}
+/* 首次进入自动从同域拉取；失败就留着手动按钮 */
+async function wrAutoLoad(){
+  if(wr._tried||!/^https?:/.test(location.protocol)) return; wr._tried=true;
+  try{ const rs=await fetch("./公文写作.json",{cache:"no-store"}); if(!rs.ok) return;
+    const j=await rs.json(); if(!j||!j.papers) return;
+    db.wrBank=j; save(); toast("写作资料已载入"); render();
+  }catch(e){}
+}
+function wrImport(){
+  const online=/^https?:/.test(location.protocol);
+  const h=openModal("载入 / 更新公文写作资料",
+    '<p class="lw-hint">载入「公文写作.json」。<b>只写入文种、格式、范文等资料</b>；你写过的草稿和习作不受影响。</p>'+
+    (online?'<div class="lw-actions" style="margin-bottom:11px"><button class="lw-go" id="wrNet">📶 从网上载入（手机推荐）</button></div>':"")+
+    '<p class="lw-hint">或者自己选文件：</p><input type="file" id="wrFile" accept=".json,application/json">'+
+    '<div id="wrMsg" class="lw-hint" style="margin-top:9px"></div>');
+  const adopt=(j)=>{ if(!j||!j.papers) throw new Error("不是公文写作资料文件");
+    db.wrBank=j; save(); closeModal(); toast("已载入："+j.papers.length+" 道练笔 / "+(j.docs||[]).length+" 个文种"); render(); };
+  const net=h.querySelector("#wrNet");
+  if(net) net.onclick=async()=>{ const m=h.querySelector("#wrMsg"); m.textContent="下载中…";
+    try{ const rs=await fetch("./公文写作.json",{cache:"no-store"});
+      if(!rs.ok) throw new Error("HTTP "+rs.status); adopt(await rs.json());
+    }catch(err){ m.textContent="服务器上没有这个文件（"+err.message+"）。请用下面的「选择文件」。"; } };
+  h.querySelector("#wrFile").onchange=(e)=>{ const f=e.target.files&&e.target.files[0]; if(!f) return;
+    const m=h.querySelector("#wrMsg"); m.textContent="读取中…"; const rd=new FileReader();
+    rd.onload=()=>{ try{ adopt(JSON.parse(rd.result)); }catch(err){ m.textContent="导入失败："+err.message; } };
+    rd.readAsText(f); };
+}
+
+/* ---------- 练笔列表 ---------- */
+function wrList(host){
+  const ps=wrPapers();
+  let h='<p class="qz-sub" style="margin:2px 0 12px">材料＋题目在上，写完才出提纲和范文。写的过程自动存草稿，中途走开也不会丢。</p><div class="wr-plist">';
+  ps.forEach(p=>{ const d=wrState().drafts[p.id], dn=(wrState().done[p.id]||[]).length;
+    const n=d?wrCount(d.text):0;
+    let tag=dn?'<span class="wr-tg ok">已完成 '+dn+' 次</span>':(n?'<span class="wr-tg go">草稿 '+n+' 字</span>':'<span class="wr-tg">未开始</span>');
+    h+='<button class="wr-prow" data-p="'+esc(p.id)+'"><div class="wr-pt">'+esc(p.name)+'</div>'+
+       '<div class="wr-pm"><span class="wr-type">'+esc(p.type)+'</span><span>'+esc(p.cat)+'</span>'+
+       '<span>建议 '+p.mins+' 分钟</span><span>'+p.minWords+'—'+p.maxWords+' 字</span>'+tag+'</div></button>'; });
+  h+='</div><div class="qz-actions"><button class="qz-btn sm" id="wrRe">🔄 更新写作资料</button></div>';
+  host.innerHTML=h;
+  host.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{ wr.pid=b.dataset.p; wr.stage="w"; wr.view="write"; render(); });
+  host.querySelector("#wrRe").onclick=wrImport;
+}
+
+/* ---------- 写作页 ---------- */
+function wrWrite(main){
+  const p=wrPaper(wr.pid); if(!p){ wr.view="home"; render(); return; }
+  const d=wrDraft(p.id);
+  if(wr.stage==="w"&&!d.runAt) d.runAt=Date.now();
+  if(wr.stage!=="w") wrStop();
+  const n=wrCount(d.text), okLen=(n>=p.minWords&&n<=p.maxWords);
+  let h='<div class="wr-top"><button class="wr-x" id="wrExit">‹ 返回</button>'+
+        '<div class="wr-tt">'+esc(p.name)+'</div>'+
+        '<div class="wr-meta"><span id="wrClk">'+wrMs(wrElapsed(d))+'</span>'+
+        '<span class="'+(okLen?"g":(n>p.maxWords?"r":""))+'" id="wrCnt">'+n+' 字</span></div></div>';
+  /* 题面 */
+  h+='<div class="wr-q"><div class="wr-mat">'+wrP(p.material)+'</div>'+
+     '<div class="wr-task"><b>【作答要求】</b><br>'+wrP(p.task)+
+     '<ol class="wr-req">'+p.req.map(r=>"<li>"+esc(r)+"</li>").join("")+'</ol></div></div>';
+  if(wr.stage==="w"){
+    h+='<div class="wr-bar"><span class="qz-sub">要求 '+p.minWords+'—'+p.maxWords+' 字 · 建议 '+p.mins+' 分钟</span>'+
+       '<button class="qz-btn sm" id="wrPeek">'+(d.peek?"审题要点（已看）":"💡 卡住了？看审题要点")+'</button></div>';
+    if(d.peek) h+='<div class="wr-tips"><b>审题要点</b><ul>'+p.tips.map(t=>"<li>"+esc(t)+"</li>").join("")+'</ul></div>';
+    h+='<textarea class="wr-ta" id="wrTa" placeholder="在这里作答……（自动保存，中途离开不会丢）">'+esc(d.text)+'</textarea>';
+    h+='<div class="wr-bar"><span class="qz-sub" id="wrSv">'+(d.savedAt?"已保存 "+d.savedAt:"　")+'</span>'+
+       '<div class="wr-acts"><button class="qz-btn sm" id="wrClr">清空重写</button>'+
+       '<button class="qz-btn pri" id="wrFin">我写完了 · 看提纲和范文</button></div></div>';
+  }else{
+    h+='<div class="wr-cmp"><div class="wr-col"><div class="wr-clb">我写的（'+n+' 字）</div>'+
+       '<div class="wr-mine">'+(d.text?wrP(d.text):'<span class="qz-sub">（空）</span>')+'</div></div>'+
+       '<div class="wr-col"><div class="wr-clb">参考范文</div><div class="wr-model">'+wrP(p.model)+'</div></div></div>';
+    h+='<div class="wr-sec"><b>审题要点</b><ul>'+p.tips.map(t=>"<li>"+esc(t)+"</li>").join("")+'</ul></div>';
+    h+='<div class="wr-sec"><b>结构提纲</b>'+p.outline.map(o=>'<div class="wr-ol"><div class="wr-olh">'+esc(o.h)+'</div><ul>'+
+       o.pts.map(x=>"<li>"+esc(x)+"</li>").join("")+'</ul></div>').join("")+'</div>';
+    const cs=d.checks||[];
+    h+='<div class="wr-sec"><b>对照评分（勾掉你做到的）</b><div class="wr-chk">'+
+       p.checks.map((c,i)=>'<label class="wr-ck'+(cs[i]?" on":"")+'"><input type="checkbox" data-c="'+i+'"'+(cs[i]?" checked":"")+'>'+
+       '<span><b>'+esc(c.t)+'</b><i>'+esc(c.d)+'</i></span></label>').join("")+'</div>'+
+       '<div class="wr-score" id="wrSc">做到 '+cs.filter(Boolean).length+' / '+p.checks.length+' 条</div></div>';
+    h+='<div class="wr-acts big"><button class="qz-btn" id="wrEdit">‹ 回去改</button>'+
+       '<button class="qz-btn" id="wrOne">📤 发给 Claude 批改</button>'+
+       '<button class="qz-btn pri" id="wrSave">存入我的习作</button></div>';
+  }
+  main.innerHTML=h;
+  main.querySelector("#wrExit").onclick=()=>{ wrStop(); save(); wr.view="home"; render(); };
+  if(wr.stage==="w"){
+    const ta=main.querySelector("#wrTa"), sv=main.querySelector("#wrSv"), cnt=main.querySelector("#wrCnt");
+    let t=null;
+    ta.oninput=()=>{ const v=ta.value, c=wrCount(v);
+      cnt.textContent=c+" 字";
+      cnt.className=(c>=p.minWords&&c<=p.maxWords)?"g":(c>p.maxWords?"r":"");
+      clearTimeout(t); t=setTimeout(()=>{ d.text=v; d.savedAt=new Date().toTimeString().slice(0,5);
+        save(); sv.textContent="已保存 "+d.savedAt; },800); };
+    main.querySelector("#wrPeek").onclick=()=>{ d.peek=true; save(); render(); };
+    main.querySelector("#wrClr").onclick=()=>{ if(confirm("清空这篇草稿重写？")){ d.text=""; d.ms=0; d.runAt=Date.now(); save(); render(); } };
+    main.querySelector("#wrFin").onclick=()=>{ d.text=ta.value; wrStop(); save(); wr.stage="c"; window.scrollTo({top:0}); render(); };
+    if(wrTimer) clearInterval(wrTimer);
+    wrTimer=setInterval(()=>{ const el=document.getElementById("wrClk"); if(!el){ clearInterval(wrTimer); wrTimer=null; return; }
+      el.textContent=wrMs(wrElapsed(d)); },1000);
+  }else{
+    main.querySelectorAll("[data-c]").forEach(b=>b.onchange=()=>{
+      const a=d.checks||(d.checks=[]); a[+b.dataset.c]=b.checked; save();
+      b.closest(".wr-ck").classList.toggle("on",b.checked);
+      main.querySelector("#wrSc").textContent="做到 "+a.filter(Boolean).length+" / "+p.checks.length+" 条"; });
+    main.querySelector("#wrEdit").onclick=()=>{ wr.stage="w"; render(); };
+    main.querySelector("#wrOne").onclick=()=>wrExport(p.id);
+    main.querySelector("#wrSave").onclick=()=>{
+      wrDone(p.id).push({ date:today(), words:n, ms:wrElapsed(d), text:d.text,
+        checks:(d.checks||[]).filter(Boolean).length, total:p.checks.length });
+      d.text=""; d.ms=0; d.runAt=null; d.checks=[]; d.peek=false; save();
+      toast("已存入「我的习作」"); wr.view="home"; wr.tab="m"; render(); };
+  }
+}
+
+/* ---------- 文种 ---------- */
+function wrDocs(host){
+  const b=wrBank(), ds=(b.docs||[]).filter(d=>d.cat===wr.dcat);
+  let h='<div class="wr-seg">'+["法定","事务"].map(c=>'<button class="'+(wr.dcat===c?"on":"")+'" data-c="'+c+'">'+
+        (c==="法定"?"法定公文 15 种":"常考事务文书 12 种")+'</button>').join("")+'</div><div class="wr-dl">';
+  ds.forEach(d=>{ const op=wr.open[d.id];
+    h+='<div class="wr-d'+(op?" on":"")+'"><button class="wr-dh" data-d="'+esc(d.id)+'">'+
+       '<span class="wr-dn">'+esc(d.name)+'</span>'+(d.dir!=="—"?'<span class="wr-dir">'+esc(d.dir)+'</span>':"")+
+       '<span class="wr-dd">'+esc(d.def)+'</span><i>'+(op?"▾":"▸")+'</i></button>';
+    if(op) h+='<div class="wr-db"><p><b>适用</b>　'+esc(d.use)+'</p><p><b>写法</b>　'+wrP(d.fmt)+'</p>'+
+       '<p class="wr-warn"><b>⚠️ 注意</b>　'+esc(String(d.warn).replace(/^⚠️s*/,""))+'</p></div>';
+    h+='</div>'; });
+  h+='</div>';
+  h+='<div class="wr-lb">易混辨析（考试最爱考这几组）</div><div class="wr-dl">';
+  (b.pairs||[]).forEach(p=>{ const op=wr.pairOpen[p.id];
+    h+='<div class="wr-d'+(op?" on":"")+'"><button class="wr-dh" data-x="'+esc(p.id)+'">'+
+       '<span class="wr-dn">'+esc(p.t)+'</span>'+(p.hot?'<span class="wr-hot">高频</span>':"")+'<i>'+(op?"▾":"▸")+'</i></button>';
+    if(op){ h+='<div class="wr-db"><table class="wr-tb"><tbody>'+
+      p.rows.map(r=>"<tr><th>"+esc(r[0])+"</th><td>"+esc(r[1])+"</td><td>"+esc(r[2])+"</td></tr>").join("")+
+      '</tbody></table><p class="wr-warn"><b>⚠️ 注意</b>　'+esc(p.key)+'</p></div>'; }
+    h+='</div>'; });
+  h+='</div>';
+  host.innerHTML=h;
+  host.querySelectorAll("[data-c]").forEach(x=>x.onclick=()=>{ wr.dcat=x.dataset.c; render(); });
+  host.querySelectorAll("[data-d]").forEach(x=>x.onclick=()=>{ const k=x.dataset.d; wr.open[k]=!wr.open[k]; render(); });
+  host.querySelectorAll("[data-x]").forEach(x=>x.onclick=()=>{ const k=x.dataset.x; wr.pairOpen[k]=!wr.pairOpen[k]; render(); });
+}
+
+/* ---------- 格式 ---------- */
+function wrFmt(host){
+  const f=wrBank().fmt||{parts:[],errs:[]};
+  let h='<p class="qz-sub" style="margin:2px 0 12px">按《党政机关公文处理工作条例》（2012）的格式要素整理，标 ⚠️ 的都是考过或易错的点。</p>';
+  (f.parts||[]).forEach(g=>{ h+='<div class="wr-lb">'+esc(g.g)+'</div><div class="wr-fl">'+
+    g.items.map(i=>'<div class="wr-f"><div class="wr-fn">'+esc(i.n)+'</div><div class="wr-fd">'+esc(i.d)+
+    '<div class="wr-fw">'+esc(i.w)+'</div></div></div>').join("")+'</div>'; });
+  h+='<div class="wr-lb">常见格式错误（自查清单）</div><div class="wr-el">'+
+    (f.errs||[]).map(e=>'<div class="wr-e"><div class="wr-et">✗ '+esc(e.t)+'</div>'+
+      '<div class="wr-ed"><span class="bad">错例：'+esc(e.d)+'</span><span class="good">正解：'+esc(e.f)+'</span></div></div>').join("")+'</div>';
+  host.innerHTML=h;
+}
+
+/* ---------- 模板与金句 ---------- */
+function wrTpl(host){
+  const t=wrBank().tpl||{skel:[],phrases:[]};
+  let h='<div class="wr-lb">写作骨架（照着套）</div><div class="wr-dl">';
+  (t.skel||[]).forEach((s,i)=>{ const op=wr.open["sk"+i];
+    h+='<div class="wr-d'+(op?" on":"")+'"><button class="wr-dh" data-s="'+i+'"><span class="wr-dn">'+esc(s.n)+'</span><i>'+(op?"▾":"▸")+'</i></button>'+
+       (op?'<div class="wr-db"><pre class="wr-pre">'+esc(s.body)+'</pre></div>':"")+'</div>'; });
+  h+='</div><div class="wr-lb">常用表述与金句</div>';
+  (t.phrases||[]).forEach(g=>{ h+='<div class="wr-ph"><div class="wr-phg">'+esc(g.g)+'</div><ul>'+
+    g.list.map(x=>"<li>"+esc(x)+"</li>").join("")+'</ul></div>'; });
+  host.innerHTML=h;
+  host.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{ const k="sk"+b.dataset.s; wr.open[k]=!wr.open[k]; render(); });
+}
+
+/* ---------- 我的习作 ---------- */
+function wrMine(host){
+  const s=wrState(), rows=[];
+  Object.keys(s.done).forEach(pid=>{ const p=wrPaper(pid); if(!p) return;
+    (s.done[pid]||[]).forEach((r,i)=>rows.push(Object.assign({pid:pid,idx:i,name:p.name,type:p.type},r))); });
+  rows.sort((a,b)=>a.date<b.date?1:-1);
+  const drafts=Object.keys(s.drafts).filter(k=>wrCount(s.drafts[k].text)>0&&wrPaper(k));
+  let h="";
+  if(drafts.length){ h+='<div class="wr-lb">还没写完的草稿</div><div class="wr-plist">'+
+    drafts.map(k=>{ const p=wrPaper(k), d=s.drafts[k];
+      return '<button class="wr-prow" data-p="'+esc(k)+'"><div class="wr-pt">'+esc(p.name)+'</div>'+
+      '<div class="wr-pm"><span class="wr-type">'+esc(p.type)+'</span><span>'+wrCount(d.text)+' 字</span>'+
+      '<span>用时 '+wrMs(d.ms)+'</span><span class="wr-tg go">接着写</span></div></button>'; }).join("")+'</div>'; }
+  if(!rows.length){ h+='<div class="empty">还没有存过习作。<br><span class="qz-sub">写完一篇后点「存入我的习作」，这里会留档，随时能翻出来对比进步。</span></div>'; }
+  else{
+    h+='<div class="wr-lb">已完成 '+rows.length+' 篇</div><div class="wr-ml">'+
+      rows.map(r=>'<div class="wr-mrow"><div class="wr-mh"><b>'+esc(r.name)+'</b>'+
+      '<span class="wr-type">'+esc(r.type)+'</span></div>'+
+      '<div class="wr-mm">'+r.date+' · '+r.words+' 字 · 用时 '+wrMs(r.ms)+' · 自评 '+r.checks+'/'+r.total+'</div>'+
+      '<div class="wr-mtx">'+wrP(r.text)+'</div></div>').join("")+'</div>';
+    h+='<div class="qz-actions"><button class="qz-btn pri" id="wrAll">📤 导出全部习作发给 Claude 批改</button></div>';
+  }
+  host.innerHTML=h;
+  host.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{ wr.pid=b.dataset.p; wr.stage="w"; wr.view="write"; render(); });
+  const a=host.querySelector("#wrAll"); if(a) a.onclick=()=>wrExport(null);
+}
+
+/* ---------- 导出给 Claude 批改 ---------- */
+function wrExport(pid){
+  const NL="\n", s=wrState();
+  const list=[];
+  if(pid){ const p=wrPaper(pid), d=wrDraft(pid);
+    list.push({p:p, text:d.text, words:wrCount(d.text), ms:wrElapsed(d),
+      checks:(d.checks||[]).filter(Boolean).length, date:today()}); }
+  else{ Object.keys(s.done).forEach(k=>{ const p=wrPaper(k); if(!p) return;
+      (s.done[k]||[]).forEach(r=>list.push({p:p,text:r.text,words:r.words,ms:r.ms,checks:r.checks,date:r.date})); }); }
+  let md="# 公文写作习作 "+today()+NL+NL;
+  md+="> 下面是我按题目写的文章。请帮我批改："+NL;
+  md+="> 1）先说文种和格式对不对（标题三要素、主送机关、结束语、落款这些）；"+NL;
+  md+="> 2）再说结构和内容，哪些采分点没写到、哪些是空话；"+NL;
+  md+="> 3）挑出可以直接替换的病句，给出改后的句子；"+NL;
+  md+="> 4）最后按 30 分制打个分，并告诉我下一篇该重点练什么。"+NL+NL;
+  list.forEach((it,i)=>{
+    const p=it.p;
+    md+="---"+NL+NL+"## 第 "+(i+1)+" 篇　"+p.name+NL+NL;
+    md+="- **文种**："+p.type+"（"+p.cat+"）"+NL;
+    md+="- **字数要求**："+p.minWords+"—"+p.maxWords+" 字；我写了 "+it.words+" 字"+NL;
+    md+="- **建议时间**："+p.mins+" 分钟；我用了 "+wrMs(it.ms)+NL;
+    md+="- **自评**：对照评分表做到 "+it.checks+"/"+p.checks.length+" 条"+NL;
+    md+="- **日期**："+it.date+NL+NL;
+    md+="### 题目材料"+NL+NL+p.material+NL+NL;
+    md+="### 作答要求"+NL+NL+p.task+NL;
+    p.req.forEach((r,k)=>{ md+=(k+1)+". "+r+NL; });
+    md+=NL+"### 我写的"+NL+NL+(it.text||"（空）")+NL+NL;
+  });
+  const blob=new Blob([md],{type:"text/markdown;charset=utf-8"});
+  const h=openModal("导出习作",
+    '<p class="qz-sub">复制下面全部内容发给 Claude，让它给你逐句批改、打分、指出下一篇该练什么。</p>'+
+    '<textarea id="wrTa2" class="lw-ta" readonly>'+esc(md)+'</textarea>'+
+    '<div class="qz-actions"><button class="qz-btn pri" id="wrCp">复制全部</button>'+
+    '<a class="qz-btn" id="wrDl" download="公文写作习作-'+today()+'.md">下载 .md</a></div>');
+  h.querySelector("#wrDl").href=URL.createObjectURL(blob);
+  h.querySelector("#wrCp").onclick=()=>{ const ta=h.querySelector("#wrTa2"); ta.select(); ta.setSelectionRange(0,999999);
+    try{ document.execCommand("copy"); toast("已复制 ✓"); }catch(e){ toast("请手动长按复制"); } };
+}
+/* ===== 10.11 公文写作 END ===== */
 /* ===== 11. 设置 ===== */
 function mountSettings(main){
   const s=db.settings;
