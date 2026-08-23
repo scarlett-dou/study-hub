@@ -3998,6 +3998,7 @@ const QZ_DEF_MIN=120;                                 // 模拟考试默认时�
 let qz={ view:"home", pick:{}, kps:{}, kpSort:"weak", kpQ:"", scope:"全部", nums:null, take:"real", mode:"practice", mins:QZ_DEF_MIN,
          cur:0, showExp:false, cardOpen:false, showHist:true };
 let qzTimer=null;
+let qzShownCur=-1;   /* 答题卡里当前正显示的题号，用来判断这次重绘有没有换题 */
 
 /* ---------- 习思想题库的做题状态 ----------
    法律/管理各有自己的模块存状态，习思想没有独立模块，所以状态层放在这里。
@@ -4539,8 +4540,22 @@ function qzRun(main){
      '<button class="qz-btn pri" id="qzNext">下一页</button></div>';
   h+='</div></div></div>';
   main.innerHTML=h;
+  qzShownCur=qz.cur;   /* 记下这次渲染出来的题号，供 keepSheet 判断有没有换题 */
 
-  const rerender=()=>{ p.cur=qz.cur; save(); render(); };
+  /* 换题时答题卡别自己跳回最前：先原样恢复滚动位置，只有当前题滚出视野才最小幅度带回来。
+     滚动的是 .qz-side（overflow-y:auto），不是里面的 .qz-sheet-wrap。 */
+  const keepSheet=(fn)=>{
+    const s0=main.querySelector(".qz-side"), top=s0?s0.scrollTop:0, was=qzShownCur;
+    fn();
+    const s=document.querySelector(".qz-side"); if(!s) return;
+    s.scrollTop=top;
+    if(qz.cur===was) return;          /* 只是答题/标记，没换题 —— 原样不动 */
+    const cur=s.querySelector(".qz-cell.cur"); if(!cur) return;
+    const cb=cur.getBoundingClientRect(), sb=s.getBoundingClientRect();
+    if(cb.top<sb.top) s.scrollTop-=(sb.top-cb.top)+8;
+    else if(cb.bottom>sb.bottom) s.scrollTop+=(cb.bottom-sb.bottom)+8;
+  };
+  const rerender=()=>{ keepSheet(()=>{ p.cur=qz.cur; save(); render(); }); };
   main.querySelectorAll(".qz-opt").forEach(b=>b.onclick=()=>{
     if(!exam&&answered) return;
     const k=b.dataset.k;
@@ -4560,7 +4575,7 @@ function qzRun(main){
   main.querySelector("#qzPrev").onclick=()=>{ if(qz.cur>0){ qz.cur--; rerender(); } };
   main.querySelector("#qzNext").onclick=()=>{ if(qz.cur<qs.length-1){ qz.cur++; rerender(); } else toast("已是最后一题"); };
   main.querySelector("#qzMark").onclick=()=>{ if(p.marks[key]) delete p.marks[key]; else p.marks[key]=1; rerender(); };
-  const cb=main.querySelector("#qzCardBtn"); if(cb) cb.onclick=()=>{ qz.cardOpen=!qz.cardOpen; render(); };
+  const cb=main.querySelector("#qzCardBtn"); if(cb) cb.onclick=()=>{ qz.cardOpen=!qz.cardOpen; keepSheet(render); };
   main.querySelectorAll(".qz-cell").forEach(c=>c.onclick=()=>{ qz.cur=+c.dataset.i; qz.cardOpen=false; rerender(); });
   main.querySelector("#qzSubmit").onclick=()=>qzSubmit(qs);
   /* 中途返回：进度和计时都保留，首页可「继续」 */
