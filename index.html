@@ -787,6 +787,12 @@
   .qz-wkb{height:5px;border-radius:3px;background:var(--sep);overflow:hidden}
   .qz-wkb i{display:block;height:100%;background:linear-gradient(90deg,var(--orange),var(--red))}
   @media(max-width:720px){ .qz-kps{grid-template-columns:1fr;max-height:240px} }
+  /* 判分后显示所属章节 / 知识点 */
+  .qz-kpline{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;margin-top:10px;
+    padding-top:9px;border-top:1px dashed var(--sep2);font-size:12.5px}
+  .qz-kpline span{color:var(--text3);flex:none}
+  .qz-kpline b{font-weight:600;color:var(--tint);background:rgba(0,122,255,.10);
+    border-radius:6px;padding:2px 9px;line-height:1.7}
   /* ===== 10.10 刷题中心 CSS END ===== */
   /* 云同步:手动下载/上传与对比 */
   .cs-man{ margin-top:12px; padding-top:12px; border-top:1px solid var(--sep) }
@@ -4028,18 +4034,23 @@ function sjGrade(id,ok){ const x=sjQEnsure(id); x.n++; x.last=today();
 /* ---------- 题库适配层：把三个题库摊平成一套结构 ---------- */
 function qzSrcs(){ return [
   { key:"law", group:"法律", qs:()=>((db.lawBank&&db.lawBank.questions)||[]), subj:q=>q.subject||"法律",
-    type:q=>q.type||(q.sec==="判断题"?"tf":"mc"), pts:()=>((db.lawBank&&db.lawBank.points)||[]) },
+    type:q=>q.type||(q.sec==="判断题"?"tf":"mc"), pts:()=>((db.lawBank&&db.lawBank.points)||[]),
+    kps:q=>q.kps||[] },
   { key:"mg",  group:"管理", qs:()=>((db.mgBank&&db.mgBank.questions)||[]),  subj:()=>"管理",
     type:q=>(q.sec==="判断题"?"tf":"mc"),
-    pts:()=>(((db.mgBank&&db.mgBank.points)||[]).map(p=>({id:p.id,subject:"管理",name:p.name,hint:p.hint||""}))) },
+    pts:()=>(((db.mgBank&&db.mgBank.points)||[]).map(p=>({id:p.id,subject:"管理",name:p.name,hint:p.hint||""}))),
+    kps:q=>q.kps||[] },
   { key:"sj",  group:"习思想", qs:()=>((db.sjBank&&db.sjBank.questions)||[]), subj:()=>"习思想",
-    type:q=>q.type||(q.sec==="判断题"?"tf":"mc") },
+    type:q=>q.type||(q.sec==="判断题"?"tf":"mc"),
+    /* 习思想的「知识点」就是她背诵库里的章节（1—16 章，第九章拆 9.1—9.5） */
+    pts:()=>(((db.sjBank&&db.sjBank.chapters)||[]).map(c=>({id:"sjc-"+c.key, subject:"习思想", name:c.name, hint:""}))),
+    kps:q=>(q.ch?["sjc-"+q.ch]:[]) },
 ]; }
 function qzAll(){ const out=[];
   qzSrcs().forEach(s=>s.qs().forEach(q=>out.push({
     src:s.key, id:q.id, group:s.group, subject:s.subj(q), sec:q.sec, num:q.num,
     type:s.type(q), stem:q.stem, options:q.options, answer:q.answer, explain:q.explain,
-    mark:q.mark||"", page:q.page, kps:q.kps||[], _raw:q })));
+    mark:q.mark||"", page:q.page, kps:(s.kps?s.kps(q):(q.kps||[])), _raw:q })));
   return out; }
 /* 统一的做题状态视图（各自读各自的 state） */
 function qzSt(q){
@@ -4153,8 +4164,15 @@ function qzPoints(){
   const out=[];
   qzSrcs().forEach(s=>{ if(!s.pts) return;
     s.pts().forEach(p=>{ if(!cnt[p.id]) return;
-      out.push({ id:p.id, subject:p.subject||s.group, name:p.name, hint:p.hint||"", n:cnt[p.id] }); }); });
+      out.push({ id:p.id, subject:p.subject||s.group, name:p.name, hint:p.hint||"", n:cnt[p.id], ord:out.length }); }); });
   return out; }
+/* 知识点 id → 名字。答完题要显示「这题属于哪一章 / 哪个知识点」。 */
+function qzKpNames(q){
+  const ids=q.kps||[]; if(!ids.length) return [];
+  const map={};
+  qzSrcs().forEach(s=>{ if(!s.pts) return; s.pts().forEach(p=>map[p.id]=p.name); });
+  return ids.map(i=>map[i]).filter(Boolean);
+}
 /* 一个知识点的掌握情况：做了多少、错多少、蒙对多少（答对但标了模糊）、薄弱指数 */
 function qzKpStat(id){
   const qs=qzAll().filter(q=>(q.kps||[]).indexOf(id)>=0);
@@ -4380,13 +4398,16 @@ function qzBuilder(main){
   const kps=qzPoints().map(p=>Object.assign({},p,qzKpStat(p.id)));
   const kq=(qz.kpQ||"").trim();
   let kshow=kq?kps.filter(p=>p.name.indexOf(kq)>=0||(p.hint||"").indexOf(kq)>=0):kps.slice();
-  kshow.sort(qz.kpSort==="weak" ? (a,b)=>b.weak-a.weak||b.n-a.n : (a,b)=>b.n-a.n);
+  kshow.sort(qz.kpSort==="weak" ? (a,b)=>b.weak-a.weak||b.n-a.n
+           : qz.kpSort==="ord"  ? (a,b)=>a.ord-b.ord            /* 习思想按 1→16 章的原顺序 */
+           : (a,b)=>b.n-a.n);
   const kpOn=Object.keys(qz.kps).length;
   if(kps.length){
     h+='<div class="qz-sec"><div class="qz-lb">② 知识点 <span class="qz-sub">（不选＝该科目全部；共 '+kps.length+' 个）</span></div>';
     h+='<div class="qz-kbar"><input type="text" id="qzKpQ" placeholder="搜知识点…" value="'+esc(qz.kpQ||"")+'">'+
        '<button class="qz-chip sm'+(qz.kpSort==="weak"?" on":"")+'" data-ksort="weak">薄弱优先</button>'+
        '<button class="qz-chip sm'+(qz.kpSort==="n"?" on":"")+'" data-ksort="n">题多优先</button>'+
+       '<button class="qz-chip sm'+(qz.kpSort==="ord"?" on":"")+'" data-ksort="ord">按顺序</button>'+
        (kpOn?'<button class="qz-chip sm" id="qzKpClr">清空所选（'+kpOn+'）</button>':"")+'</div>';
     h+='<div class="qz-kps">'+kshow.map(p=>{
       const lv=p.done?(p.weak>=1?3:(p.weak>=0.5?2:(p.weak>0?1:0))):0;
@@ -4532,6 +4553,9 @@ function qzRun(main){
     const ok=(pick===q.answer);
     h+='<div class="qz-vd '+(ok?"ok":"no")+'">'+(ok?"✅ 回答正确":'❌ 回答错误：你选了「'+esc(pick)+'」，正确答案「<b>'+esc(q.answer)+'</b>」')+'</div>'+
        '<div class="qz-exp"><b>【答案】'+esc(q.answer)+'</b><br>'+esc(q.explain||"（无解析）").replace(/\n/g,"<br>")+'</div>';
+    const kn=qzKpNames(q);
+    if(kn.length) h+='<div class="qz-kpline"><span>'+(q.src==="sj"?"所属章节":"知识点")+'</span>'+
+      kn.map(n=>'<b>'+esc(n)+'</b>').join("")+'</div>';
     h+='<div id="qzFz"></div>';
   }
   h+='<div class="qz-nav"><button class="qz-btn'+(marked?" on":"")+'" id="qzMark">🚩 '+(marked?"取消标记":"标记本题")+'</button>'+
@@ -4674,7 +4698,9 @@ function qzResult(main){
     h+='<div class="qz-rv'+(pick?(ok?" ok":" no"):" un")+'"><button class="qz-rvh" data-i="'+i+'">'+
        '<span class="qz-rvn">'+(i+1)+'</span><span class="qz-rvs">'+esc(x.stem.slice(0,40))+(x.stem.length>40?"…":"")+'</span>'+
        '<span class="qz-rvr">'+(pick?(ok?"✓":"✗ 你选"+esc(pick)):"未答")+'</span></button>'+
-       '<div class="qz-rvb" id="qzrv'+i+'"><b>【答案】'+esc(x.answer)+'</b><br>'+esc(x.explain||"").replace(/\n/g,"<br>")+'</div></div>'; });
+       '<div class="qz-rvb" id="qzrv'+i+'"><b>【答案】'+esc(x.answer)+'</b><br>'+esc(x.explain||"").replace(/\n/g,"<br>")+
+       (qzKpNames(x).length?'<div class="qz-kpline"><span>'+(x.src==="sj"?"所属章节":"知识点")+'</span>'+qzKpNames(x).map(n=>'<b>'+esc(n)+'</b>').join("")+'</div>':"")+
+       '</div></div>'; });
   h+='</div>';
   h+='<div class="qz-actions"><button class="qz-btn pri" id="qzAgain">再来一套</button>'+
      '<button class="qz-btn" id="qzWrong">只练这套里的错题</button><button class="qz-btn" id="qzHome">回首页</button></div>';
