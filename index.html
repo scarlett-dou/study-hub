@@ -4092,7 +4092,7 @@ function sjImport(){
   const online=/^https?:/.test(location.protocol);
   const has=((db.sjBank&&db.sjBank.questions)||[]).length;
   const h=openModal("载入 / 更新习思想题库",
-    '<p class="qz-sub">载入「习思想题库.json」。<b>只写入题目</b>；你的做题记录、错题本进度、背诵库和课程都不受影响。'+
+    '<p class="qz-sub">载入「习思想题库.json」（270 题）。<b>只写入题目</b>；你的做题记录、错题本进度、背诵库和课程都不受影响。'+
     (has?'<br>当前已有 <b>'+has+'</b> 题。':"")+'</p>'+
     (online?'<div class="qz-actions" style="margin-bottom:11px"><button class="qz-btn pri" id="qzSjNet">📶 从网上载入</button></div>':"")+
     '<p class="qz-sub">或者自己选文件：</p>'+
@@ -4104,7 +4104,7 @@ function sjImport(){
     try{ const rs=await fetch("./习思想题库.json",{cache:"no-store"});
       if(!rs.ok) throw new Error("HTTP "+rs.status);
       await sjAdopt(await rs.json());
-    }catch(err){ msg.textContent="服务器上没有这个文件（"+err.message+"）。习思想题库默认只走私有仓库同步，请用下面的「选择文件」，或在已开云同步的设备上导入一次，其它设备会自动同步过来。"; }
+    }catch(err){ msg.textContent="下载失败（"+err.message+"）。检查一下网络，或者用下面的「选择文件」；也可以在已开云同步的设备上导入一次，其它设备会自动同步过来。"; }
   };
   h.querySelector("#qzSjFile").onchange=(e)=>{
     const f=e.target.files&&e.target.files[0]; if(!f) return;
