@@ -962,6 +962,28 @@
     .wr-ta{min-height:320px;font-size:16px}
     .wr-acts.big .qz-btn{min-width:100%}
   }
+  /* 没有范文的题：对照页只留一栏 */
+  .wr-cmp.one{grid-template-columns:1fr}
+  .wr-nomodel{background:var(--amber-bg);border-radius:4px;padding:12px 15px;font-size:14px;
+    line-height:1.85;margin-bottom:12px}
+  /* 我的习作：按题分组 + 每次留档 */
+  .wr-grp{border:1px solid var(--rule);border-radius:var(--r);background:var(--surface);
+    box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden}
+  .wr-gh{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:12px 15px;
+    background:var(--surface2);border-bottom:1px solid var(--rule);font-size:15px}
+  .wr-gh b{flex:1;min-width:140px}
+  .wr-gn{font-size:12px;background:var(--tint);color:#fff;border-radius:6px;padding:2px 9px;font-weight:600}
+  .wr-grp .wr-ml{padding:12px 15px;gap:12px}
+  .wr-grp .wr-mrow{border:1px solid var(--rule);border-radius:10px;padding:11px 13px;box-shadow:none}
+  .wr-no{font-size:13px;font-weight:700;color:var(--tint);flex:none}
+  .wr-mh{gap:10px}
+  .wr-mh .wr-mm{margin:0;flex:1;min-width:120px}
+  .wr-delta{font-size:11.5px;color:var(--text2);background:var(--surface2);
+    border-radius:5px;padding:2px 8px;white-space:nowrap}
+  .wr-del{border:1px solid var(--sep2);background:none;color:var(--text3);border-radius:7px;
+    padding:3px 10px;font-size:12px;font-family:inherit;flex:none}
+  .wr-del:hover{border-color:var(--red);color:var(--red)}
+  @media(max-width:600px){ .wr-gh{font-size:14px} .wr-delta{display:none} }
   /* ===== 10.11 公文写作 CSS END ===== */
 </style>
 
@@ -5031,11 +5053,13 @@ function wrWrite(main){
        '<div class="wr-acts"><button class="qz-btn sm" id="wrClr">清空重写</button>'+
        '<button class="qz-btn pri" id="wrFin">我写完了 · 看提纲和范文</button></div></div>';
   }else{
-    h+='<div class="wr-cmp"><div class="wr-col"><div class="wr-clb">我写的（'+n+' 字）</div>'+
+    const hasModel=!!(p.model&&p.model.trim());
+    h+='<div class="wr-cmp'+(hasModel?'':' one')+'"><div class="wr-col"><div class="wr-clb">我写的（'+n+' 字）</div>'+
        '<div class="wr-mine">'+(d.text?wrP(d.text):'<span class="qz-sub">（空）</span>')+'</div></div>'+
-       '<div class="wr-col"><div class="wr-clb">参考范文</div><div class="wr-model">'+wrP(p.model)+'</div></div></div>';
+       (hasModel?'<div class="wr-col"><div class="wr-clb">参考范文</div><div class="wr-model">'+wrP(p.model)+'</div></div>':"")+'</div>';
+    if(!hasModel) h+='<div class="wr-nomodel">这道题没有参考范文——文章由你自己写。对着下面的<b>审题要点</b>和<b>评分自查表</b>逐条过一遍，再点「存入我的习作」留档；下次重写时可以和这一版对比。</div>';
     h+='<div class="wr-sec"><b>审题要点</b><ul>'+p.tips.map(t=>"<li>"+esc(t)+"</li>").join("")+'</ul></div>';
-    h+='<div class="wr-sec"><b>结构提纲</b>'+p.outline.map(o=>'<div class="wr-ol"><div class="wr-olh">'+esc(o.h)+'</div><ul>'+
+    if((p.outline||[]).length) h+='<div class="wr-sec"><b>结构提纲</b>'+p.outline.map(o=>'<div class="wr-ol"><div class="wr-olh">'+esc(o.h)+'</div><ul>'+
        o.pts.map(x=>"<li>"+esc(x)+"</li>").join("")+'</ul></div>').join("")+'</div>';
     const cs=d.checks||[];
     h+='<div class="wr-sec"><b>对照评分（勾掉你做到的）</b><div class="wr-chk">'+
@@ -5132,6 +5156,12 @@ function wrTpl(host){
   host.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{ const k="sk"+b.dataset.s; wr.open[k]=!wr.open[k]; render(); });
 }
 
+/* 删掉某一篇的第 i 次留档。i 是它在 done[pid] 里的下标——删完后面的自动往前顶，编号跟着重排。 */
+function wrDelOne(pid,i){ const a=(wrState().done[pid]||[]);
+  if(i<0||i>=a.length) return;
+  a.splice(i,1); if(!a.length) delete wrState().done[pid];
+  save(); toast("已删除"); render(); }
+
 /* ---------- 我的习作 ---------- */
 function wrMine(host){
   const s=wrState(), rows=[];
@@ -5147,23 +5177,52 @@ function wrMine(host){
       '<span>用时 '+wrMs(d.ms)+'</span><span class="wr-tg go">接着写</span></div></button>'; }).join("")+'</div>'; }
   if(!rows.length){ h+='<div class="empty">还没有存过习作。<br><span class="qz-sub">写完一篇后点「存入我的习作」，这里会留档，随时能翻出来对比进步。</span></div>'; }
   else{
-    h+='<div class="wr-lb">已完成 '+rows.length+' 篇</div><div class="wr-ml">'+
-      rows.map(r=>'<div class="wr-mrow"><div class="wr-mh"><b>'+esc(r.name)+'</b>'+
-      '<span class="wr-type">'+esc(r.type)+'</span></div>'+
-      '<div class="wr-mm">'+r.date+' · '+r.words+' 字 · 用时 '+wrMs(r.ms)+' · 自评 '+r.checks+'/'+r.total+'</div>'+
-      '<div class="wr-mtx">'+wrP(r.text)+'</div></div>').join("")+'</div>';
+    /* 按题目分组，同一题的多次留档按保存顺序编号「第 N 次」 */
+    const byP={}; rows.forEach(r=>(byP[r.pid]=byP[r.pid]||[]).push(r));
+    const pids=Object.keys(byP).sort((a,b)=>{
+      const la=byP[a][0], lb=byP[b][0]; return la.date<lb.date?1:-1; });   /* 最近写过的题排前面 */
+    h+='<div class="wr-lb">已留档 '+rows.length+' 篇 · '+pids.length+' 道题</div>';
+    pids.forEach(pid=>{
+      const list=byP[pid].slice().sort((a,b)=>a.idx-b.idx);   /* 组内按保存顺序，第1次在前 */
+      const p0=list[0];
+      h+='<div class="wr-grp"><div class="wr-gh"><b>'+esc(p0.name)+'</b>'+
+        '<span class="wr-type">'+esc(p0.type)+'</span>'+
+        '<span class="wr-gn">'+list.length+' 次</span>'+
+        '<button class="qz-btn sm" data-again="'+esc(pid)+'">再写一次</button>'+
+        '<button class="qz-btn sm" data-pexp="'+esc(pid)+'">📤 导出这道题</button></div>';
+      h+='<div class="wr-ml">'+list.map((r,k)=>{
+        const prev=k?list[k-1]:null;
+        const dw=prev?(r.words-prev.words):0, dc=prev?(r.checks-prev.checks):0;
+        return '<div class="wr-mrow"><div class="wr-mh">'+
+          '<span class="wr-no">第 '+(k+1)+' 次</span>'+
+          '<span class="wr-mm">'+r.date+' · '+r.words+' 字 · 用时 '+wrMs(r.ms)+' · 自评 '+r.checks+'/'+r.total+'</span>'+
+          (prev?'<span class="wr-delta">'+(dw>=0?'字数 +'+dw:'字数 '+dw)+'　自评 '+(dc>=0?'+'+dc:''+dc)+'</span>':"")+
+          '<button class="wr-del" data-del="'+esc(pid)+'" data-i="'+r.idx+'" title="删除这一次">删除</button>'+
+          '</div><div class="wr-mtx">'+wrP(r.text)+'</div></div>'; }).join("")+'</div></div>';
+    });
     h+='<div class="qz-actions"><button class="qz-btn pri" id="wrAll">📤 导出全部习作发给 Claude 批改</button></div>';
   }
   host.innerHTML=h;
   host.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{ wr.pid=b.dataset.p; wr.stage="w"; wr.view="write"; render(); });
+  host.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{
+    const pid=b.dataset.del, i=+b.dataset.i, p=wrPaper(pid);
+    const a2=(wrState().done[pid]||[]), no=a2.findIndex((x,k)=>k===i)+1;
+    if(confirm("删除《"+(p?p.name:pid)+"》的这一次留档？\n\n删掉就找不回来了，后面几次的编号会往前顺延。")) wrDelOne(pid,i); });
+  host.querySelectorAll("[data-again]").forEach(b=>b.onclick=()=>{
+    wr.pid=b.dataset.again; wr.stage="w"; wr.view="write"; render(); });
+  host.querySelectorAll("[data-pexp]").forEach(b=>b.onclick=()=>wrExport(b.dataset.pexp,true));
   const a=host.querySelector("#wrAll"); if(a) a.onclick=()=>wrExport(null);
 }
 
 /* ---------- 导出给 Claude 批改 ---------- */
-function wrExport(pid){
+function wrExport(pid,allOfPaper){
   const NL="\n", s=wrState();
   const list=[];
-  if(pid){ const p=wrPaper(pid), d=wrDraft(pid);
+  if(pid&&allOfPaper){   /* 这道题的全部留档，按第 1 次、第 2 次…排 */
+    const p=wrPaper(pid);
+    (s.done[pid]||[]).forEach((r,k)=>list.push({p:p,text:r.text,words:r.words,ms:r.ms,checks:r.checks,date:r.date,no:k+1}));
+  }
+  else if(pid){ const p=wrPaper(pid), d=wrDraft(pid);
     list.push({p:p, text:d.text, words:wrCount(d.text), ms:wrElapsed(d),
       checks:(d.checks||[]).filter(Boolean).length, date:today()}); }
   else{ Object.keys(s.done).forEach(k=>{ const p=wrPaper(k); if(!p) return;
@@ -5176,7 +5235,7 @@ function wrExport(pid){
   md+="> 4）最后按 30 分制打个分，并告诉我下一篇该重点练什么。"+NL+NL;
   list.forEach((it,i)=>{
     const p=it.p;
-    md+="---"+NL+NL+"## 第 "+(i+1)+" 篇　"+p.name+NL+NL;
+    md+="---"+NL+NL+"## "+(it.no?"第 "+it.no+" 次　":"第 "+(i+1)+" 篇　")+p.name+NL+NL;
     md+="- **文种**："+p.type+"（"+p.cat+"）"+NL;
     md+="- **字数要求**："+p.minWords+"—"+p.maxWords+" 字；我写了 "+it.words+" 字"+NL;
     md+="- **建议时间**："+p.mins+" 分钟；我用了 "+wrMs(it.ms)+NL;
