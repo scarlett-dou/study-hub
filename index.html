@@ -994,7 +994,7 @@ function defaultSettings(){ return {
   timeplan:{ periods:{am:["08:00","12:00"],noon:["12:00","14:00"],pm:["14:00","18:00"],eve:["18:00","23:00"]},
              meals:{lunch:["12:00","13:30"],dinner:["18:00","19:30"]}, window:["08:00","22:30"], stepMin:30, maxSpanH:5 },
 }; }
-function blankDb(){ return { version:7, today:null, settings:defaultSettings(), contents:[], courses:[], recites:[], plans:[], userModules:[], flashDecks:[], flashState:{}, timeplan:{}, lawBank:{version:1,questions:[],cards:[]}, lawState:{q:{},c:{},log:[]}, mgBank:{version:1,modules:[],points:[],questions:[]}, mgState:{q:{},log:[],note:{},ui:{}}, sjBank:{version:1,questions:[]}, sjState:{q:{},log:[]}, wrBank:null, wrState:{drafts:{},done:{},ui:{}}, qzState:{paper:null,last:null,exams:[]}, mockBank:null }; }
+function blankDb(){ return { version:7, today:null, settings:defaultSettings(), contents:[], courses:[], recites:[], plans:[], userModules:[], flashDecks:[], flashState:{}, timeplan:{}, lawBank:{version:1,questions:[],cards:[]}, lawState:{q:{},c:{},log:[]}, mgBank:{version:1,modules:[],points:[],questions:[]}, mgState:{q:{},log:[],note:{},ui:{}}, sjBank:{version:1,questions:[]}, sjState:{q:{},log:[]}, mzBank:{version:1,points:[],questions:[]}, mzState:{q:{},log:[]}, wrBank:null, wrState:{drafts:{},done:{},ui:{}}, qzState:{paper:null,last:null,exams:[]}, mockBank:null }; }
 let db=blankDb();
 let state={ view:"home", calBase:null, selDate:null };
 
@@ -1047,6 +1047,8 @@ function normalizeDb(o){
   d.lawState=(o.lawState&&typeof o.lawState==="object")?o.lawState:{q:{},c:{},log:[]}; if(!d.lawState.q) d.lawState.q={}; if(!d.lawState.c) d.lawState.c={}; if(!Array.isArray(d.lawState.log)) d.lawState.log=[];
   d.sjBank=(o.sjBank&&typeof o.sjBank==="object")?o.sjBank:{version:1,questions:[]}; if(!Array.isArray(d.sjBank.questions)) d.sjBank.questions=[];
   d.sjState=(o.sjState&&typeof o.sjState==="object")?o.sjState:{q:{},log:[]}; if(!d.sjState.q) d.sjState.q={}; if(!Array.isArray(d.sjState.log)) d.sjState.log=[];
+  d.mzBank=(o.mzBank&&typeof o.mzBank==="object")?o.mzBank:{version:1,points:[],questions:[]}; if(!Array.isArray(d.mzBank.questions)) d.mzBank.questions=[]; if(!Array.isArray(d.mzBank.points)) d.mzBank.points=[];
+  d.mzState=(o.mzState&&typeof o.mzState==="object")?o.mzState:{q:{},log:[]}; if(!d.mzState.q) d.mzState.q={}; if(!Array.isArray(d.mzState.log)) d.mzState.log=[];
   /* 刷题中心的当前试卷/上次组卷配置/历史成绩。不登记的话刷新一次就全没了(2026-08-23 补) */
   d.qzState=(o.qzState&&typeof o.qzState==="object")?o.qzState:{paper:null,last:null,exams:[]}; if(!Array.isArray(d.qzState.exams)) d.qzState.exams=[];
   d.mockBank=(o.mockBank&&typeof o.mockBank==="object")?o.mockBank:null;
@@ -1083,7 +1085,7 @@ function spDImg(d){ return "decks/"+d.id+"-images.json"; }
 /* db → { 路径:json字符串 }。文件名用 id(稳定、纯 ASCII),中文名放进 index.meta 供仓库网页查阅。 */
 function splitDb(){
   const files={}, meta={};
-  const state={}; Object.keys(db).forEach(k=>{ if(k!=="contents"&&k!=="flashDecks"&&k!=="lawBank"&&k!=="mgBank"&&k!=="wrBank"&&k!=="sjBank") state[k]=db[k]; });
+  const state={}; Object.keys(db).forEach(k=>{ if(k!=="contents"&&k!=="flashDecks"&&k!=="lawBank"&&k!=="mgBank"&&k!=="wrBank"&&k!=="sjBank"&&k!=="mzBank") state[k]=db[k]; });
   files["state.json"]=JSON.stringify(state);
   (db.contents||[]).forEach(c=>{ const p=spCPath(c); files[p]=JSON.stringify(c); meta[p]={name:c.name||""}; });
   (db.flashDecks||[]).forEach(d=>{ const p=spDPath(d), body={};
@@ -1097,6 +1099,7 @@ function splitDb(){
   if(db.wrBank&&((db.wrBank.papers||[]).length)) files["wr/bank.json"]=JSON.stringify(db.wrBank);
   /* 习思想题库:270 题体积大且极少变,同样单独成文件,不随日常打卡重写 */
   if(db.sjBank&&((db.sjBank.questions||[]).length)) files["sj/bank.json"]=JSON.stringify(db.sjBank);
+  if(db.mzBank&&((db.mzBank.questions||[]).length)) files["mz/bank.json"]=JSON.stringify(db.mzBank);
   const hashes={}; Object.keys(files).forEach(p=>{ hashes[p]=spHash(files[p]); });
   files["index.json"]=JSON.stringify({ _split:SPLIT_VER, savedAt:db.savedAt||null, stats:(typeof csStats==="function"?csStats(db):undefined), files:hashes, meta },null,1);
   return files;
@@ -1135,6 +1138,7 @@ function mergeFiles(files){
     if(typeof files["mg/bank.json"]==="string") out.mgBank=JSON.parse(files["mg/bank.json"]);
     if(typeof files["wr/bank.json"]==="string") out.wrBank=JSON.parse(files["wr/bank.json"]);
     if(typeof files["sj/bank.json"]==="string") out.sjBank=JSON.parse(files["sj/bank.json"]);
+    if(typeof files["mz/bank.json"]==="string") out.mzBank=JSON.parse(files["mz/bank.json"]);
     return out;
   }catch(e){ return null; }
 }
@@ -1303,12 +1307,12 @@ async function csAdoptLegacy(old,ot){ CS.applying=true; db=normalizeDb(old); awa
    所以：①index.json 里带上各类记录条数；②自动同步前比一次，发现「要覆盖的那边反而更多」
    就停下来不动，让人自己选方向；③设置里给出明确的「下载 / 上传」两个动作。 */
 function csStats(o){ o=o||{}; const n=x=>Object.keys(x||{}).length;
-  return { law:n((o.lawState||{}).q), mg:n((o.mgState||{}).q), sj:n((o.sjState||{}).q),
+  return { law:n((o.lawState||{}).q), mg:n((o.mgState||{}).q), sj:n((o.sjState||{}).q), mz:n((o.mzState||{}).q),
            wr:n((o.wrState||{}).done), contents:(o.contents||[]).length, decks:(o.flashDecks||[]).length,
            plans:(o.plans||[]).length, courses:(o.courses||[]).length, recites:(o.recites||[]).length }; }
 /* 只拿「正常只会增加」的项当护栏；计划/课程/复习会被正常删除，不参与判断，免得天天误报 */
-const CS_GUARD=[["law","法律做题"],["mg","管理做题"],["sj","习思想做题"],["wr","写作习作"],["contents","背诵章节"],["decks","卡片本"]];
-const CS_ROWS=[["law","刷题·法律"],["mg","刷题·管理"],["sj","刷题·习思想"],["wr","写作习作"],
+const CS_GUARD=[["law","法律做题"],["mg","管理做题"],["sj","习思想做题"],["mz","马哲做题"],["wr","写作习作"],["contents","背诵章节"],["decks","卡片本"]];
+const CS_ROWS=[["law","刷题·法律"],["mg","刷题·管理"],["sj","刷题·习思想"],["mz","刷题·马哲"],["wr","写作习作"],
   ["contents","背诵章节"],["decks","卡片本"],["plans","计划"],["courses","课程"],["recites","复习"]];
 /* a 比 b 少的项（= 拿 a 去覆盖 b 会丢东西） */
 function csShrink(a,b){ if(!a||!b) return [];
@@ -4049,7 +4053,32 @@ function sjGrade(id,ok){ const x=sjQEnsure(id); x.n++; x.last=today();
   if(s.log.length>SJ_LOG_CAP) s.log=s.log.slice(-Math.floor(SJ_LOG_CAP*0.7));
   save(); }
 
-/* ---------- 题库适配层：把三个题库摊平成一套结构 ---------- */
+/* ---------- 马哲题库的做题状态 ----------
+   与习思想同构：没有独立模块，状态层放在刷题中心里。
+   错题规则与法律/习思想一致：错 1 次入册，连对 MZ_MASTER 次才移出。 */
+const MZ_MASTER=2, MZ_LOG_CAP=4000;
+function mzS(){ const s=db.mzState||(db.mzState={q:{},log:[]}); if(!s.q)s.q={}; if(!s.log)s.log=[]; return s; }
+function mzQSt(id){ return mzS().q[id]||null; }
+function mzQEnsure(id){ const s=mzS(); let x=s.q[id];
+  if(!x){ x={w:0,r:0,n:0,streak:0,mastered:false,last:null}; s.q[id]=x; }
+  if(!x.fzo) x.fzo=[];        /* 标为「不确定」的选项字母 */
+  if(x.fz==null) x.fz=0;      /* 标过几次「模糊」 */
+  return x; }
+function mzInBook(id){ const x=mzQSt(id); return !!x && x.w>0 && !x.mastered; }
+function mzSetFuzzy(id,on){ const x=mzQEnsure(id);
+  if(on&&!x.fuzzy) x.fz=(x.fz||0)+1;
+  x.fuzzy=!!on; if(!on) x.fzo=[]; save(); }
+function mzToggleOpt(id,k){ const x=mzQEnsure(id); const i=x.fzo.indexOf(k);
+  if(i>=0) x.fzo.splice(i,1); else { x.fzo.push(k); if(!x.fuzzy){ x.fuzzy=true; x.fz=(x.fz||0)+1; } }
+  save(); }
+function mzGrade(id,ok){ const x=mzQEnsure(id); x.n++; x.last=today();
+  if(ok){ x.r++; if(x.w>0){ x.streak++; if(x.streak>=MZ_MASTER) x.mastered=true; } }
+  else  { x.w++; x.streak=0; x.mastered=false; }
+  const s=mzS(); s.log.push({d:today(),q:id,ok:ok?1:0});
+  if(s.log.length>MZ_LOG_CAP) s.log=s.log.slice(-Math.floor(MZ_LOG_CAP*0.7));
+  save(); }
+
+/* ---------- 题库适配层：把四个题库摊平成一套结构 ---------- */
 function qzSrcs(){ return [
   { key:"law", group:"法律", qs:()=>((db.lawBank&&db.lawBank.questions)||[]), subj:q=>q.subject||"法律",
     type:q=>q.type||(q.sec==="判断题"?"tf":"mc"), pts:()=>((db.lawBank&&db.lawBank.points)||[]),
@@ -4063,6 +4092,11 @@ function qzSrcs(){ return [
     /* 习思想的「知识点」就是她背诵库里的章节（1—16 章，第九章拆 9.1—9.5） */
     pts:()=>(((db.sjBank&&db.sjBank.chapters)||[]).map(c=>({id:"sjc-"+c.key, subject:"习思想", name:c.name, hint:""}))),
     kps:q=>(q.ch?["sjc-"+q.ch]:[]) },
+  { key:"mz",  group:"马哲", qs:()=>((db.mzBank&&db.mzBank.questions)||[]), subj:()=>"马哲",
+    type:q=>q.type||(q.sec==="判断题"?"tf":"mc"),
+    /* 马哲的知识点＝她自己的笔记《马克思主义哲学》里的五章及其条目，共 56 个 */
+    pts:()=>(((db.mzBank&&db.mzBank.points)||[]).map(p=>({id:p.id,subject:"马哲",name:p.name,hint:p.chapter||""}))),
+    kps:q=>q.kps||[] },
 ]; }
 function qzAll(){ const out=[];
   qzSrcs().forEach(s=>s.qs().forEach(q=>out.push({
@@ -4076,25 +4110,31 @@ function qzSt(q){
     return x?{done:x.n>0,wrong:x.w>0,inBook:lawInBook(q.id),fuzzy:!!x.fuzzy,mastered:!!x.mastered,w:x.w||0}:null; }
   if(q.src==="sj"){ const x=sjQSt(q.id);
     return x?{done:x.n>0,wrong:x.w>0,inBook:sjInBook(q.id),fuzzy:!!x.fuzzy,mastered:!!x.mastered,w:x.w||0}:null; }
+  if(q.src==="mz"){ const x=mzQSt(q.id);
+    return x?{done:x.n>0,wrong:x.w>0,inBook:mzInBook(q.id),fuzzy:!!x.fuzzy,mastered:!!x.mastered,w:x.w||0}:null; }
   const x=mgQSt(q.id);
   return x&&x.ans?{done:true,wrong:!x.ok,inBook:mgInBook(q._raw),fuzzy:mgIsUns(x),mastered:false,w:x.w||0}:null;
 }
 /* 备注：我对这道题的思考 / 不懂的地方。法律存 lawState.q[id].note，管理存 mgState.note[id]。 */
 function qzNoteGet(q){ if(q.src==="law"){ const x=lawQSt(q.id); return (x&&x.note)||""; }
   if(q.src==="sj"){ const x=sjQSt(q.id); return (x&&x.note)||""; }
+  if(q.src==="mz"){ const x=mzQSt(q.id); return (x&&x.note)||""; }
   return (mgS().note||{})[q.id]||""; }
 function qzNoteSet(q,t){ t=String(t||"");
   if(q.src==="law"){ const x=lawQEnsure(q.id); if(t) x.note=t; else delete x.note; }
   else if(q.src==="sj"){ const x=sjQEnsure(q.id); if(t) x.note=t; else delete x.note; }
+  else if(q.src==="mz"){ const x=mzQEnsure(q.id); if(t) x.note=t; else delete x.note; }
   else { const s2=mgS(); if(!s2.note) s2.note={}; if(t) s2.note[q.id]=t; else delete s2.note[q.id]; }
   save(); }
 /* Claude 对这条备注的解答。跟备注放在一起，存她自己的状态里，不写进题库（题库要公开发布）。 */
 function qzAnsGet(q){ if(q.src==="law"){ const x=lawQSt(q.id); return (x&&x.ans)||""; }
   if(q.src==="sj"){ const x=sjQSt(q.id); return (x&&x.ans)||""; }
+  if(q.src==="mz"){ const x=mzQSt(q.id); return (x&&x.ans)||""; }
   return ((mgS().ans)||{})[q.id]||""; }
 function qzAnsSet(q,t){ t=String(t||"");
   if(q.src==="law"){ const x=lawQEnsure(q.id); if(t) x.ans=t; else delete x.ans; }
   else if(q.src==="sj"){ const x=sjQEnsure(q.id); if(t) x.ans=t; else delete x.ans; }
+  else if(q.src==="mz"){ const x=mzQEnsure(q.id); if(t) x.ans=t; else delete x.ans; }
   else { const s2=mgS(); if(!s2.ans) s2.ans={}; if(t) s2.ans[q.id]=t; else delete s2.ans[q.id]; }
   save(); }
 /* 问过问题的题（答题卡上要标出来） */
@@ -4108,6 +4148,7 @@ function qzGrade(q,pick){
   const ok=(pick===q.answer);
   if(q.src==="law"){ lawGrade(q.id,ok); }
   else if(q.src==="sj"){ sjGrade(q.id,ok); }
+  else if(q.src==="mz"){ mzGrade(q.id,ok); }
   else { const x=mgQEnsure(q.id); x.pick=pick; mgGrade(q._raw,x); }
   return ok;
 }
@@ -4119,6 +4160,9 @@ function qzHist(q){
             sysW:Math.max(0,(x.w||0)-(x.book?1:0)),   /* 同上:系统里错了几次 */
             last: x.w>0&&!x.mastered ? "错" : (x.r>0?"对":"") , date:x.last||""}; }
   if(q.src==="sj"){ const x=sjQSt(q.id); if(!x||!x.n) return null;
+    return {n:x.n, w:x.w||0, r:x.r||0, mastered:!!x.mastered, fuzzy:!!x.fuzzy,
+            last: x.w>0&&!x.mastered ? "错" : (x.r>0?"对":""), date:x.last||""}; }
+  if(q.src==="mz"){ const x=mzQSt(q.id); if(!x||!x.n) return null;
     return {n:x.n, w:x.w||0, r:x.r||0, mastered:!!x.mastered, fuzzy:!!x.fuzzy,
             last: x.w>0&&!x.mastered ? "错" : (x.r>0?"对":""), date:x.last||""}; }
   const x=mgQSt(q.id); if(!x||!x.ans) return null;
@@ -4296,7 +4340,8 @@ function qzHome(main){
   }
   h+='<div class="qz-jump"><span class="qz-sub">各科目的错题本 / 卡片 / 知识点薄弱度，仍在原来的模块里：</span>'+
      '<button class="qz-btn sm" data-go="law">法律模块</button><button class="qz-btn sm" data-go="mg">管理模块</button>'+
-     '<button class="qz-btn sm" id="qzSjImp">习思想题库 · 载入/更新</button></div>';
+     '<button class="qz-btn sm" id="qzSjImp">习思想题库 · 载入/更新</button>'+
+     '<button class="qz-btn sm" id="qzMzImp">马哲题库 · 载入/更新</button></div>';
   const ex=qzState().exams;
   if(ex.length){ h+='<div class="qz-lb">最近的模拟卷</div><div class="qz-hist">'+
     ex.slice(-6).reverse().map(e=>'<div class="qz-hrow"><span>'+e.date+'</span><span>'+e.n+' 题</span>'+
@@ -4316,6 +4361,7 @@ function qzHome(main){
     qz.scope="全部"; qz.take="all"; qz.view="build"; render(); });
   main.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
   const si=main.querySelector("#qzSjImp"); if(si) si.onclick=sjImport;
+  const mi=main.querySelector("#qzMzImp"); if(mi) mi.onclick=mzImport;
   const gb=main.querySelector("#qzGo"); if(gb) gb.onclick=()=>{ qz.view="run"; qz.cur=qzPaper().cur||0; render(); };
   const db_=main.querySelector("#qzDrop"); if(db_) db_.onclick=()=>{ if(confirm("放弃这套卷子？已答的记录会保留。")){ qzState().paper=null; save(); render(); } };
 }
@@ -4353,6 +4399,44 @@ function sjImport(){
     const msg=h.querySelector("#qzSjMsg"); msg.textContent="读取中…";
     const rd=new FileReader();
     rd.onload=async()=>{ try{ await sjAdopt(JSON.parse(rd.result)); }
+      catch(err){ msg.textContent="导入失败："+err.message; } };
+    rd.readAsText(f);
+  };
+}
+
+/* 载入 / 更新马哲题库。**只写入 mzBank**，做题记录、错题本、以及日历/背诵库/课程都不受影响。
+   数据平时经私有仓库 study-data 自动同步过来，这里是同步没到位时的兜底入口。 */
+async function mzAdopt(data){
+  if(!data||!Array.isArray(data.questions)||!data.questions.length) throw new Error("这个文件里没有题目");
+  const bad=data.questions.filter(q=>!q.id||!q.stem||!q.sec||!q.answer).length;
+  if(bad) throw new Error("有 "+bad+" 道题缺 id/题干/题型/答案，没有导入");
+  db.mzBank=data; save();
+  toast("马哲题库已载入 "+data.questions.length+" 题 ✓");
+  closeModal(); render();
+}
+function mzImport(){
+  const online=/^https?:/.test(location.protocol);
+  const has=((db.mzBank&&db.mzBank.questions)||[]).length;
+  const h=openModal("载入 / 更新马哲题库",
+    '<p class="qz-sub">载入「马哲题库.json」（150 题，按你的笔记分了 56 个知识点）。<b>只写入题目</b>；你的做题记录、错题本进度、背诵库和课程都不受影响。'+
+    (has?'<br>当前已有 <b>'+has+'</b> 题。':"")+'</p>'+
+    (online?'<div class="qz-actions" style="margin-bottom:11px"><button class="qz-btn pri" id="qzMzNet">📶 从网上载入</button></div>':"")+
+    '<p class="qz-sub">或者自己选文件：</p>'+
+    '<input type="file" id="qzMzFile" accept=".json,application/json">'+
+    '<div id="qzMzMsg" class="qz-sub" style="margin-top:9px"></div>');
+  const net=h.querySelector("#qzMzNet");
+  if(net) net.onclick=async()=>{
+    const msg=h.querySelector("#qzMzMsg"); msg.textContent="下载中…";
+    try{ const rs=await fetch("./马哲题库.json",{cache:"no-store"});
+      if(!rs.ok) throw new Error("HTTP "+rs.status);
+      await mzAdopt(await rs.json());
+    }catch(err){ msg.textContent="下载失败（"+err.message+"）。检查一下网络，或者用下面的「选择文件」；也可以在已开云同步的设备上导入一次，其它设备会自动同步过来。"; }
+  };
+  h.querySelector("#qzMzFile").onchange=(e)=>{
+    const f=e.target.files&&e.target.files[0]; if(!f) return;
+    const msg=h.querySelector("#qzMzMsg"); msg.textContent="读取中…";
+    const rd=new FileReader();
+    rd.onload=async()=>{ try{ await mzAdopt(JSON.parse(rd.result)); }
       catch(err){ msg.textContent="导入失败："+err.message; } };
     rd.readAsText(f);
   };
@@ -4670,12 +4754,15 @@ function qzRun(main){
 function qzFuzzyBar(host,q){
   const read=()=>{ if(q.src==="law"){ const x=lawQEnsure(q.id); return {on:!!x.fuzzy,opt:x.fzo||[],n:x.fz||0}; }
                    if(q.src==="sj"){ const x=sjQEnsure(q.id); return {on:!!x.fuzzy,opt:x.fzo||[],n:x.fz||0}; }
+                   if(q.src==="mz"){ const x=mzQEnsure(q.id); return {on:!!x.fuzzy,opt:x.fzo||[],n:x.fz||0}; }
                    const x=mgQEnsure(q.id); return {on:!!x.qUns,opt:x.unsure||[],n:0}; };
   const setAll=on=>{ if(q.src==="law") lawSetFuzzy(q.id,on);
                      else if(q.src==="sj") sjSetFuzzy(q.id,on);
+                     else if(q.src==="mz") mzSetFuzzy(q.id,on);
                      else { const x=mgQEnsure(q.id); x.qUns=!!on; if(!on) x.unsure=[]; save(); } };
   const setOpt=k=>{ if(q.src==="law") lawToggleOpt(q.id,k);
                     else if(q.src==="sj") sjToggleOpt(q.id,k);
+                    else if(q.src==="mz") mzToggleOpt(q.id,k);
                     else { const x=mgQEnsure(q.id); const i=x.unsure.indexOf(k);
                            if(i>=0) x.unsure.splice(i,1); else { x.unsure.push(k); x.qUns=true; } save(); } };
   const draw=()=>{ const s=read(), keys=(q.type==="tf")?["√","×"]:Object.keys(q.options||{});
