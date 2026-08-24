@@ -767,6 +767,8 @@
     border-radius:10px;padding:9px 11px;font-family:inherit;display:flex;flex-direction:column;gap:5px}
   .qz-kp.on{border-color:var(--tint);background:rgba(0,122,255,.09)}
   .qz-kpn{font-size:13.5px;font-weight:600;line-height:1.45}
+  .qz-kpg{display:block;font-size:11px;color:var(--text3);line-height:1.3;margin-bottom:1px}
+  .qz-chip i{font-style:normal;color:var(--red);font-weight:600;margin-left:5px}
   .qz-kpm{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--text2)}
   .qz-kpm i{font-style:normal}
   .qz-kpm i.r{color:var(--red);font-weight:600}
@@ -4023,7 +4025,7 @@ const QZ_SECNAME={"判断题":"判断题","单选题":"单项选择题","多选�
 const QZ_REAL={"单选题":60,"多选题":10,"判断题":20};   // 各题型题数
 const QZ_PTS ={"单选题":0.8,"多选题":1.2,"判断题":0.5}; // 各题型分值
 const QZ_DEF_MIN=120;                                 // 模拟考试默认时长(分钟)
-let qz={ view:"home", pick:{}, kps:{}, kpSort:"weak", kpQ:"", scope:"全部", nums:null, take:"real", mode:"practice", mins:QZ_DEF_MIN,
+let qz={ view:"home", pick:{}, kps:{}, kpg:{}, kpSort:"weak", kpQ:"", scope:"全部", nums:null, take:"real", mode:"practice", mins:QZ_DEF_MIN,
          cur:0, showExp:false, cardOpen:false, showHist:true };
 let qzTimer=null;
 let qzShownCur=-1;   /* 答题卡里当前正显示的题号，用来判断这次重绘有没有换题 */
@@ -4095,7 +4097,7 @@ function qzSrcs(){ return [
   { key:"mz",  group:"马哲", qs:()=>((db.mzBank&&db.mzBank.questions)||[]), subj:()=>"马哲",
     type:q=>q.type||(q.sec==="判断题"?"tf":"mc"),
     /* 马哲的知识点＝她自己的笔记《马克思主义哲学》里的五章及其条目，共 56 个 */
-    pts:()=>(((db.mzBank&&db.mzBank.points)||[]).map(p=>({id:p.id,subject:"马哲",name:p.name,hint:p.chapter||""}))),
+    pts:()=>(((db.mzBank&&db.mzBank.points)||[]).map(p=>({id:p.id,subject:"马哲",name:p.name,grp:p.chapter||"",hint:p.chapter||""}))),
     kps:q=>q.kps||[] },
 ]; }
 function qzAll(){ const out=[];
@@ -4188,8 +4190,10 @@ function qzScopeOk(q){
     default: return true;
   } }
 function qzPool(){ const sel=qz.pick, kp=qz.kps, anyKp=Object.keys(kp).length;
+  const gs=qzGrpKpSet();                     /* 选了大类就只在大类里出题 */
   return qzAll().filter(q=>sel[q.subject]&&qzScopeOk(q)&&
-    (!anyKp||(q.kps||[]).some(k=>kp[k])));   /* 不选知识点＝该科目全部 */ }
+    (!anyKp||(q.kps||[]).some(k=>kp[k]))&&
+    (!gs||(q.kps||[]).some(k=>gs[k])));       /* 大类和知识点都不选＝该科目全部 */ }
 
 /* ---------- 模考卷（整套固定卷，含写作题）----------
    数据放 db.mockBank = { version, papers:[{ id, name, mins, note,
@@ -4242,13 +4246,13 @@ function qzPoints(){
   const out=[];
   qzSrcs().forEach(s=>{ if(!s.pts) return;
     s.pts().forEach(p=>{ if(!cnt[p.id]) return;
-      out.push({ id:p.id, subject:p.subject||s.group, name:p.name, hint:p.hint||"", n:cnt[p.id], ord:out.length }); }); });
+      out.push({ id:p.id, subject:p.subject||s.group, name:p.name, grp:p.grp||"", hint:p.hint||"", n:cnt[p.id], ord:out.length }); }); });
   return out; }
 /* 知识点 id → 名字。答完题要显示「这题属于哪一章 / 哪个知识点」。 */
 function qzKpNames(q){
   const ids=q.kps||[]; if(!ids.length) return [];
   const map={};
-  qzSrcs().forEach(s=>{ if(!s.pts) return; s.pts().forEach(p=>map[p.id]=p.name); });
+  qzSrcs().forEach(s=>{ if(!s.pts) return; s.pts().forEach(p=>map[p.id]=(p.grp?qzGrpShort(p.grp)+" · ":"")+p.name); });
   return ids.map(i=>map[i]).filter(Boolean);
 }
 /* 一个知识点的掌握情况：做了多少、错多少、蒙对多少（答对但标了模糊）、薄弱指数 */
@@ -4259,6 +4263,29 @@ function qzKpStat(id){
     if(st.inBook) wrong++; else if(st.fuzzy) luck++; });
   const weak=done?((wrong*2+luck)/done):0;
   return { n:qs.length, done:done, wrong:wrong, luck:luck, weak:weak }; }
+/* ---------- 大类：知识点之上再高一层 ----------
+   马哲的大类＝她笔记《马克思主义哲学》里的五章一级标题（哲学概述/唯物论/辩证法/认识论/唯物史观）。
+   题库的 points 里带 chapter 就会有大类；不带的题库（法律/管理/习思想）这一层自动不出现。 */
+function qzGrpShort(g){ return String(g||"").replace(/^第[一二三四五六七八九十]+章\s*/,""); }
+/* 大类列表 + 每个大类的题数/已做/错/蒙对。按「题」去重统计，不是把知识点题数相加。 */
+function qzGrps(pts){ if(!qz.kpg) qz.kpg={};
+  const list=pts||qzPoints();
+  const g2={}, order=[], kp2g={};
+  list.forEach(p=>{ if(!p.grp) return; kp2g[p.id]=p.grp;
+    if(!g2[p.grp]){ g2[p.grp]={name:p.grp,n:0,done:0,wrong:0,luck:0}; order.push(p.grp); } });
+  if(!order.length) return [];
+  const sel=qz.pick, any=Object.keys(sel).length;
+  qzAll().forEach(q=>{ if(any&&!sel[q.subject]) return;
+    const seen={}; (q.kps||[]).forEach(k=>{ const g=kp2g[k]; if(g) seen[g]=1; });
+    const ks=Object.keys(seen); if(!ks.length) return;
+    const st=qzSt(q);
+    ks.forEach(g=>{ const o=g2[g]; o.n++;
+      if(st&&st.done){ o.done++; if(st.inBook) o.wrong++; else if(st.fuzzy) o.luck++; } }); });
+  return order.map(g=>g2[g]); }
+/* 选中的大类覆盖到哪些知识点（没选大类返回 null＝不过滤） */
+function qzGrpKpSet(){ if(!qz.kpg) qz.kpg={};
+  if(!Object.keys(qz.kpg).length) return null;
+  const set={}; qzPoints().forEach(p=>{ if(p.grp&&qz.kpg[p.grp]) set[p.id]=1; }); return set; }
 /* 首页薄弱排行用：做过 >=3 题且有错/蒙对的点，按薄弱指数排 */
 function qzWeakList(min){
   min=min||3;
@@ -4334,7 +4361,7 @@ function qzHome(main){
   if(wk.length){
     h+='<div class="qz-lb">最薄弱的知识点 <span class="qz-sub">（错×2 ＋ 蒙对×1 ÷ 已做；点一下只刷这个点）</span></div><div class="qz-wk">'+
       wk.slice(0,8).map(p=>'<button class="qz-wkrow" data-wk="'+esc(p.id)+'" data-wksub="'+esc(p.subject)+'">'+
-        '<span class="qz-wkn">'+esc(p.subject)+' · '+esc(p.name)+'</span>'+
+        '<span class="qz-wkn">'+esc(p.subject)+' · '+(p.grp?esc(qzGrpShort(p.grp))+' · ':"")+esc(p.name)+'</span>'+
         '<span class="qz-wkm">共 '+p.n+' 题 · 已做 '+p.done+(p.wrong?' · <b class="r">错 '+p.wrong+'</b>':"")+(p.luck?' · <b class="o">蒙对 '+p.luck+'</b>':"")+'</span>'+
         '<span class="qz-wkb"><i style="width:'+Math.min(100,Math.round(p.weak*50))+'%"></i></span></button>').join("")+'</div>';
   }
@@ -4348,7 +4375,7 @@ function qzHome(main){
       '<span class="'+(e.pct>=80?"g":(e.pct>=60?"":"r"))+'">'+e.right+"/"+e.n+" · "+e.pct+'%</span></div>').join("")+'</div>'; }
   main.innerHTML=h;
   main.querySelectorAll(".qz-card").forEach(b=>b.onclick=()=>{
-    qz.pick={}; qz.pick[b.dataset.subj]=true; qz.view="build"; render(); });
+    qz.pick={}; qz.pick[b.dataset.subj]=true; qz.kps={}; qz.kpg={}; qz.view="build"; render(); });
   const nb=main.querySelector("#qzNew"); if(nb) nb.onclick=()=>{ qz.view="build"; render(); };
   const mb=main.querySelector("#qzMock"); if(mb) mb.onclick=()=>{ qz.view="mock"; render(); };
   const wrb=main.querySelector("#qzWr"); if(wrb) wrb.onclick=()=>go("wr");
@@ -4357,7 +4384,7 @@ function qzHome(main){
   const eb=main.querySelector("#qzExp"); if(eb) eb.onclick=qzExport;
   main.querySelectorAll("[data-wk]").forEach(b=>b.onclick=()=>{
     qz.pick={}; qz.pick[b.dataset.wksub]=true;
-    qz.kps={}; qz.kps[b.dataset.wk]=true;
+    qz.kps={}; qz.kps[b.dataset.wk]=true; qz.kpg={};
     qz.scope="全部"; qz.take="all"; qz.view="build"; render(); });
   main.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
   const si=main.querySelector("#qzSjImp"); if(si) si.onclick=sjImport;
@@ -4523,13 +4550,24 @@ function qzBuilder(main){
   /* ②知识点（不选＝该科目全部） */
   const kps=qzPoints().map(p=>Object.assign({},p,qzKpStat(p.id)));
   const kq=(qz.kpQ||"").trim();
+  if(!qz.kpg) qz.kpg={};
+  const grps=qzGrps(kps), gmap={}; grps.forEach(g=>gmap[g.name]=1);
+  Object.keys(qz.kpg).forEach(g=>{ if(!gmap[g]) delete qz.kpg[g]; });   /* 换科目后清掉失效的大类 */
+  const anyG=Object.keys(qz.kpg).length;
   let kshow=kq?kps.filter(p=>p.name.indexOf(kq)>=0||(p.hint||"").indexOf(kq)>=0):kps.slice();
+  if(anyG) kshow=kshow.filter(p=>qz.kpg[p.grp]);
   kshow.sort(qz.kpSort==="weak" ? (a,b)=>b.weak-a.weak||b.n-a.n
            : qz.kpSort==="ord"  ? (a,b)=>a.ord-b.ord            /* 习思想按 1→16 章的原顺序 */
            : (a,b)=>b.n-a.n);
   const kpOn=Object.keys(qz.kps).length;
   if(kps.length){
-    h+='<div class="qz-sec"><div class="qz-lb">② 知识点 <span class="qz-sub">（不选＝该科目全部；共 '+kps.length+' 个）</span></div>';
+    h+='<div class="qz-sec"><div class="qz-lb">'+(grps.length?'② 大类 / 知识点':'② 知识点')+
+       ' <span class="qz-sub">（都不选＝该科目全部；'+(grps.length?'共 '+grps.length+' 个大类 · ':'共 ')+kps.length+' 个知识点）</span></div>';
+    if(grps.length){
+      h+='<div class="qz-row" style="margin-bottom:9px">'+grps.map(g=>
+        '<button class="qz-chip'+(qz.kpg[g.name]?" on":"")+'" data-kpg="'+esc(g.name)+'">'+
+        esc(qzGrpShort(g.name))+' <b>'+g.n+'</b>'+(g.wrong?'<i>错'+g.wrong+'</i>':"")+'</button>').join("")+
+        (anyG?'<button class="qz-chip sm" id="qzGClr">清空大类</button>':"")+'</div>'; }
     h+='<div class="qz-kbar"><input type="text" id="qzKpQ" placeholder="搜知识点…" value="'+esc(qz.kpQ||"")+'">'+
        '<button class="qz-chip sm'+(qz.kpSort==="weak"?" on":"")+'" data-ksort="weak">薄弱优先</button>'+
        '<button class="qz-chip sm'+(qz.kpSort==="n"?" on":"")+'" data-ksort="n">题多优先</button>'+
@@ -4538,6 +4576,7 @@ function qzBuilder(main){
     h+='<div class="qz-kps">'+kshow.map(p=>{
       const lv=p.done?(p.weak>=1?3:(p.weak>=0.5?2:(p.weak>0?1:0))):0;
       return '<button class="qz-kp'+(qz.kps[p.id]?" on":"")+'" data-kp="'+esc(p.id)+'">'+
+        (p.grp&&!anyG?'<span class="qz-kpg">'+esc(qzGrpShort(p.grp))+'</span>':"")+
         '<span class="qz-kpn">'+esc(p.name)+'</span>'+
         '<span class="qz-kpm"><i>'+p.n+' 题</i>'+
         (p.done?'<i>已做 '+p.done+'</i>'+(p.wrong?'<i class="r">错 '+p.wrong+'</i>':"")+(p.luck?'<i class="o">蒙对 '+p.luck+'</i>':""):'<i class="g2">没做过</i>')+
@@ -4577,6 +4616,13 @@ function qzBuilder(main){
     render(); });
   main.querySelectorAll("[data-kp]").forEach(b=>b.onclick=()=>{
     const k=b.dataset.kp; if(qz.kps[k]) delete qz.kps[k]; else qz.kps[k]=true; render(); });
+  main.querySelectorAll("[data-kpg]").forEach(b=>b.onclick=()=>{
+    const g=b.dataset.kpg; if(qz.kpg[g]) delete qz.kpg[g]; else qz.kpg[g]=true;
+    const on=Object.keys(qz.kpg).length, ok={};
+    qzPoints().forEach(p=>{ if(!on||qz.kpg[p.grp]) ok[p.id]=1; });   /* 摘掉不在大类里的已选知识点 */
+    Object.keys(qz.kps).forEach(k2=>{ if(!ok[k2]) delete qz.kps[k2]; });
+    render(); });
+  const gclr=main.querySelector("#qzGClr"); if(gclr) gclr.onclick=()=>{ qz.kpg={}; render(); };
   main.querySelectorAll("[data-ksort]").forEach(b=>b.onclick=()=>{ qz.kpSort=b.dataset.ksort; render(); });
   const kc=main.querySelector("#qzKpClr"); if(kc) kc.onclick=()=>{ qz.kps={}; render(); };
   const kqi=main.querySelector("#qzKpQ");
