@@ -1118,7 +1118,11 @@ function spWriteOrder(files){
   const mgb=all.filter(p=>p.indexOf("mg/")===0);
   const wrf=all.filter(p=>p.indexOf("wr/")===0);
   const sjb=all.filter(p=>p.indexOf("sj/")===0);
-  return img.concat(deck,cont,law,mgb,wrf,sjb,["state.json","index.json"]);
+  const mzb=all.filter(p=>p.indexOf("mz/")===0);
+  /* 2026-08-24 修：splitDb 会产出 mz/bank.json，但这里漏了 mz 组，
+     结果该文件从不上传、index.json 却引用它——别的设备 mergeFiles 返回 null，同步整体停摆。
+     **凡是往 splitDb 里加新文件，必须同时在这里加一组**，否则就是这个下场。 */
+  return img.concat(deck,cont,law,mgb,wrf,sjb,mzb,["state.json","index.json"]);
 }
 /* { 路径:json字符串 } → db(未 normalize)。任一被 index 引用的文件缺失/解析失败 → 返回 null。
    **调用方拿到 null 必须整体放弃采用**,绝不能拿残缺数据覆盖本机。这是最关键的安全边界。 */
