@@ -779,15 +779,6 @@
   .qz-kpm b.w2{background:var(--orange)}
   .qz-kpm b.w3{background:var(--red)}
   /* 首页薄弱排行 */
-  /* QZORGSTAR: 按星级的正确率条 */
-  .qz-star{display:flex;flex-direction:column;gap:6px;margin:2px 0 14px}
-  .qz-srow{display:flex;align-items:center;gap:10px}
-  .qz-sstar{flex:0 0 76px;color:#e8a13a;letter-spacing:1px;font-size:13px}
-  .qz-sbar{flex:1;height:8px;border-radius:5px;background:rgba(127,127,127,.18);overflow:hidden}
-  .qz-sbar i{display:block;height:100%;border-radius:5px;background:#4a90d9}
-  .qz-sbar i.g{background:#3fa66a} .qz-sbar i.y{background:#e0a437} .qz-sbar i.r{background:#d0604f}
-  .qz-snum{flex:0 0 128px;display:flex;align-items:baseline;gap:7px;justify-content:flex-end}
-  .qz-snum b{font-size:14px} .qz-snum em{font-style:normal;font-size:12px;opacity:.62}
   .qz-wk{display:flex;flex-direction:column;gap:7px}
   .qz-wkrow{text-align:left;border:1px solid var(--sep);background:var(--card);color:var(--text);
     border-radius:var(--r);padding:11px 14px;box-shadow:var(--shadow);font-family:inherit;display:flex;
@@ -820,26 +811,6 @@
   .qz-qa-a{background:var(--card)}
   .qz-qa i{display:block;font-style:normal;font-size:11.5px;font-weight:700;letter-spacing:.08em;
     color:#7B5EA7;margin-bottom:5px}
-  /* 解析标注（标红）· 问答卡片删除 · 标注汇总页 */
-  .qz-hl{background:rgba(255,59,48,.13);color:var(--red);border-bottom:2px solid rgba(255,59,48,.5);
-    border-radius:2px;padding:0 1px;cursor:pointer}
-  .qz-hlbar{margin-top:8px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-  .qz-qa-foot{padding:6px 14px 8px;background:var(--card);border-top:1px dashed rgba(123,94,167,.24);text-align:right}
-  .qz-qadel{border:none;background:none;color:var(--text3);font-size:12.5px;cursor:pointer;padding:3px 0}
-  .qz-qadel:active{color:var(--red)}
-  .qz-hls{display:flex;flex-direction:column;gap:9px;margin-top:12px}
-  .qz-hlrow{position:relative;background:var(--card);border:1px solid var(--sep);border-radius:11px;padding:3px 0}
-  .qz-hlmain{display:block;width:100%;text-align:left;border:none;background:none;color:var(--text);
-    padding:9px 40px 9px 13px;cursor:pointer;font-size:14px;line-height:1.75}
-  .qz-hltag{display:block;font-size:11.5px;color:var(--text3);margin-bottom:3px}
-  .qz-hltxt{color:var(--red);font-weight:500}
-  .qz-hlx{position:absolute;right:7px;top:9px;border:none;background:none;color:var(--text3);
-    font-size:15px;padding:4px 7px;cursor:pointer}
-  .qz-hlq{display:none;padding:2px 13px 12px;border-top:1px dashed var(--sep)}
-  .qz-hlq.open{display:block}
-  .qz-hlstem{font-size:14px;line-height:1.8;margin:9px 0 7px}
-  .qz-hlopt{font-size:13.5px;color:var(--text2);padding:2px 0;line-height:1.7}
-  .qz-hlopt.hit{color:var(--green);font-weight:600}
   /* ===== 10.10 刷题中心 CSS END ===== */
   /* 云同步:手动下载/上传与对比 */
   .cs-man{ margin-top:12px; padding-top:12px; border-top:1px solid var(--sep) }
@@ -4080,7 +4051,7 @@ const QZ_SECNAME={"判断题":"判断题","单选题":"单项选择题","多选�
 const QZ_REAL={"单选题":60,"多选题":10,"判断题":20};   // 各题型题数
 const QZ_PTS ={"单选题":0.8,"多选题":1.2,"判断题":0.5}; // 各题型分值
 const QZ_DEF_MIN=120;                                 // 模拟考试默认时长(分钟)
-let qz={ view:"home", pick:{}, kps:{}, orgs:{}, stars:{}, kpg:{}, kpSort:"weak", kpQ:"", scope:"全部", nums:null, take:"real", mode:"practice", mins:QZ_DEF_MIN,
+let qz={ view:"home", pick:{}, kps:{}, kpg:{}, kpSort:"weak", kpQ:"", scope:"全部", nums:null, take:"real", mode:"practice", mins:QZ_DEF_MIN,
          cur:0, showExp:false, cardOpen:false, showHist:true };
 let qzTimer=null;
 let qzShownCur=-1;   /* 答题卡里当前正显示的题号，用来判断这次重绘有没有换题 */
@@ -4135,99 +4106,6 @@ function mzGrade(id,ok){ const x=mzQEnsure(id); x.n++; x.last=today();
   if(s.log.length>MZ_LOG_CAP) s.log=s.log.slice(-Math.floor(MZ_LOG_CAP*0.7));
   save(); }
 
-/* ---------- 问答（你问/解答）与解析标注 ---------- */
-/* 题库结构化问答：bank.qa = { 题id:{q?,a} }。显示时与本机 note/ans 合并；
-   删除只在她自己的 state 记墓碑（qaDel），公开题库不动；重新写备注自动解除墓碑。 */
-function qzBankQa(q){ const b={law:db.lawBank,mg:db.mgBank,sj:db.sjBank,mz:db.mzBank}[q.src];
-  return (b&&b.qa&&b.qa[q.id])||null; }
-function qzQaDel(q,set){
-  if(q.src==="mg"){ const s=mgS(); if(!s.qaDel) s.qaDel={};
-    if(set===undefined) return !!s.qaDel[q.id];
-    if(set) s.qaDel[q.id]=1; else delete s.qaDel[q.id]; save(); return set; }
-  if(set===undefined){ const x=(q.src==="law"?lawQSt(q.id):q.src==="sj"?sjQSt(q.id):mzQSt(q.id)); return !!(x&&x.qaDel); }
-  const x=(q.src==="law"?lawQEnsure(q.id):q.src==="sj"?sjQEnsure(q.id):mzQEnsure(q.id));
-  if(set) x.qaDel=1; else delete x.qaDel; save(); return set;
-}
-function qzQa(q){
-  if(qzQaDel(q)) return null;
-  const bq=qzBankQa(q), my=qzNoteGet(q), ans=qzAnsGet(q);
-  const question=my||(bq&&bq.q)||"", answer=ans||(bq&&bq.a)||"";
-  if(!question&&!answer) return null;
-  return {q:question,a:answer};
-}
-function qzQaCard(q,withDel){ const _qa=qzQa(q); if(!_qa) return "";
-  return '<div class="qz-qa">'+
-    (_qa.q?'<div class="qz-qa-q"><i>🙋 我的疑问</i>'+qzHlWrap(q,_qa.q)+'</div>':"")+
-    (_qa.a?'<div class="qz-qa-a"><i>💡 解答'+(_qa.q?"":"（补充讲解）")+'</i>'+qzHlWrap(q,_qa.a)+'</div>':"")+
-    (withDel?'<div class="qz-qa-foot"><button class="qz-qadel" id="qzQaDel">🗑 已解决，删除这条问答</button></div>':"")+
-    '</div>'; }
-function qzQaRemove(q){
-  if(!confirm("删除这道题的提问与解答？\n（只删这条问答的显示，题目、解析和做题记录都不受影响）")) return;
-  qzNoteSet(q,""); qzAnsSet(q,""); qzQaDel(q,true); toast("已删除"); render();
-}
-/* --- 标红：存 qzState.hls = [{t,src,id,txt,d}] --- */
-function qzHls(){ const s=qzState(); if(!Array.isArray(s.hls)) s.hls=[]; return s.hls; }
-function qzHlWrap(q,raw){
-  let html=esc(raw||"");
-  qzHls().filter(h=>h.src===q.src&&h.id===q.id).forEach(h=>{
-    const t=esc(h.txt); if(!t) return;
-    if(html.indexOf(t)>=0) html=html.replace(t,()=>'<span class="qz-hl" data-hl="'+esc(h.t)+'" title="点一下取消标红">'+t+'</span>');
-  });
-  return html.replace(/\n/g,"<br>");
-}
-function qzExpHtml(q){ return qzHlWrap(q,q.explain||"（无解析）"); }
-function qzHlAdd(q,txt){
-  txt=String(txt||"").trim(); if(!txt) return;
-  const hs=qzHls();
-  if(hs.some(h=>h.src===q.src&&h.id===q.id&&h.txt===txt)){ toast("这段已经标过了"); return; }
-  hs.push({t:uid(),src:q.src,id:q.id,txt:txt,d:today()});
-  save(); toast("已标红 ✓，汇总在首页「🖍 标注」");
-  try{ window.getSelection().removeAllRanges(); }catch(e){}
-  render();
-}
-function qzHlRemove(t){ const s=qzState(); s.hls=qzHls().filter(h=>h.t!==t); save(); render(); }
-/* 全局只装一次：解析区里有选中文字时，显示「标红」按钮并缓存选中内容
-   （手机上点按钮会先取消选区，所以按钮按下时用缓存的 qzHlTxt） */
-let qzHlTxt="";
-(function(){ document.addEventListener("selectionchange",()=>{
-  const exp=document.getElementById("qzExpWrap")||document.getElementById("qzExp"), bar=document.getElementById("qzHlBar");
-  if(!exp||!bar) return;
-  const sel=window.getSelection();
-  const t=sel&&!sel.isCollapsed?String(sel).trim():"";
-  const ok=!!t&&t.length>=2&&t.length<=600&&exp.contains(sel.anchorNode)&&exp.contains(sel.focusNode);
-  if(ok) qzHlTxt=t;
-  bar.style.display=ok?"":"none";
-}); })();
-/* --- 标注汇总页 --- */
-function qzHlPage(main){
-  const hls=qzHls().slice().reverse();
-  const map={}; qzAll().forEach(q=>map[q.src+"|"+q.id]=q);
-  const NAME={law:"法律",mg:"管理",sj:"习思想",mz:"马哲"};
-  let h='<div class="qz-hd"><h2>🖍 我的标注</h2><span class="qz-sub">'+hls.length+' 条 · 点摘录展开原题</span></div>';
-  h+='<div class="qz-actions"><button class="qz-btn sm" id="qzBack">‹ 返回刷题</button></div>';
-  if(!hls.length) h+='<div class="qz-sub" style="padding:18px 2px;line-height:2">还没有标注。做题判分后，在解析里<b>长按选中</b>想记住的句子，点「🖍 标红选中的内容」——所有标红都会汇总到这里。</div>';
-  h+='<div class="qz-hls">'+hls.map(x=>{
-    const q=map[x.src+"|"+x.id];
-    const subj=q?q.subject:(NAME[x.src]||x.src);
-    return '<div class="qz-hlrow">'+
-      '<button class="qz-hlmain" data-open="'+esc(x.t)+'">'+
-        '<span class="qz-hltag">'+esc(subj)+(q?' · '+esc(q.sec)+' 第'+q.num+'题':"")+(x.d?' · '+esc(x.d):"")+'</span>'+
-        '<span class="qz-hltxt">'+esc(x.txt)+'</span></button>'+
-      '<button class="qz-hlx" data-del="'+esc(x.t)+'" title="删除标注">✕</button>'+
-      '<div class="qz-hlq" id="qzhl-'+esc(x.t)+'">'+
-        (q?('<div class="qz-hlstem">'+esc(q.stem).replace(/\n/g,"<br>")+'</div>'+
-            (q.options?Object.keys(q.options).map(k=>'<div class="qz-hlopt'+(q.answer.indexOf(k)>=0?" hit":"")+'">'+esc(k)+'. '+esc(q.type==="tf"?(k==="√"?"正确":"错误"):q.options[k])+'</div>').join(""):
-              '<div class="qz-hlopt hit">答案：'+esc(q.answer)+'</div>')+
-            '<div class="qz-exp"><b>【答案】'+esc(q.answer)+'</b><br>'+qzExpHtml(q)+'</div>'+qzQaCard(q,false))
-          :'<span class="qz-sub">这道题不在当前题库里（可能题库还没载入）</span>')+
-      '</div></div>'; }).join("")+'</div>';
-  main.innerHTML=h;
-  main.querySelector("#qzBack").onclick=()=>{ qz.view="home"; render(); };
-  main.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{
-    const el=main.querySelector('[id="qzhl-'+b.dataset.open+'"]'); if(el) el.classList.toggle("open"); });
-  main.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ if(confirm("删除这条标注？")) qzHlRemove(b.dataset.del); });
-}
-
 /* ---------- 题库适配层：把四个题库摊平成一套结构 ---------- */
 function qzSrcs(){ return [
   { key:"law", group:"法律", qs:()=>((db.lawBank&&db.lawBank.questions)||[]), subj:q=>q.subject||"法律",
@@ -4252,9 +4130,6 @@ function qzAll(){ const out=[];
   qzSrcs().forEach(s=>s.qs().forEach(q=>out.push({
     src:s.key, id:q.id, group:s.group, subject:s.subj(q), sec:q.sec, num:q.num,
     type:s.type(q), stem:q.stem, options:q.options, answer:q.answer, explain:q.explain,
-    /* QZORGSTAR: org＝出题机构（无非 / 金标尺），star＝该机构标的 1–5 星难度。
-       老数据没有 org 字段，法律题一律当金标尺；别的题库没有这两个维度。 */
-    org:q.org||(s.key==="law"?"金标尺":""), star:+q.star||0,
     mark:q.mark||"", page:q.page, kps:(s.kps?s.kps(q):(q.kps||[])), _raw:q })));
   return out; }
 /* 统一的做题状态视图（各自读各自的 state） */
@@ -4278,7 +4153,6 @@ function qzNoteSet(q,t){ t=String(t||"");
   else if(q.src==="sj"){ const x=sjQEnsure(q.id); if(t) x.note=t; else delete x.note; }
   else if(q.src==="mz"){ const x=mzQEnsure(q.id); if(t) x.note=t; else delete x.note; }
   else { const s2=mgS(); if(!s2.note) s2.note={}; if(t) s2.note[q.id]=t; else delete s2.note[q.id]; }
-  if(t) qzQaDel(q,false);   /* 重新提问＝要重新看到问答卡片 */
   save(); }
 /* Claude 对这条备注的解答。跟备注放在一起，存她自己的状态里，不写进题库（题库要公开发布）。 */
 function qzAnsGet(q){ if(q.src==="law"){ const x=lawQSt(q.id); return (x&&x.ans)||""; }
@@ -4345,28 +4219,7 @@ function qzPool(){ const sel=qz.pick, kp=qz.kps, anyKp=Object.keys(kp).length;
   const gs=qzGrpKpSet();                     /* 选了大类就只在大类里出题 */
   return qzAll().filter(q=>sel[q.subject]&&qzScopeOk(q)&&
     (!anyKp||(q.kps||[]).some(k=>kp[k]))&&
-    (!gs||(q.kps||[]).some(k=>gs[k]))&&       /* 大类和知识点都不选＝该科目全部 */
-    /* QZORGSTAR2 机构/难度：都不选就是不限 */
-    (!Object.keys(qz.orgs||{}).length||(q.org&&qz.orgs[q.org]))&&
-    (!Object.keys(qz.stars||{}).length||(q.star&&qz.stars[q.star]))); }
-
-/* ---------- QZORGSTAR2：出题机构 / 难度星级 ---------- */
-/* 无非题库每题自带 1–5 星难度，金标尺题库没有；两套题合在 lawBank 里靠 org 区分。
-   下面三个统计都只看当前所选科目；没选科目就统计全部。 */
-function qzOrgs(){ const sel=qz.pick, any=Object.keys(sel).length, c={};
-  qzAll().forEach(q=>{ if(!q.org) return; if(any&&!sel[q.subject]) return; c[q.org]=(c[q.org]||0)+1; });
-  return Object.keys(c).sort().map(k=>({name:k,n:c[k]})); }
-function qzStars(){ const sel=qz.pick, any=Object.keys(sel).length, c={};
-  qzAll().forEach(q=>{ if(!q.star) return; if(any&&!sel[q.subject]) return; c[q.star]=(c[q.star]||0)+1; });
-  return c; }
-/* 按星级看正确率：用 qzHist 的累计 n/r（作答次数/做对次数），不是只看最后一次。
-   只有带星级的题会进这张表。 */
-function qzStarStat(){ const rows={};
-  qzAll().forEach(q=>{ if(!q.star) return;
-    const r=rows[q.star]||(rows[q.star]={star:q.star,n:0,done:0,tries:0,right:0});
-    r.n++; const h=qzHist(q); if(!h||!h.n) return;
-    r.done++; r.tries+=h.n||0; r.right+=h.r||0; });
-  return Object.keys(rows).sort().map(k=>rows[k]); }
+    (!gs||(q.kps||[]).some(k=>gs[k])));       /* 大类和知识点都不选＝该科目全部 */ }
 
 /* ---------- 模考卷（整套固定卷，含写作题）----------
    数据放 db.mockBank = { version, papers:[{ id, name, mins, note,
@@ -4403,7 +4256,7 @@ function qzFull(qs){ return qs.reduce((s,q)=>s+(QZ_PTS[q.sec]||1),0); }
 function qzGot(qs,p){ return qs.reduce((s,q)=>s+((p.picks[q.src+"|"+q.id]===q.answer)?(QZ_PTS[q.sec]||1):0),0); }
 function qzR1(n){ return Math.round(n*10)/10; }
 function qzState(){ const s=db.qzState||(db.qzState={paper:null,last:null,exams:[]});
-  if(!Array.isArray(s.exams)) s.exams=[]; if(!Array.isArray(s.hls)) s.hls=[]; return s; }
+  if(!Array.isArray(s.exams)) s.exams=[]; return s; }
 function qzPaper(){ return qzState().paper; }
 function qzItems(){ const p=qzPaper(); if(!p) return [];
   const map={}; qzAll().forEach(q=>map[q.src+"|"+q.id]=q);
@@ -4474,7 +4327,6 @@ function mountQuiz(main){
   if(qz.view==="result") return qzResult(main);
   if(qz.view==="build")  return qzBuilder(main);
   if(qz.view==="mock")   return qzMockList(main);
-  if(qz.view==="hl")     return qzHlPage(main);
   qzHome(main);
 }
 
@@ -4519,12 +4371,6 @@ function qzHome(main){
      '<div class="qz-cnum">'+(cdN?cdN+' 张':'还没有卡片')+'</div>'+
      '<div class="qz-bar"><i style="width:0%"></i></div>'+
      '<div class="qz-cmeta">错题整理成的知识卡 · 挖空反复过</div></button>';
-  /* 标注：解析里标红的句子汇总 */
-  const hlN=qzHls().length;
-  h+='<button class="qz-card" id="qzHlsGo"><div class="qz-cname">🖍 标注</div>'+
-     '<div class="qz-cnum">'+(hlN?hlN+' 条':'解析选中可标红')+'</div>'+
-     '<div class="qz-bar"><i style="width:0%"></i></div>'+
-     '<div class="qz-cmeta">标红的重点句都在这 · 点一条看原题</div></button>';
   /* 公文写作：独立版块，进入第 10.11 节 */
   const wb=db.wrBank, wn=((wb&&wb.papers)||[]).length;
   const wdn=Object.keys(((db.wrState||{}).done)||{}).length;
@@ -4545,16 +4391,6 @@ function qzHome(main){
         '<span class="qz-wkm">共 '+p.n+' 题 · 已做 '+p.done+(p.wrong?' · <b class="r">错 '+p.wrong+'</b>':"")+(p.luck?' · <b class="o">蒙对 '+p.luck+'</b>':"")+'</span>'+
         '<span class="qz-wkb"><i style="width:'+Math.min(100,Math.round(p.weak*50))+'%"></i></span></button>').join("")+'</div>';
   }
-  /* QZORGSTAR: 按难度星级看正确率 */
-  const _ss=qzStarStat().filter(r=>r.done);
-  if(_ss.length){
-    h+='<div class="qz-lb">按难度看正确率 <span class="qz-sub">（无非题库自带星级；正确率＝做对次数÷作答次数）</span></div><div class="qz-star">'+
-      _ss.map(r=>{ const acc=r.tries?Math.round(100*r.right/r.tries):0;
-        const lv=acc>=85?"g":(acc>=70?"y":"r");
-        return '<div class="qz-srow"><span class="qz-sstar">'+"★".repeat(r.star)+'</span>'+
-          '<span class="qz-sbar"><i class="'+lv+'" style="width:'+acc+'%"></i></span>'+
-          '<span class="qz-snum"><b>'+acc+'%</b><em>做过 '+r.done+'/'+r.n+' 题</em></span></div>'; }).join("")+
-      '</div>'; }
   h+='<div class="qz-jump"><span class="qz-sub">各科目的错题本 / 卡片 / 知识点薄弱度，仍在原来的模块里：</span>'+
      '<button class="qz-btn sm" data-go="law">法律模块</button><button class="qz-btn sm" data-go="mg">管理模块</button>'+
      '<button class="qz-btn sm" id="qzSjImp">习思想题库 · 载入/更新</button>'+
@@ -4569,7 +4405,6 @@ function qzHome(main){
   const nb=main.querySelector("#qzNew"); if(nb) nb.onclick=()=>{ qz.view="build"; render(); };
   const mb=main.querySelector("#qzMock"); if(mb) mb.onclick=()=>{ qz.view="mock"; render(); };
   const wrb=main.querySelector("#qzWr"); if(wrb) wrb.onclick=()=>go("wr");
-  const hlb=main.querySelector("#qzHlsGo"); if(hlb) hlb.onclick=()=>{ qz.view="hl"; render(); };
   const cdb=main.querySelector("#qzCards");
   if(cdb) cdb.onclick=()=>{ if(typeof law==="object"){ law.tab="card"; law.ci=0; } go("law"); };
   const eb=main.querySelector("#qzExp"); if(eb) eb.onclick=qzExport;
@@ -4738,16 +4573,6 @@ function qzBuilder(main){
       h+='<button class="qz-chip'+(qz.pick[sn]?" on":"")+'" data-subj="'+esc(sn)+'">'+esc(sn)+' <b>'+s2.n+'</b></button>'; });
     h+='</div>'; });
   h+='</div></div>';
-  /* QZORGSTAR: 机构 / 难度——题库里真有这两个字段时才出现，别的题库看不到这两排 */
-  const _orgs=qzOrgs(), _stc=qzStars(), _stk=Object.keys(_stc).sort();
-  if(_orgs.length>1){
-    h+='<div class="qz-sec"><div class="qz-lb">① 出题机构 <span class="qz-sub">（不选＝两家一起刷）</span></div><div class="qz-row">'+
-       _orgs.map(o=>'<button class="qz-chip'+(qz.orgs[o.name]?" on":"")+'" data-org="'+esc(o.name)+'">'+esc(o.name)+' <b>'+o.n+'</b></button>').join("")+
-       '</div></div>'; }
-  if(_stk.length){
-    h+='<div class="qz-sec"><div class="qz-lb">① 难度 <span class="qz-sub">（无非题库自带的星级；不选＝不限）</span></div><div class="qz-row">'+
-       _stk.map(k=>'<button class="qz-chip'+(qz.stars[k]?" on":"")+'" data-star="'+k+'">'+"★".repeat(+k)+'<b>'+_stc[k]+'</b></button>').join("")+
-       '</div></div>'; }
   /* ②知识点（不选＝该科目全部） */
   const kps=qzPoints().map(p=>Object.assign({},p,qzKpStat(p.id)));
   const kq=(qz.kpQ||"").trim();
@@ -4815,10 +4640,6 @@ function qzBuilder(main){
     const ok={}; qzPoints().forEach(p=>ok[p.id]=1);          /* 科目变了,把不属于新科目的知识点摘掉 */
     Object.keys(qz.kps).forEach(k2=>{ if(!ok[k2]) delete qz.kps[k2]; });
     render(); });
-  main.querySelectorAll("[data-org]").forEach(b=>b.onclick=()=>{      /* QZORGSTAR */
-    const k=b.dataset.org; if(qz.orgs[k]) delete qz.orgs[k]; else qz.orgs[k]=true; render(); });
-  main.querySelectorAll("[data-star]").forEach(b=>b.onclick=()=>{
-    const k=b.dataset.star; if(qz.stars[k]) delete qz.stars[k]; else qz.stars[k]=true; render(); });
   main.querySelectorAll("[data-kp]").forEach(b=>b.onclick=()=>{
     const k=b.dataset.kp; if(qz.kps[k]) delete qz.kps[k]; else qz.kps[k]=true; render(); });
   main.querySelectorAll("[data-kpg]").forEach(b=>b.onclick=()=>{
@@ -4843,7 +4664,7 @@ function qzBuilder(main){
   main.querySelector("#qzStart").onclick=()=>{
     const p=qzBuild(); if(!p){ toast("这个筛选下没有题"); return; }
     const st=qzState(); st.paper=p;
-    st.last={pick:Object.assign({},qz.pick),kps:Object.assign({},qz.kps),orgs:Object.assign({},qz.orgs),stars:Object.assign({},qz.stars),scope:qz.scope,nums:Object.assign({},qz.nums),take:qz.take,mode:qz.mode,mins:qz.mins,showHist:qz.showHist};
+    st.last={pick:Object.assign({},qz.pick),kps:Object.assign({},qz.kps),scope:qz.scope,nums:Object.assign({},qz.nums),take:qz.take,mode:qz.mode,mins:qz.mins,showHist:qz.showHist};
     qz.cur=0; qz.view="run"; save(); render(); };
 }
 
@@ -4934,9 +4755,11 @@ function qzRun(main){
   if(!exam&&answered){
     const ok=(pick===q.answer);
     h+='<div class="qz-vd '+(ok?"ok":"no")+'">'+(ok?"✅ 回答正确":'❌ 回答错误：你选了「'+esc(pick)+'」，正确答案「<b>'+esc(q.answer)+'</b>」')+'</div>'+
-       '<div id="qzExpWrap"><div class="qz-exp" id="qzExp"><b>【答案】'+esc(q.answer)+'</b><br>'+qzExpHtml(q)+'</div>'+
-       '<div class="qz-hlbar" id="qzHlBar" style="display:none"><button class="qz-btn sm pri" id="qzHlDo">🖍 标红选中的内容</button><span class="qz-sub">解析和解答里的文字都能标 · 汇总在首页「🖍 标注」</span></div>'+
-       qzQaCard(q,true)+'</div>';
+       '<div class="qz-exp"><b>【答案】'+esc(q.answer)+'</b><br>'+esc(q.explain||"（无解析）").replace(/\n/g,"<br>")+'</div>';
+    const _my=qzNoteGet(q), _ans=qzAnsGet(q);
+    if(_my||_ans) h+='<div class="qz-qa">'+
+      (_my?'<div class="qz-qa-q"><i>你问过</i>'+esc(_my).replace(/\n/g,"<br>")+'</div>':"")+
+      (_ans?'<div class="qz-qa-a"><i>解答</i>'+esc(_ans).replace(/\n/g,"<br>")+'</div>':"")+'</div>';
     const kn=qzKpNames(q);
     if(kn.length) h+='<div class="qz-kpline"><span>'+(q.src==="sj"?"所属章节":"知识点")+'</span>'+
       kn.map(n=>'<b>'+esc(n)+'</b>').join("")+'</div>';
@@ -4982,12 +4805,6 @@ function qzRun(main){
     rerender(); };
   main.querySelector("#qzPrev").onclick=()=>{ if(qz.cur>0){ qz.cur--; rerender(); } };
   main.querySelector("#qzNext").onclick=()=>{ if(qz.cur<qs.length-1){ qz.cur++; rerender(); } else toast("已是最后一题"); };
-  const _hd=main.querySelector("#qzHlDo");
-  if(_hd) _hd.onpointerdown=(e)=>{ e.preventDefault(); if(qzHlTxt) qzHlAdd(q,qzHlTxt); };
-  const _ex=main.querySelector("#qzExpWrap")||main.querySelector("#qzExp");
-  if(_ex) _ex.onclick=(e)=>{ const sp=e.target.closest(".qz-hl");
-    if(sp&&confirm("取消这条标红？")) qzHlRemove(sp.dataset.hl); };
-  const _qd=main.querySelector("#qzQaDel"); if(_qd) _qd.onclick=()=>qzQaRemove(q);
   main.querySelector("#qzMark").onclick=()=>{ if(p.marks[key]) delete p.marks[key]; else p.marks[key]=1; rerender(); };
   const cb=main.querySelector("#qzCardBtn"); if(cb) cb.onclick=()=>{ qz.cardOpen=!qz.cardOpen; keepSheet(render); };
   main.querySelectorAll(".qz-cell").forEach(c=>c.onclick=()=>{ qz.cur=+c.dataset.i; qz.cardOpen=false; rerender(); });
@@ -5091,7 +4908,7 @@ function qzResult(main){
     h+='<div class="qz-rv'+(pick?(ok?" ok":" no"):" un")+'"><button class="qz-rvh" data-i="'+i+'">'+
        '<span class="qz-rvn">'+(i+1)+'</span><span class="qz-rvs">'+esc(x.stem.slice(0,40))+(x.stem.length>40?"…":"")+'</span>'+
        '<span class="qz-rvr">'+(pick?(ok?"✓":"✗ 你选"+esc(pick)):"未答")+'</span></button>'+
-       '<div class="qz-rvb" id="qzrv'+i+'"><b>【答案】'+esc(x.answer)+'</b><br>'+qzExpHtml(x)+qzQaCard(x,false)+
+       '<div class="qz-rvb" id="qzrv'+i+'"><b>【答案】'+esc(x.answer)+'</b><br>'+esc(x.explain||"").replace(/\n/g,"<br>")+
        (qzKpNames(x).length?'<div class="qz-kpline"><span>'+(x.src==="sj"?"所属章节":"知识点")+'</span>'+qzKpNames(x).map(n=>'<b>'+esc(n)+'</b>').join("")+'</div>':"")+
        '</div></div>'; });
   h+='</div>';
@@ -5455,7 +5272,7 @@ async function forceUpdateApp(){
 function mountSettings(main){
   const s=db.settings;
   let h='<h2 class="mod-h">设置</h2><div class="mod-sub">考试时间、评分与掌握度、间隔参数、数据同步、备份、扩展模块。改动即时保存。</div>';
-  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-08-26-a</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
+  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-08-24-b</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
      '<button class="btn" onclick="forceUpdateApp()">🔄 强制更新程序</button></div>';
   h+='<div class="card"><h4>考试时间</h4><div class="frow"><div class="field"><label>名称</label><input type="text" id="setExamLabel" value="'+esc(s.examLabel||"考试")+'"></div><div class="field"><label>日期</label><input type="date" id="setExamDate" value="'+(s.examDate||"")+'"></div><div class="field"><label>备考起点(可选)</label><input type="date" id="setExamStart" value="'+(s.examStart||"")+'"><div class="desc">留空＝最早的一条数据</div></div></div></div>';
   h+='<div class="card"><h4>掌握度算法</h4><div class="radios" id="mModel">'+
