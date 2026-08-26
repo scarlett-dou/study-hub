@@ -1144,8 +1144,24 @@ function splitDb(){
   (db.flashDecks||[]).forEach(d=>{ const p=spDPath(d), body={};
     Object.keys(d).forEach(k=>{ if(k!=="images") body[k]=d[k]; });
     files[p]=JSON.stringify(body); files[spDImg(d)]=JSON.stringify(d.images||{}); meta[p]={name:d.name||""}; });
-  /* 法律题库:题目+卡片体积大且极少变,单独成文件,不随日常打卡重写 */
-  if(db.lawBank&&(((db.lawBank.questions||[]).length)||((db.lawBank.cards||[]).length))) files["law/bank.json"]=JSON.stringify(db.lawBank);
+  /* 法律题库:题目+卡片体积大且极少变,单独成文件,不随日常打卡重写。
+     2026-08-26 并入无非 1095 题后整包 2.22MB,越过了 GitHub Contents API 的 1MB 门槛
+     (>1MB 只返元数据,读要走 raw 媒体类型、写的 base64 负载也翻倍;而那条 raw 分支
+     从没被实战验证过)。故按「出题机构+科目」再拆,让每个文件都留在 1MB 以下:
+       law/bank.json      金标尺 519 题 + 卡片 + 知识点
+       law/wf-<科目>.json 无非的题,按科目分(科目码取自题 id 的第二段,纯 ASCII)
+     **拆的只是文件;内存里 db.lawBank 仍是完整一份,App 其余代码完全无感。**
+     spWriteOrder 按 "law/" 前缀成组,新文件自动进组,不用另加。 */
+  if(db.lawBank&&(((db.lawBank.questions||[]).length)||((db.lawBank.cards||[]).length))){
+    const lb=db.lawBank, wfq={}, base=[];
+    (lb.questions||[]).forEach(q=>{
+      if(q&&q.org==="无非"){ let k=String(q.id||"").split("-")[1]||"x"; if(!/^[a-z0-9]+$/.test(k)) k="x";
+        (wfq[k]||(wfq[k]=[])).push(q); }
+      else base.push(q); });
+    const o={}; Object.keys(lb).forEach(k=>{ if(k!=="questions") o[k]=lb[k]; }); o.questions=base;
+    files["law/bank.json"]=JSON.stringify(o);
+    Object.keys(wfq).forEach(k=>{ files["law/wf-"+k+".json"]=JSON.stringify(wfq[k]); });
+  }
   /* 管理题库:题目+逐选项知识点体积大且极少变,同样单独成文件 */
   if(db.mgBank&&((db.mgBank.questions||[]).length)) files["mg/bank.json"]=JSON.stringify(db.mgBank);
   /* 公文写作:范文/文种/格式资料体积大且极少变,同样单独成文件 */
@@ -1191,7 +1207,14 @@ function mergeFiles(files){
       const d=JSON.parse(files[p]), ip=spDImg(d);
       d.images=(typeof files[ip]==="string")?JSON.parse(files[ip]):{};
       out.flashDecks.push(d); });
-    if(typeof files["law/bank.json"]==="string") out.lawBank=JSON.parse(files["law/bank.json"]);
+    if(typeof files["law/bank.json"]==="string"){
+      out.lawBank=JSON.parse(files["law/bank.json"]);
+      /* 无非的题按科目分在 law/wf-*.json,在这里合回同一个 lawBank。
+         走 need(=index 引用的文件清单),所以少任何一片上面的 need 循环已经先返回 null 了。 */
+      if(!Array.isArray(out.lawBank.questions)) out.lawBank.questions=[];
+      need.forEach(p=>{ if(p.indexOf("law/wf-")===0)
+        out.lawBank.questions=out.lawBank.questions.concat(JSON.parse(files[p])); });
+    }
     if(typeof files["mg/bank.json"]==="string") out.mgBank=JSON.parse(files["mg/bank.json"]);
     if(typeof files["wr/bank.json"]==="string") out.wrBank=JSON.parse(files["wr/bank.json"]);
     if(typeof files["sj/bank.json"]==="string") out.sjBank=JSON.parse(files["sj/bank.json"]);
