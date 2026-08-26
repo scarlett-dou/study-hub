@@ -3642,9 +3642,14 @@ async function lawAdopt(o){
   if(!qs||!qs.length) throw new Error("文件里没有 questions");
   const bad=qs.filter(q=>!q.id||!q.subject||!q.sec||!q.answer);
   if(bad.length) throw new Error("有 "+bad.length+" 条缺 id/subject/sec/answer");
-  db.lawBank={version:o.version||1,questions:qs,cards:Array.isArray(o.cards)?o.cards:[]};
+  /* points/qa 必须带上：points 是 170 个知识点(丢了「按知识点选题」就废)，
+     qa 是她的提问+解答卡片。文件里没有就沿用本机已有的，别置空。 */
+  const _pv=(db.lawBank&&db.lawBank.points)||[], _qv=(db.lawBank&&db.lawBank.qa)||null;
+  db.lawBank={version:o.version||1,questions:qs,cards:Array.isArray(o.cards)?o.cards:[],
+              points:Array.isArray(o.points)&&o.points.length?o.points:_pv};
+  const _qa=(o.qa&&typeof o.qa==="object")?o.qa:_qv; if(_qa) db.lawBank.qa=_qa;
   await save(); closeModal(); law.qi=0; law.ci=0; render();
-  toast("题库已更新："+qs.length+" 题 / "+db.lawBank.cards.length+" 张卡");
+  toast("题库已更新："+qs.length+" 题 / "+db.lawBank.cards.length+" 张卡 / "+(db.lawBank.points||[]).length+" 个知识点");
 }
 function lawImport(){
   const online=/^https?:/.test(location.protocol);
@@ -4580,6 +4585,7 @@ function qzHome(main){
       '</div>'; }
   h+='<div class="qz-jump"><span class="qz-sub">各科目的错题本 / 卡片 / 知识点薄弱度，仍在原来的模块里：</span>'+
      '<button class="qz-btn sm" data-go="law">法律模块</button><button class="qz-btn sm" data-go="mg">管理模块</button>'+
+     '<button class="qz-btn sm" id="qzLawImp">法律题库 · 载入/更新</button>'+
      '<button class="qz-btn sm" id="qzSjImp">习思想题库 · 载入/更新</button>'+
      '<button class="qz-btn sm" id="qzMzImp">马哲题库 · 载入/更新</button></div>';
   const ex=qzState().exams;
@@ -4601,6 +4607,7 @@ function qzHome(main){
     qz.kps={}; qz.kps[b.dataset.wk]=true; qz.kpg={};
     qz.scope="全部"; qz.take="all"; qz.view="build"; render(); });
   main.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
+  const li=main.querySelector("#qzLawImp"); if(li) li.onclick=lawImport;
   const si=main.querySelector("#qzSjImp"); if(si) si.onclick=sjImport;
   const mi=main.querySelector("#qzMzImp"); if(mi) mi.onclick=mzImport;
   const gb=main.querySelector("#qzGo"); if(gb) gb.onclick=()=>{ qz.view="run"; qz.cur=qzPaper().cur||0; render(); };
@@ -5478,7 +5485,7 @@ async function forceUpdateApp(){
 function mountSettings(main){
   const s=db.settings;
   let h='<h2 class="mod-h">设置</h2><div class="mod-sub">考试时间、评分与掌握度、间隔参数、数据同步、备份、扩展模块。改动即时保存。</div>';
-  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-08-26-a</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
+  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-08-26-b</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
      '<button class="btn" onclick="forceUpdateApp()">🔄 强制更新程序</button></div>';
   h+='<div class="card"><h4>考试时间</h4><div class="frow"><div class="field"><label>名称</label><input type="text" id="setExamLabel" value="'+esc(s.examLabel||"考试")+'"></div><div class="field"><label>日期</label><input type="date" id="setExamDate" value="'+(s.examDate||"")+'"></div><div class="field"><label>备考起点(可选)</label><input type="date" id="setExamStart" value="'+(s.examStart||"")+'"><div class="desc">留空＝最早的一条数据</div></div></div></div>';
   h+='<div class="card"><h4>掌握度算法</h4><div class="radios" id="mModel">'+
