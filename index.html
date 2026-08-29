@@ -746,6 +746,36 @@
   .qz-navsp{flex:1}
   .qz-nav .qz-btn{flex:none;min-width:104px}
   .qz-card.mock{border-style:dashed;border-color:var(--tint)}
+  /* MOCK_MODULE_V1 模考错题库 */
+  .mk-hd{display:flex;align-items:center;gap:10px;margin:2px 0 14px;flex-wrap:wrap}
+  .mk-hd h2{font-size:19px;margin:0}
+  .mk-sub{font-size:12.5px;color:var(--sub)}
+  .mk-back{background:none;border:none;color:var(--tint);font-size:14px;cursor:pointer;padding:4px 0}
+  .mk-paper{width:100%;text-align:left;background:var(--card);color:var(--text);border:1px solid var(--sep);border-radius:12px;padding:14px 16px;margin-bottom:10px;cursor:pointer;display:block}
+  .mk-pname{font-size:15.5px;font-weight:700;margin-bottom:4px}
+  .mk-pmeta{font-size:12.5px;color:var(--sub);line-height:1.9}
+  .mk-score{font-weight:700;color:#d63a2f}
+  .mk-subs{display:grid;grid-template-columns:repeat(auto-fill,minmax(146px,1fr));gap:10px;margin:12px 0}
+  .mk-scard{text-align:left;background:var(--card);color:var(--text);border:1px solid var(--sep);border-radius:12px;padding:12px 14px;cursor:pointer}
+  .mk-scard .nm{font-size:14.5px;font-weight:700;margin-bottom:6px}
+  .mk-scard .n{font-size:22px;font-weight:700;color:#d63a2f;line-height:1.1}
+  .mk-scard .ct{font-size:12px;color:var(--sub)}
+  .mk-q{background:var(--card);border:1px solid var(--sep);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+  .mk-qh{font-size:12px;color:var(--sub);margin-bottom:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .mk-tag{display:inline-block;font-size:11px;font-weight:700;border-radius:20px;padding:1px 9px;white-space:nowrap}
+  .mk-tag.t1{background:#fdeceb;color:#c0392b}.mk-tag.t2{background:#fff4e0;color:#a86000}
+  .mk-tag.t3{background:#eaf1fb;color:#24457a}.mk-tag.t4{background:#eaf5ec;color:#2e7d4a}
+  .mk-stem{font-size:15px;line-height:1.9;white-space:pre-wrap;margin-bottom:10px}
+  .mk-opt{display:flex;gap:9px;padding:7px 10px;border-radius:9px;margin-bottom:5px;font-size:14px;line-height:1.75;border:1.5px solid transparent}
+  .mk-opt .k{font-weight:700;flex:none;width:1.3em}
+  .mk-opt.ok{background:#eaf5ec;border-color:#2e9e5b;color:#1d6b3a}
+  .mk-opt.bad{background:#fdeceb;border-color:#d63a2f;color:#a32b1f}
+  .mk-ansline{font-size:13.5px;margin-top:10px;display:flex;gap:16px;flex-wrap:wrap}
+  .mk-ansline b.r{color:#2e9e5b}.mk-ansline b.w{color:#d63a2f}
+  .mk-exp{margin-top:10px;padding:10px 12px;background:var(--fill);border-radius:9px;font-size:13.5px;line-height:1.9;white-space:pre-wrap}
+  .mk-why{margin-top:8px;padding:10px 12px;border-left:3px solid #e0a800;background:var(--fill);border-radius:0 9px 9px 0;font-size:13.5px;line-height:1.9}
+  .mk-why b{color:#a86000}
+  .mk-pt{margin-top:8px;font-size:12.5px;color:var(--sub)}
   .qz-mocks{display:flex;flex-direction:column;gap:8px}
   .qz-mrow{text-align:left;border:1px solid var(--sep);background:var(--card);color:var(--text);
     border-radius:11px;padding:13px 15px;font-family:inherit}
@@ -4538,6 +4568,8 @@ function mountQuiz(main){
   if(qz.view==="result") return qzResult(main);
   if(qz.view==="build")  return qzBuilder(main);
   if(qz.view==="mock")   return qzMockList(main);
+  if(qz.view==="mockSubs") return qzMockSubs(main);
+  if(qz.view==="mockQs")   return qzMockQs(main);
   if(qz.view==="hl")     return qzHlPage(main);
   qzHome(main);
 }
@@ -4576,7 +4608,7 @@ function qzHome(main){
   h+='<button class="qz-card mock" id="qzMock"><div class="qz-cname">📄 模考题</div>'+
      '<div class="qz-cnum">'+(mk.length?mk.length+' 套整卷':'还没有卷子')+'</div>'+
      '<div class="qz-bar"><i style="width:0%"></i></div>'+
-     '<div class="qz-cmeta">'+(mk.length?'含写作题 · 按真题结构':'把模考题给我，我做进来')+'</div></button>';
+     '<div class="qz-cmeta">'+(mk.length?(mk.length+' 套 · 错题按科目归档'):'把模考题给我，我做进来')+'</div></button>';
   /* 卡片：法律 + 习思想的知识卡与陷阱卡，渲染在法律模块的卡片页里 */
   const cdN=((db.lawBank&&db.lawBank.cards)||[]).length+((db.sjBank&&db.sjBank.cards)||[]).length;
   h+='<button class="qz-card cd" id="qzCards"><div class="qz-cname">🗂️ 卡片</div>'+
@@ -4805,25 +4837,89 @@ function qzExport(){
   };
 }
 
-/* ---------- 模考卷列表 ---------- */
+/* ---------- 模考错题库（MOCK_MODULE_V1） ---------- */
+function mkSubjects(p){
+  var by={},order=[];
+  (p.items||[]).forEach(function(it){
+    var s=it.subject||"未分类";
+    if(!by[s]){ by[s]={name:s,items:[]}; order.push(s); }
+    by[s].items.push(it);
+  });
+  return order.map(function(s){ return by[s]; }).sort(function(a,b){ return b.items.length-a.items.length; });
+}
+function mkTagCls(t){ return t==="选非题"?"t1":(t==="定位词"?"t2":(t==="方法"?"t3":"t4")); }
+function mkAnsSet(s){ return String(s||"").split(/[,\uFF0C\s]+/).filter(Boolean); }
+
 function qzMockList(main){
   const ms=qzMocks();
-  let h='<div class="qz-hd"><button class="qz-back" id="qzBack">‹ 返回</button><h2>模考题</h2>'+
-        '<span class="qz-sub">整套卷、按真题结构、含写作题</span></div>';
+  let h='<div class="mk-hd"><button class="mk-back" id="qzBack">‹ 返回</button><h2>📄 模考</h2>'+
+        '<span class="mk-sub">每次模考的错题，按科目归档</span></div>';
   if(!ms.length){
-    h+='<div class="empty">还没有模考卷。<br><span class="qz-sub">把模考题（题目＋答案，有写作材料的话也一起）发给我，'+
-       '我按真题结构做成整卷放进来：判断→单选→多选→写作，选「模拟考试」就是限时、交卷才出分。</span></div>';
+    h+='<div class="empty">还没有模考卷。<br><span class="qz-sub">把模考题（题目＋答案＋你的作答）发给我，我整理成错题归档放进来。</span></div>';
     main.innerHTML=h; main.querySelector("#qzBack").onclick=()=>{ qz.view="home"; render(); }; return;
   }
-  h+='<div class="qz-mocks">'+ms.map(p=>{
-    const st=qzMockState()[p.id];
-    const n=(p.items||[]).length, w=(p.items||[]).filter(i=>i.sec==="写作题").length;
-    return '<button class="qz-mrow" data-id="'+esc(p.id)+'"><div class="qz-mname">'+esc(p.name)+'</div>'+
-      '<div class="qz-mmeta">'+n+' 题'+(w?' · 含写作':"")+' · '+(p.mins||120)+' 分钟'+
-      (st&&st.score?' · 上次 '+st.score.pts+'/'+st.score.full+' 分':"")+'</div></button>'; }).join("")+'</div>';
+  h+=ms.map(function(p){
+    const n=(p.items||[]).length,st=p.stat||{},subs=mkSubjects(p);
+    let meta=(p.date?esc(p.date)+" · ":"");
+    if(st.pts!=null) meta+='<span class="mk-score">'+st.pts+" / "+(st.full||100)+' 分</span> · ';
+    meta+="错题 <b>"+n+"</b> 道 · "+subs.length+" 个科目";
+    if(st.objRight!=null){
+      meta+="<br>客观题 "+st.objRight+"/"+(st.objTotal||90)+" 正确";
+      if(st.objSecs) meta+="　·　用时 "+Math.round(st.objSecs/60)+" 分钟";
+    }
+    return '<button class="mk-paper" data-id="'+esc(p.id)+'"><div class="mk-pname">'+esc(p.name)+
+      '</div><div class="mk-pmeta">'+meta+'</div></button>';
+  }).join("");
   main.innerHTML=h;
   main.querySelector("#qzBack").onclick=()=>{ qz.view="home"; render(); };
-  main.querySelectorAll(".qz-mrow").forEach(b=>b.onclick=()=>{ toast("模考卷数据还没导入"); });
+  main.querySelectorAll(".mk-paper").forEach(b=>b.onclick=()=>{ qz.mockId=b.dataset.id; qz.view="mockSubs"; render(); });
+}
+
+function qzMockSubs(main){
+  const p=qzMockById(qz.mockId);
+  if(!p){ qz.view="mock"; render(); return; }
+  const subs=mkSubjects(p);
+  let h='<div class="mk-hd"><button class="mk-back" id="qzBack">‹ 模考</button><h2>'+esc(p.name)+'</h2></div>';
+  if(p.note) h+='<div class="mk-sub" style="margin:-8px 0 12px;line-height:1.9">'+esc(p.note)+'</div>';
+  h+='<div class="mk-subs">'+subs.map(function(s){
+    return '<button class="mk-scard" data-s="'+esc(s.name)+'"><div class="nm">'+esc(s.name)+
+      '</div><div class="n">'+s.items.length+'</div><div class="ct">道错题</div></button>';
+  }).join("")+'</div>';
+  h+='<div class="qz-actions"><button class="qz-btn pri big" id="mkAll">📖 按顺序看全部 '+((p.items||[]).length)+' 道</button></div>';
+  main.innerHTML=h;
+  main.querySelector("#qzBack").onclick=()=>{ qz.view="mock"; render(); };
+  main.querySelector("#mkAll").onclick=()=>{ qz.mockSub=null; qz.view="mockQs"; render(); };
+  main.querySelectorAll(".mk-scard").forEach(b=>b.onclick=()=>{ qz.mockSub=b.dataset.s; qz.view="mockQs"; render(); });
+}
+
+function qzMockQs(main){
+  const p=qzMockById(qz.mockId);
+  if(!p){ qz.view="mock"; render(); return; }
+  const list=(p.items||[]).filter(function(it){ return !qz.mockSub||it.subject===qz.mockSub; });
+  let h='<div class="mk-hd"><button class="mk-back" id="qzBack">‹ 返回</button><h2>'+
+        esc(qz.mockSub||"全部错题")+'</h2><span class="mk-sub">'+list.length+' 道</span></div>';
+  h+=list.map(function(it){
+    const ok=mkAnsSet(it.answer),mine=mkAnsSet(it.mine);
+    let o="";
+    Object.keys(it.options||{}).forEach(function(k){
+      const isOk=ok.indexOf(k)>=0,isMine=mine.indexOf(k)>=0;
+      o+='<div class="mk-opt '+(isOk?"ok":(isMine?"bad":""))+'"><span class="k">'+esc(k)+'</span><span>'+
+         esc(it.options[k])+(isOk?"　✓":"")+(isMine&&!isOk?"　← 你选的":"")+'</span></div>';
+    });
+    return '<div class="mk-q"><div class="mk-qh"><b>第 '+it.no+' 题</b><span>'+esc(it.sec||"")+
+      '</span><span>'+esc(it.subject||"")+'</span>'+
+      (it.tag?'<span class="mk-tag '+mkTagCls(it.tag)+'">'+esc(it.tag)+'</span>':"")+
+      (it.secs?'<span>用时 '+it.secs+'s</span>':"")+'</div>'+
+      '<div class="mk-stem">'+esc(it.stem||"")+'</div>'+o+
+      '<div class="mk-ansline"><span>正确答案 <b class="r">'+esc(it.answer||"")+'</b></span>'+
+      '<span>你的答案 <b class="w">'+esc(it.mine||"未作答")+'</b></span></div>'+
+      (it.explain?'<div class="mk-exp"><b>解析</b>　'+esc(it.explain)+'</div>':"")+
+      (it.why?'<div class="mk-why"><b>💡 怎么记</b>　'+esc(it.why)+'</div>':"")+
+      (it.point?'<div class="mk-pt">考点：'+esc(it.point)+'</div>':"")+'</div>';
+  }).join("");
+  main.innerHTML=h;
+  main.querySelector("#qzBack").onclick=()=>{ qz.view="mockSubs"; render(); };
+  window.scrollTo({top:0});
 }
 
 /* ---------- 组卷页 ---------- */
