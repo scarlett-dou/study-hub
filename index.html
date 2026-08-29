@@ -760,6 +760,8 @@
   .mk-scard .nm{font-size:14.5px;font-weight:700;margin-bottom:6px}
   .mk-scard .n{font-size:22px;font-weight:700;color:#d63a2f;line-height:1.1}
   .mk-scard .ct{font-size:12px;color:var(--sub)}
+  .mk-redo{margin-top:9px;width:100%;border:1px solid var(--tint);background:transparent;color:var(--tint);
+    border-radius:8px;padding:5px 0;font-size:12.5px;font-weight:600;cursor:pointer}
   .mk-q{background:var(--card);border:1px solid var(--sep);border-radius:12px;padding:14px 16px;margin-bottom:12px}
   .mk-qh{font-size:12px;color:var(--sub);margin-bottom:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   .mk-tag{display:inline-block;font-size:11px;font-weight:700;border-radius:20px;padding:1px 9px;white-space:nowrap}
@@ -4311,7 +4313,41 @@ function qzHlPage(main){
 }
 
 /* ---------- 题库适配层：把四个题库摊平成一套结构 ---------- */
+/* ===== MOCK_PRACTICE_V1：模考题的做题状态（存 qzState.mkq，与各科目题库互不干扰） ===== */
+function mkS(){ const s=qzState(); if(!s.mkq) s.mkq={}; return s.mkq; }
+function mkQSt(id){ return mkS()[id]||null; }
+function mkQEnsure(id){ const m=mkS(); if(!m[id]) m[id]={n:0,r:0,w:0,streak:0,mastered:false,fuzzy:false,fzo:{},last:""}; return m[id]; }
+const MK_MASTER=2;   /* 连对 2 次移出错题本，与法律/习思想一致 */
+function mkGrade(id,ok){
+  const x=mkQEnsure(id); x.n=(x.n||0)+1; x.last=today();
+  if(ok){ x.r=(x.r||0)+1; x.streak=(x.streak||0)+1; if(x.w>0&&x.streak>=MK_MASTER) x.mastered=true; }
+  else { x.w=(x.w||0)+1; x.streak=0; x.mastered=false; }
+  const s=qzState(); s.mklog=s.mklog||[]; s.mklog.push({d:today(),id:id,ok:!!ok});
+  if(s.mklog.length>2000) s.mklog=s.mklog.slice(-2000);
+}
+function mkInBook(id){ const x=mkQSt(id); return !!(x&&x.w>0&&!x.mastered); }
+function mkSetFuzzy(id,v){ const x=mkQEnsure(id); x.fuzzy=!!v; }
+function mkToggleOpt(id,k){ const x=mkQEnsure(id); x.fzo=x.fzo||{}; if(x.fzo[k]) delete x.fzo[k]; else x.fzo[k]=1; }
+/* 把所有模考卷的题摊平成题源（带 paperId，供按卷筛） */
+function mkAllQs(){
+  const out=[];
+  qzMocks().forEach(function(p){
+    (p.items||[]).forEach(function(it){
+      if(it.sec==="写作题") return;                 /* 写作题不进刷题 */
+      const q=Object.assign({},it);
+      q.id=q.id||(p.id+"-"+q.no);
+      q.paperId=p.id; q.paperName=p.name;
+      out.push(q);
+    });
+  });
+  return out;
+}
 function qzSrcs(){ return [
+  { key:"mk", group:"模考", qs:()=>mkAllQs(), subj:q=>q.subject||"模考",
+    type:q=>q.type||(q.sec==="判断题"?"tf":"mc"),
+    /* 「知识点」＝每套模考卷，组卷时可按卷筛；grp＝科目，可先按科目筛 */
+    pts:()=>qzMocks().map(p=>({id:"mkp-"+p.id,subject:"模考",name:p.name,grp:"模考卷",hint:p.date||""})),
+    kps:q=>(q.paperId?["mkp-"+q.paperId]:[]) },
   { key:"law", group:"法律", qs:()=>((db.lawBank&&db.lawBank.questions)||[]), subj:q=>q.subject||"法律",
     type:q=>q.type||(q.sec==="判断题"?"tf":"mc"), pts:()=>((db.lawBank&&db.lawBank.points)||[]),
     kps:q=>q.kps||[] },
@@ -4354,6 +4390,8 @@ function qzSt(q){
     return x?{done:x.n>0,wrong:x.w>0,inBook:mzInBook(q.id),fuzzy:!!x.fuzzy,mastered:!!x.mastered,w:x.w||0}:null; }
   if(q.src==="gs"){ const x=gsQSt(q.id);
     return x?{done:x.n>0,wrong:x.w>0,inBook:gsInBook(q.id),fuzzy:!!x.fuzzy,mastered:!!x.mastered,w:x.w||0}:null; }
+  if(q.src==="mk"){ const x=mkQSt(q.id);
+    return x?{done:x.n>0,wrong:x.w>0,inBook:mkInBook(q.id),fuzzy:!!x.fuzzy,mastered:!!x.mastered,w:x.w||0}:null; }
   const x=mgQSt(q.id);
   return x&&x.ans?{done:true,wrong:!x.ok,inBook:mgInBook(q._raw),fuzzy:mgIsUns(x),mastered:false,w:x.w||0}:null;
 }
@@ -4397,6 +4435,7 @@ function qzGrade(q,pick){
   else if(q.src==="sj"){ sjGrade(q.id,ok); }
   else if(q.src==="mz"){ mzGrade(q.id,ok); }
   else if(q.src==="gs"){ gsGrade(q.id,ok); }
+  else if(q.src==="mk"){ mkGrade(q.id,ok); }
   else { const x=mgQEnsure(q.id); x.pick=pick; mgGrade(q._raw,x); }
   return ok;
 }
@@ -4882,14 +4921,40 @@ function qzMockSubs(main){
   let h='<div class="mk-hd"><button class="mk-back" id="qzBack">‹ 模考</button><h2>'+esc(p.name)+'</h2></div>';
   if(p.note) h+='<div class="mk-sub" style="margin:-8px 0 12px;line-height:1.9">'+esc(p.note)+'</div>';
   h+='<div class="mk-subs">'+subs.map(function(s){
-    return '<button class="mk-scard" data-s="'+esc(s.name)+'"><div class="nm">'+esc(s.name)+
-      '</div><div class="n">'+s.items.length+'</div><div class="ct">道错题</div></button>';
+    return '<div class="mk-scard" data-s="'+esc(s.name)+'"><div class="nm">'+esc(s.name)+
+      '</div><div class="n">'+s.items.length+'</div><div class="ct">道错题</div>'+
+      '<button class="mk-redo" data-s="'+esc(s.name)+'">▶️ 重做这科</button></div>';
   }).join("")+'</div>';
-  h+='<div class="qz-actions"><button class="qz-btn pri big" id="mkAll">📖 按顺序看全部 '+((p.items||[]).length)+' 道</button></div>';
+  h+='<div class="qz-actions"><button class="qz-btn pri big" id="mkRedo">▶️ 重做整卷（'+((p.items||[]).filter(function(x){return x.sec!=="写作题";}).length)+' 道）</button>'+
+       '<button class="qz-btn big" id="mkAll">📖 按顺序看全部解析</button></div>';
   main.innerHTML=h;
   main.querySelector("#qzBack").onclick=()=>{ qz.view="mock"; render(); };
   main.querySelector("#mkAll").onclick=()=>{ qz.mockSub=null; qz.view="mockQs"; render(); };
+  main.querySelector("#mkRedo").onclick=()=>mkStartPractice(p,null);
   main.querySelectorAll(".mk-scard").forEach(b=>b.onclick=()=>{ qz.mockSub=b.dataset.s; qz.view="mockQs"; render(); });
+  main.querySelectorAll(".mk-redo").forEach(b=>{ b.onclick=(e)=>{ e.stopPropagation(); mkStartPractice(p,b.dataset.s); }; });
+}
+
+/* 用模考题直接组一份卷，进既有做题界面（可反复做、判分、写备注） */
+function mkStartPractice(p,subject){
+  const list=(p.items||[]).filter(function(it){
+    if(it.sec==="写作题") return false;
+    return !subject||it.subject===subject;
+  }).map(function(it){
+    const q=Object.assign({},it);
+    q.id=q.id||(p.id+"-"+q.no); q.paperId=p.id; q.paperName=p.name;
+    return { src:"mk", id:q.id, group:"模考", subject:q.subject||"模考", sec:q.sec, num:q.no,
+             type:q.type||(q.sec==="判断题"?"tf":"mc"), stem:q.stem, options:q.options,
+             answer:q.answer, explain:q.explain, org:"", star:0, mark:"", kps:["mkp-"+p.id], _raw:q };
+  });
+  if(!list.length){ toast("这一组没有可做的题"); return; }
+  /* 卷面按 判断→单选→多选 排序，和真卷一致 */
+  const ord={"判断题":0,"单选题":1,"多选题":2};
+  list.sort(function(a,b){ return (ord[a.sec]==null?9:ord[a.sec])-(ord[b.sec]==null?9:ord[b.sec]) || a.num-b.num; });
+  const s=qzState();
+  s.paper={ mode:"practice", picks:{}, marks:{}, cur:0, submitted:false, startAt:Date.now(),
+            name:(p.name+(subject?(" · "+subject):" · 全部错题")), qs:list };
+  qz.view="run"; render();
 }
 
 function qzMockQs(main){
