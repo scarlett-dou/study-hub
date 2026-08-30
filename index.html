@@ -1172,7 +1172,7 @@ function spDImg(d){ return "decks/"+d.id+"-images.json"; }
 /* db → { 路径:json字符串 }。文件名用 id(稳定、纯 ASCII),中文名放进 index.meta 供仓库网页查阅。 */
 function splitDb(){
   const files={}, meta={};
-  const state={}; Object.keys(db).forEach(k=>{ if(k!=="contents"&&k!=="flashDecks"&&k!=="lawBank"&&k!=="mgBank"&&k!=="wrBank"&&k!=="sjBank"&&k!=="mzBank"&&k!=="gsBank") state[k]=db[k]; });
+  const state={}; Object.keys(db).forEach(k=>{ if(k!=="contents"&&k!=="flashDecks"&&k!=="lawBank"&&k!=="mgBank"&&k!=="wrBank"&&k!=="sjBank"&&k!=="mzBank"&&k!=="gsBank"&&k!=="mockBank") state[k]=db[k]; });
   files["state.json"]=JSON.stringify(state);
   (db.contents||[]).forEach(c=>{ const p=spCPath(c); files[p]=JSON.stringify(c); meta[p]={name:c.name||""}; });
   (db.flashDecks||[]).forEach(d=>{ const p=spDPath(d), body={};
@@ -1205,6 +1205,8 @@ function splitDb(){
   if(db.mzBank&&((db.mzBank.questions||[]).length)) files["mz/bank.json"]=JSON.stringify(db.mzBank);
   /* 国省情题库：120 题 + 43 个知识点（知识点是按她自己两份笔记的标题划分的） */
   if(db.gsBank&&((db.gsBank.questions||[]).length)) files["gs/bank.json"]=JSON.stringify(db.gsBank);
+  /* 模考卷：整卷题目+解析，一份就 100KB 上下，且极少变 */
+  if(db.mockBank&&((db.mockBank.papers||[]).length)) files["mock/bank.json"]=JSON.stringify(db.mockBank);
   const hashes={}; Object.keys(files).forEach(p=>{ hashes[p]=spHash(files[p]); });
   files["index.json"]=JSON.stringify({ _split:SPLIT_VER, savedAt:db.savedAt||null, stats:(typeof csStats==="function"?csStats(db):undefined), files:hashes, meta },null,1);
   return files;
@@ -1223,10 +1225,11 @@ function spWriteOrder(files){
   const sjb=all.filter(p=>p.indexOf("sj/")===0);
   const mzb=all.filter(p=>p.indexOf("mz/")===0);
   const gsb=all.filter(p=>p.indexOf("gs/")===0);
+  const mkb=all.filter(p=>p.indexOf("mock/")===0);
   /* 2026-08-24 修：splitDb 会产出 mz/bank.json，但这里漏了 mz 组，
      结果该文件从不上传、index.json 却引用它——别的设备 mergeFiles 返回 null，同步整体停摆。
      **凡是往 splitDb 里加新文件，必须同时在这里加一组**，否则就是这个下场。 */
-  return img.concat(deck,cont,law,mgb,wrf,sjb,mzb,gsb,["state.json","index.json"]);
+  return img.concat(deck,cont,law,mgb,wrf,sjb,mzb,gsb,mkb,["state.json","index.json"]);
 }
 /* { 路径:json字符串 } → db(未 normalize)。任一被 index 引用的文件缺失/解析失败 → 返回 null。
    **调用方拿到 null 必须整体放弃采用**,绝不能拿残缺数据覆盖本机。这是最关键的安全边界。 */
@@ -1257,6 +1260,7 @@ function mergeFiles(files){
     if(typeof files["sj/bank.json"]==="string") out.sjBank=JSON.parse(files["sj/bank.json"]);
     if(typeof files["mz/bank.json"]==="string") out.mzBank=JSON.parse(files["mz/bank.json"]);
     if(typeof files["gs/bank.json"]==="string") out.gsBank=JSON.parse(files["gs/bank.json"]);
+    if(typeof files["mock/bank.json"]==="string") out.mockBank=JSON.parse(files["mock/bank.json"]);
     return out;
   }catch(e){ return null; }
 }
@@ -4889,14 +4893,64 @@ function mkSubjects(p){
 function mkTagCls(t){ return t==="选非题"?"t1":(t==="定位词"?"t2":(t==="方法"?"t3":"t4")); }
 function mkAnsSet(s){ return String(s||"").split(/[,\uFF0C\s]+/).filter(Boolean); }
 
+/* 载入 / 更新模考卷。**只写入 mockBank**，做题记录、错题本、日历、背诵库都不受影响。
+   合并规则：同 id 的卷子整份替换，不同 id 的追加 —— 这样陆续加卷子不会冲掉旧的。 */
+async function mockAdopt(data){
+  const ps=(data&&Array.isArray(data.papers))?data.papers:(Array.isArray(data)?data:null);
+  if(!ps||!ps.length) throw new Error("这个文件里没有 papers");
+  const bad=ps.filter(p=>!p.id||!p.name||!Array.isArray(p.items)||!p.items.length).length;
+  if(bad) throw new Error("有 "+bad+" 份卷子缺 id/name/items，没有导入");
+  if(!db.mockBank||typeof db.mockBank!=="object") db.mockBank={version:1,papers:[]};
+  if(!Array.isArray(db.mockBank.papers)) db.mockBank.papers=[];
+  let add=0,rep=0;
+  ps.forEach(function(p){
+    const i=db.mockBank.papers.findIndex(x=>x.id===p.id);
+    if(i>=0){ db.mockBank.papers[i]=p; rep++; } else { db.mockBank.papers.push(p); add++; }
+  });
+  save();
+  toast("模考卷已载入：新增 "+add+" 份 / 更新 "+rep+" 份 ✓");
+  closeModal(); render();
+}
+function mockImport(){
+  const online=/^https?:/.test(location.protocol);
+  const has=((db.mockBank&&db.mockBank.papers)||[]).length;
+  const h=openModal("载入 / 更新模考卷",
+    '<p class="qz-sub">载入「模考卷.json」。<b>只写入模考卷</b>；你的做题记录、错题本、日历和背诵库都不受影响。'+
+    (has?'（当前已有 '+has+' 份）':'')+'<br>同一份卷子（id 相同）会整份替换，不同的会追加。</p>'+
+    (online?'<div class="qz-actions" style="margin-bottom:11px"><button class="qz-btn pri" id="qzMkNet">📶 从网上载入</button></div>':"")+
+    '<p class="qz-sub">或者自己选文件：</p>'+
+    '<input type="file" id="qzMkFile" accept=".json,application/json">'+
+    '<div id="qzMkMsg" class="qz-sub" style="margin-top:9px"></div>');
+  const net=h.querySelector("#qzMkNet");
+  if(net) net.onclick=async()=>{
+    const msg=h.querySelector("#qzMkMsg"); msg.textContent="下载中…";
+    try{ const rs=await fetch("./模考卷.json",{cache:"no-store"});
+      if(!rs.ok) throw new Error("HTTP "+rs.status);
+      await mockAdopt(await rs.json());
+    }catch(err){ msg.textContent="没能从网上取到（"+err.message+"）。请用下面的「选择文件」。"; }
+  };
+  h.querySelector("#qzMkFile").onchange=(e)=>{
+    const f=e.target.files&&e.target.files[0]; if(!f) return;
+    const msg=h.querySelector("#qzMkMsg"); msg.textContent="读取中…";
+    const rd=new FileReader();
+    rd.onload=async()=>{ try{ await mockAdopt(JSON.parse(rd.result)); }
+      catch(err){ msg.textContent="导入失败："+err.message; } };
+    rd.readAsText(f);
+  };
+}
 function qzMockList(main){
   const ms=qzMocks();
   let h='<div class="mk-hd"><button class="mk-back" id="qzBack">‹ 返回</button><h2>📄 模考</h2>'+
         '<span class="mk-sub">每次模考的错题，按科目归档</span></div>';
   if(!ms.length){
-    h+='<div class="empty">还没有模考卷。<br><span class="qz-sub">把模考题（题目＋答案＋你的作答）发给我，我整理成错题归档放进来。</span></div>';
-    main.innerHTML=h; main.querySelector("#qzBack").onclick=()=>{ qz.view="home"; render(); }; return;
+    h+='<div class="empty">还没有模考卷。<br><span class="qz-sub">点下面的按钮载入模考卷，或把新的卷子发给我整理。</span></div>'+
+       '<div class="qz-actions"><button class="qz-btn pri" id="qzMkImp">📄 载入模考卷</button></div>';
+    main.innerHTML=h;
+    main.querySelector("#qzBack").onclick=()=>{ qz.view="home"; render(); };
+    const ib0=main.querySelector("#qzMkImp"); if(ib0) ib0.onclick=mockImport;
+    return;
   }
+  h+='<div class="qz-actions" style="margin-bottom:12px"><button class="qz-btn" id="qzMkImp">📄 载入 / 更新模考卷</button></div>';
   h+=ms.map(function(p){
     const n=(p.items||[]).length,st=p.stat||{},subs=mkSubjects(p);
     let meta=(p.date?esc(p.date)+" · ":"");
@@ -4912,6 +4966,7 @@ function qzMockList(main){
   main.innerHTML=h;
   main.querySelector("#qzBack").onclick=()=>{ qz.view="home"; render(); };
   main.querySelectorAll(".mk-paper").forEach(b=>b.onclick=()=>{ qz.mockId=b.dataset.id; qz.view="mockSubs"; render(); });
+  const ib=main.querySelector("#qzMkImp"); if(ib) ib.onclick=mockImport;
 }
 
 function qzMockSubs(main){
@@ -5722,7 +5777,7 @@ async function forceUpdateApp(){
 function mountSettings(main){
   const s=db.settings;
   let h='<h2 class="mod-h">设置</h2><div class="mod-sub">考试时间、评分与掌握度、间隔参数、数据同步、备份、扩展模块。改动即时保存。</div>';
-  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-08-26-f</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
+  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-08-26-g</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
      '<button class="btn" onclick="forceUpdateApp()">🔄 强制更新程序</button></div>';
   h+='<div class="card"><h4>考试时间</h4><div class="frow"><div class="field"><label>名称</label><input type="text" id="setExamLabel" value="'+esc(s.examLabel||"考试")+'"></div><div class="field"><label>日期</label><input type="date" id="setExamDate" value="'+(s.examDate||"")+'"></div><div class="field"><label>备考起点(可选)</label><input type="date" id="setExamStart" value="'+(s.examStart||"")+'"><div class="desc">留空＝最早的一条数据</div></div></div></div>';
   h+='<div class="card"><h4>掌握度算法</h4><div class="radios" id="mModel">'+
