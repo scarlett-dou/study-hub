@@ -1079,7 +1079,7 @@ function defaultSettings(){ return {
   timeplan:{ periods:{am:["08:00","12:00"],noon:["12:00","14:00"],pm:["14:00","18:00"],eve:["18:00","23:00"]},
              meals:{lunch:["12:00","13:30"],dinner:["18:00","19:30"]}, window:["08:00","22:30"], stepMin:30, maxSpanH:5 },
 }; }
-function blankDb(){ return { version:7, today:null, settings:defaultSettings(), contents:[], courses:[], recites:[], plans:[], userModules:[], flashDecks:[], flashState:{}, timeplan:{}, lawBank:{version:1,questions:[],cards:[]}, lawState:{q:{},c:{},log:[]}, mgBank:{version:1,modules:[],points:[],questions:[]}, mgState:{q:{},log:[],note:{},ui:{}}, sjBank:{version:1,questions:[]}, sjState:{q:{},log:[]}, mzBank:{version:1,points:[],questions:[]}, mzState:{q:{},log:[]}, gsBank:{version:1,points:[],questions:[]}, gsState:{q:{},log:[]}, wrBank:null, wrState:{drafts:{},done:{},ui:{}}, qzState:{paper:null,last:null,exams:[]}, mockBank:null }; }
+function blankDb(){ return { version:7, today:null, settings:defaultSettings(), contents:[], courses:[], recites:[], plans:[], userModules:[], flashDecks:[], flashState:{}, timeplan:{}, lawBank:{version:1,questions:[],cards:[]}, lawState:{q:{},c:{},log:[]}, mgBank:{version:1,modules:[],points:[],questions:[]}, mgState:{q:{},log:[],note:{},ui:{}}, sjBank:{version:1,questions:[]}, sjState:{q:{},log:[]}, mzBank:{version:1,points:[],questions:[]}, mzState:{q:{},log:[]}, gsBank:{version:1,points:[],questions:[]}, gsState:{q:{},log:[]}, ksBank:{version:1,points:[],questions:[]}, ksState:{q:{},log:[]}, ecBank:{version:1,points:[],questions:[]}, ecState:{q:{},log:[]}, wrBank:null, wrState:{drafts:{},done:{},ui:{}}, qzState:{paper:null,last:null,exams:[]}, mockBank:null }; }
 let db=blankDb();
 let state={ view:"home", calBase:null, selDate:null };
 
@@ -1136,6 +1136,10 @@ function normalizeDb(o){
   d.mzState=(o.mzState&&typeof o.mzState==="object")?o.mzState:{q:{},log:[]}; if(!d.mzState.q) d.mzState.q={}; if(!Array.isArray(d.mzState.log)) d.mzState.log=[];
   d.gsBank=(o.gsBank&&typeof o.gsBank==="object")?o.gsBank:{version:1,points:[],questions:[]}; if(!Array.isArray(d.gsBank.questions)) d.gsBank.questions=[]; if(!Array.isArray(d.gsBank.points)) d.gsBank.points=[];
   d.gsState=(o.gsState&&typeof o.gsState==="object")?o.gsState:{q:{},log:[]}; if(!d.gsState.q) d.gsState.q={}; if(!Array.isArray(d.gsState.log)) d.gsState.log=[];
+  d.ksBank=(o.ksBank&&typeof o.ksBank==="object")?o.ksBank:{version:1,points:[],questions:[]}; if(!Array.isArray(d.ksBank.questions)) d.ksBank.questions=[]; if(!Array.isArray(d.ksBank.points)) d.ksBank.points=[];
+  d.ksState=(o.ksState&&typeof o.ksState==="object")?o.ksState:{q:{},log:[]}; if(!d.ksState.q) d.ksState.q={}; if(!Array.isArray(d.ksState.log)) d.ksState.log=[];
+  d.ecBank=(o.ecBank&&typeof o.ecBank==="object")?o.ecBank:{version:1,points:[],questions:[]}; if(!Array.isArray(d.ecBank.questions)) d.ecBank.questions=[]; if(!Array.isArray(d.ecBank.points)) d.ecBank.points=[];
+  d.ecState=(o.ecState&&typeof o.ecState==="object")?o.ecState:{q:{},log:[]}; if(!d.ecState.q) d.ecState.q={}; if(!Array.isArray(d.ecState.log)) d.ecState.log=[];
   /* 刷题中心的当前试卷/上次组卷配置/历史成绩。不登记的话刷新一次就全没了(2026-08-23 补) */
   d.qzState=(o.qzState&&typeof o.qzState==="object")?o.qzState:{paper:null,last:null,exams:[]}; if(!Array.isArray(d.qzState.exams)) d.qzState.exams=[];
   d.mockBank=(o.mockBank&&typeof o.mockBank==="object")?o.mockBank:null;
@@ -1172,7 +1176,7 @@ function spDImg(d){ return "decks/"+d.id+"-images.json"; }
 /* db → { 路径:json字符串 }。文件名用 id(稳定、纯 ASCII),中文名放进 index.meta 供仓库网页查阅。 */
 function splitDb(){
   const files={}, meta={};
-  const state={}; Object.keys(db).forEach(k=>{ if(k!=="contents"&&k!=="flashDecks"&&k!=="lawBank"&&k!=="mgBank"&&k!=="wrBank"&&k!=="sjBank"&&k!=="mzBank"&&k!=="gsBank"&&k!=="mockBank") state[k]=db[k]; });
+  const state={}; Object.keys(db).forEach(k=>{ if(k!=="contents"&&k!=="flashDecks"&&k!=="lawBank"&&k!=="mgBank"&&k!=="wrBank"&&k!=="sjBank"&&k!=="mzBank"&&k!=="gsBank"&&k!=="mockBank"&&k!=="ecBank"&&k!=="ksBank") state[k]=db[k]; });
   files["state.json"]=JSON.stringify(state);
   (db.contents||[]).forEach(c=>{ const p=spCPath(c); files[p]=JSON.stringify(c); meta[p]={name:c.name||""}; });
   (db.flashDecks||[]).forEach(d=>{ const p=spDPath(d), body={};
@@ -1207,6 +1211,8 @@ function splitDb(){
   if(db.gsBank&&((db.gsBank.questions||[]).length)) files["gs/bank.json"]=JSON.stringify(db.gsBank);
   /* 模考卷：整卷题目+解析，一份就 100KB 上下，且极少变 */
   if(db.mockBank&&((db.mockBank.papers||[]).length)) files["mock/bank.json"]=JSON.stringify(db.mockBank);
+  if(db.ksBank&&((db.ksBank.questions||[]).length)) files["ks/bank.json"]=JSON.stringify(db.ksBank);
+  if(db.ecBank&&((db.ecBank.questions||[]).length)) files["ec/bank.json"]=JSON.stringify(db.ecBank);
   const hashes={}; Object.keys(files).forEach(p=>{ hashes[p]=spHash(files[p]); });
   files["index.json"]=JSON.stringify({ _split:SPLIT_VER, savedAt:db.savedAt||null, stats:(typeof csStats==="function"?csStats(db):undefined), files:hashes, meta },null,1);
   return files;
@@ -1226,10 +1232,12 @@ function spWriteOrder(files){
   const mzb=all.filter(p=>p.indexOf("mz/")===0);
   const gsb=all.filter(p=>p.indexOf("gs/")===0);
   const mkb=all.filter(p=>p.indexOf("mock/")===0);
+  const ksb=all.filter(p=>p.indexOf("ks/")===0);
+  const ecb=all.filter(p=>p.indexOf("ec/")===0);
   /* 2026-08-24 修：splitDb 会产出 mz/bank.json，但这里漏了 mz 组，
      结果该文件从不上传、index.json 却引用它——别的设备 mergeFiles 返回 null，同步整体停摆。
      **凡是往 splitDb 里加新文件，必须同时在这里加一组**，否则就是这个下场。 */
-  return img.concat(deck,cont,law,mgb,wrf,sjb,mzb,gsb,mkb,["state.json","index.json"]);
+  return img.concat(deck,cont,law,mgb,wrf,sjb,mzb,gsb,mkb,ecb,ksb,["state.json","index.json"]);
 }
 /* { 路径:json字符串 } → db(未 normalize)。任一被 index 引用的文件缺失/解析失败 → 返回 null。
    **调用方拿到 null 必须整体放弃采用**,绝不能拿残缺数据覆盖本机。这是最关键的安全边界。 */
@@ -1261,6 +1269,8 @@ function mergeFiles(files){
     if(typeof files["mz/bank.json"]==="string") out.mzBank=JSON.parse(files["mz/bank.json"]);
     if(typeof files["gs/bank.json"]==="string") out.gsBank=JSON.parse(files["gs/bank.json"]);
     if(typeof files["mock/bank.json"]==="string") out.mockBank=JSON.parse(files["mock/bank.json"]);
+    if(typeof files["ks/bank.json"]==="string") out.ksBank=JSON.parse(files["ks/bank.json"]);
+    if(typeof files["ec/bank.json"]==="string") out.ecBank=JSON.parse(files["ec/bank.json"]);
     return out;
   }catch(e){ return null; }
 }
@@ -1430,7 +1440,7 @@ async function csAdoptLegacy(old,ot){ CS.applying=true; db=normalizeDb(old); awa
    就停下来不动，让人自己选方向；③设置里给出明确的「下载 / 上传」两个动作。 */
 function csStats(o){ o=o||{}; const n=x=>Object.keys(x||{}).length;
   return { law:n((o.lawState||{}).q), mg:n((o.mgState||{}).q), sj:n((o.sjState||{}).q), mz:n((o.mzState||{}).q), gs:n((o.gsState||{}).q),
-           wr:n((o.wrState||{}).done), contents:(o.contents||[]).length, decks:(o.flashDecks||[]).length,
+           ec:n((o.ecState||{}).q), ks:n((o.ksState||{}).q), wr:n((o.wrState||{}).done), contents:(o.contents||[]).length, decks:(o.flashDecks||[]).length,
            plans:(o.plans||[]).length, courses:(o.courses||[]).length, recites:(o.recites||[]).length }; }
 /* 只拿「正常只会增加」的项当护栏；计划/课程/复习会被正常删除，不参与判断，免得天天误报 */
 const CS_GUARD=[["law","法律做题"],["mg","管理做题"],["sj","习思想做题"],["mz","马哲做题"],["wr","写作习作"],["contents","背诵章节"],["decks","卡片本"]];
@@ -4208,6 +4218,40 @@ function mzGrade(id,ok){ const x=mzQEnsure(id); x.n++; x.last=today();
 /* ---------- 问答（你问/解答）与解析标注 ---------- */
 /* 题库结构化问答：bank.qa = { 题id:{q?,a} }。显示时与本机 note/ans 合并；
    删除只在她自己的 state 记墓碑（qaDel），公开题库不动；重新写备注自动解除墓碑。 */
+/* ---------- 经济：状态层（与马哲/国省情同构） ---------- */
+function ecS(){ const s=db.ecState||(db.ecState={q:{},log:[]}); if(!s.q)s.q={}; if(!s.log)s.log=[]; return s; }
+function ecQSt(id){ return ecS().q[id]||null; }
+function ecQEnsure(id){ const s=ecS(); let x=s.q[id];
+  if(!x) x=s.q[id]={n:0,w:0,r:0,streak:0,mastered:false,last:null,fuzzy:false,fzo:[]};
+  if(!Array.isArray(x.fzo)) x.fzo=[];
+  return x; }
+function ecInBook(id){ const x=ecQSt(id); return !!x && x.w>0 && !x.mastered; }
+function ecSetFuzzy(id,on){ const x=ecQEnsure(id); x.fuzzy=!!on; if(!on) x.fzo=[]; save(); }
+function ecToggleOpt(id,k){ const x=ecQEnsure(id); const i=x.fzo.indexOf(k);
+  if(i<0) x.fzo.push(k); else x.fzo.splice(i,1); x.fuzzy=x.fzo.length>0||x.fuzzy; save(); }
+function ecGrade(id,ok){ const x=ecQEnsure(id); x.n++; x.last=today();
+  if(ok){ x.r++; x.streak=(x.streak||0)+1; if(x.streak>=2) x.mastered=true; }
+  else { x.w++; x.streak=0; x.mastered=false; }
+  const s=ecS(); s.log.push({d:today(),q:id,ok:ok?1:0});
+  if(s.log.length>4000) s.log=s.log.slice(-4000);
+  save(); }
+/* ---------- 常识：状态层（与马哲/国省情同构） ---------- */
+function ksS(){ const s=db.ksState||(db.ksState={q:{},log:[]}); if(!s.q)s.q={}; if(!s.log)s.log=[]; return s; }
+function ksQSt(id){ return ksS().q[id]||null; }
+function ksQEnsure(id){ const s=ksS(); let x=s.q[id];
+  if(!x) x=s.q[id]={n:0,w:0,r:0,streak:0,mastered:false,last:null,fuzzy:false,fzo:[]};
+  if(!Array.isArray(x.fzo)) x.fzo=[];
+  return x; }
+function ksInBook(id){ const x=ksQSt(id); return !!x && x.w>0 && !x.mastered; }
+function ksSetFuzzy(id,on){ const x=ksQEnsure(id); x.fuzzy=!!on; if(!on) x.fzo=[]; save(); }
+function ksToggleOpt(id,k){ const x=ksQEnsure(id); const i=x.fzo.indexOf(k);
+  if(i<0) x.fzo.push(k); else x.fzo.splice(i,1); x.fuzzy=x.fzo.length>0||x.fuzzy; save(); }
+function ksGrade(id,ok){ const x=ksQEnsure(id); x.n++; x.last=today();
+  if(ok){ x.r++; x.streak=(x.streak||0)+1; if(x.streak>=2) x.mastered=true; }
+  else { x.w++; x.streak=0; x.mastered=false; }
+  const s=ksS(); s.log.push({d:today(),q:id,ok:ok?1:0});
+  if(s.log.length>4000) s.log=s.log.slice(-4000);
+  save(); }
 /* ---------- 国省情：状态层（与马哲同构） ---------- */
 function gsS(){ const s=db.gsState||(db.gsState={q:{},log:[]}); if(!s.q)s.q={}; if(!s.log)s.log=[]; return s; }
 function gsQSt(id){ return gsS().q[id]||null; }
@@ -4226,14 +4270,14 @@ function gsGrade(id,ok){ const x=gsQEnsure(id); x.n++; x.last=today();
   const s=gsS(); s.log.push({d:today(),q:id,ok:ok?1:0});
   if(s.log.length>4000) s.log=s.log.slice(-4000);
   save(); }
-function qzBankQa(q){ const b={law:db.lawBank,mg:db.mgBank,sj:db.sjBank,mz:db.mzBank,gs:db.gsBank}[q.src];
+function qzBankQa(q){ const b={law:db.lawBank,mg:db.mgBank,sj:db.sjBank,mz:db.mzBank,gs:db.gsBank,ec:db.ecBank,ks:db.ksBank}[q.src];
   return (b&&b.qa&&b.qa[q.id])||null; }
 function qzQaDel(q,set){
   if(q.src==="mg"){ const s=mgS(); if(!s.qaDel) s.qaDel={};
     if(set===undefined) return !!s.qaDel[q.id];
     if(set) s.qaDel[q.id]=1; else delete s.qaDel[q.id]; save(); return set; }
-  if(set===undefined){ const x=(q.src==="law"?lawQSt(q.id):q.src==="sj"?sjQSt(q.id):q.src==="gs"?gsQSt(q.id):mzQSt(q.id)); return !!(x&&x.qaDel); }
-  const x=(q.src==="law"?lawQEnsure(q.id):q.src==="sj"?sjQEnsure(q.id):q.src==="gs"?gsQEnsure(q.id):mzQEnsure(q.id));
+  if(set===undefined){ const x=(q.src==="law"?lawQSt(q.id):q.src==="sj"?sjQSt(q.id):q.src==="gs"?gsQSt(q.id):q.src==="ec"?ecQSt(q.id):q.src==="ks"?ksQSt(q.id):mzQSt(q.id)); return !!(x&&x.qaDel); }
+  const x=(q.src==="law"?lawQEnsure(q.id):q.src==="sj"?sjQEnsure(q.id):q.src==="gs"?gsQEnsure(q.id):q.src==="ec"?ecQEnsure(q.id):q.src==="ks"?ksQEnsure(q.id):mzQEnsure(q.id));
   if(set) x.qaDel=1; else delete x.qaDel; save(); return set;
 }
 function qzQa(q){
@@ -4364,12 +4408,22 @@ function qzSrcs(){ return [
     /* 习思想的「知识点」就是她背诵库里的章节（1—16 章，第九章拆 9.1—9.5） */
     pts:()=>(((db.sjBank&&db.sjBank.chapters)||[]).map(c=>({id:"sjc-"+c.key, subject:"习思想", name:c.name, hint:""}))),
     kps:q=>(q.ch?["sjc-"+q.ch]:[]) },
+  { key:"ec", group:"经济", qs:()=>((db.ecBank&&db.ecBank.questions)||[]), subj:q=>q.subject||"经济",
+    type:q=>q.type||(q.sec==="判断题"?"tf":"mc"),
+    pts:()=>(((db.ecBank&&db.ecBank.points)||[]).map(x=>({id:x.id,subject:"经济",name:x.name,grp:x.chapter||"",hint:x.chapter||""}))),
+    kps:q=>q.kps||[] },
+  { key:"ks", group:"常识", qs:()=>((db.ksBank&&db.ksBank.questions)||[]), subj:q=>q.subject||"常识",
+    type:q=>q.type||(q.sec==="判断题"?"tf":"mc"),
+    pts:()=>(((db.ksBank&&db.ksBank.points)||[]).map(x=>({id:x.id,subject:"常识",name:x.name,grp:x.chapter||"",hint:x.chapter||""}))),
+    kps:q=>q.kps||[] },
   { key:"gs",  group:"国省情", qs:()=>((db.gsBank&&db.gsBank.questions)||[]), subj:()=>"国省情",
     type:q=>q.type||(q.sec==="判断题"?"tf":"mc"),
     /* 知识点＝她自己两份笔记的一级/二级标题；grp 用一级标题，组卷时可先按章筛 */
     pts:()=>(((db.gsBank&&db.gsBank.points)||[]).map(p=>({id:p.id,subject:"国省情",name:p.subject+"·"+p.name,grp:p.chapter||"",hint:p.chapter||""}))),
     kps:q=>q.kps||[] },
-  { key:"mz",  group:"马哲", qs:()=>((db.mzBank&&db.mzBank.questions)||[]), subj:()=>"马哲",
+  /* 马哲库里现在还装着无非的党史毛概/邓论/三个代表/科学发展观，
+     所以科目标签读每题自己的 subject，让它们在刷题中心各自成科、可单独组卷。 */
+  { key:"mz",  group:"马哲", qs:()=>((db.mzBank&&db.mzBank.questions)||[]), subj:q=>q.subject||"马哲",
     type:q=>q.type||(q.sec==="判断题"?"tf":"mc"),
     /* 马哲的知识点＝她自己的笔记《马克思主义哲学》里的五章及其条目，共 56 个 */
     pts:()=>(((db.mzBank&&db.mzBank.points)||[]).map(p=>({id:p.id,subject:"马哲",name:p.name,grp:p.chapter||"",hint:p.chapter||""}))),
@@ -4394,6 +4448,10 @@ function qzSt(q){
     return x?{done:x.n>0,wrong:x.w>0,inBook:mzInBook(q.id),fuzzy:!!x.fuzzy,mastered:!!x.mastered,w:x.w||0}:null; }
   if(q.src==="gs"){ const x=gsQSt(q.id);
     return x?{done:x.n>0,wrong:x.w>0,inBook:gsInBook(q.id),fuzzy:!!x.fuzzy,mastered:!!x.mastered,w:x.w||0}:null; }
+  if(q.src==="ks"){ const x=ksQSt(q.id);
+    return x?{done:x.n>0,wrong:x.w>0,inBook:ksInBook(q.id),fuzzy:!!x.fuzzy,mastered:!!x.mastered,w:x.w||0}:null; }
+  if(q.src==="ec"){ const x=ecQSt(q.id);
+    return x?{done:x.n>0,wrong:x.w>0,inBook:ecInBook(q.id),fuzzy:!!x.fuzzy,mastered:!!x.mastered,w:x.w||0}:null; }
   if(q.src==="mk"){ const x=mkQSt(q.id);
     return x?{done:x.n>0,wrong:x.w>0,inBook:mkInBook(q.id),fuzzy:!!x.fuzzy,mastered:!!x.mastered,w:x.w||0}:null; }
   const x=mgQSt(q.id);
@@ -4404,12 +4462,16 @@ function qzNoteGet(q){ if(q.src==="law"){ const x=lawQSt(q.id); return (x&&x.not
   if(q.src==="sj"){ const x=sjQSt(q.id); return (x&&x.note)||""; }
   if(q.src==="mz"){ const x=mzQSt(q.id); return (x&&x.note)||""; }
   if(q.src==="gs"){ const x=gsQSt(q.id); return (x&&x.note)||""; }
+  if(q.src==="ks"){ const x=ksQSt(q.id); return (x&&x.note)||""; }
+  if(q.src==="ec"){ const x=ecQSt(q.id); return (x&&x.note)||""; }
   return (mgS().note||{})[q.id]||""; }
 function qzNoteSet(q,t){ t=String(t||"");
   if(q.src==="law"){ const x=lawQEnsure(q.id); if(t) x.note=t; else delete x.note; }
   else if(q.src==="sj"){ const x=sjQEnsure(q.id); if(t) x.note=t; else delete x.note; }
   else if(q.src==="mz"){ const x=mzQEnsure(q.id); if(t) x.note=t; else delete x.note; }
   else if(q.src==="gs"){ const x=gsQEnsure(q.id); if(t) x.note=t; else delete x.note; }
+  else if(q.src==="ks"){ const x=ksQEnsure(q.id); if(t) x.note=t; else delete x.note; }
+  else if(q.src==="ec"){ const x=ecQEnsure(q.id); if(t) x.note=t; else delete x.note; }
   else { const s2=mgS(); if(!s2.note) s2.note={}; if(t) s2.note[q.id]=t; else delete s2.note[q.id]; }
   if(t) qzQaDel(q,false);   /* 重新提问＝要重新看到问答卡片 */
   save(); }
@@ -4418,12 +4480,16 @@ function qzAnsGet(q){ if(q.src==="law"){ const x=lawQSt(q.id); return (x&&x.ans)
   if(q.src==="sj"){ const x=sjQSt(q.id); return (x&&x.ans)||""; }
   if(q.src==="mz"){ const x=mzQSt(q.id); return (x&&x.ans)||""; }
   if(q.src==="gs"){ const x=gsQSt(q.id); return (x&&x.ans)||""; }
+  if(q.src==="ks"){ const x=ksQSt(q.id); return (x&&x.ans)||""; }
+  if(q.src==="ec"){ const x=ecQSt(q.id); return (x&&x.ans)||""; }
   return ((mgS().ans)||{})[q.id]||""; }
 function qzAnsSet(q,t){ t=String(t||"");
   if(q.src==="law"){ const x=lawQEnsure(q.id); if(t) x.ans=t; else delete x.ans; }
   else if(q.src==="sj"){ const x=sjQEnsure(q.id); if(t) x.ans=t; else delete x.ans; }
   else if(q.src==="mz"){ const x=mzQEnsure(q.id); if(t) x.ans=t; else delete x.ans; }
   else if(q.src==="gs"){ const x=gsQEnsure(q.id); if(t) x.ans=t; else delete x.ans; }
+  else if(q.src==="ks"){ const x=ksQEnsure(q.id); if(t) x.ans=t; else delete x.ans; }
+  else if(q.src==="ec"){ const x=ecQEnsure(q.id); if(t) x.ans=t; else delete x.ans; }
   else { const s2=mgS(); if(!s2.ans) s2.ans={}; if(t) s2.ans[q.id]=t; else delete s2.ans[q.id]; }
   save(); }
 /* 问过问题的题（答题卡上要标出来） */
@@ -4439,6 +4505,8 @@ function qzGrade(q,pick){
   else if(q.src==="sj"){ sjGrade(q.id,ok); }
   else if(q.src==="mz"){ mzGrade(q.id,ok); }
   else if(q.src==="gs"){ gsGrade(q.id,ok); }
+  else if(q.src==="ks"){ ksGrade(q.id,ok); }
+  else if(q.src==="ec"){ ecGrade(q.id,ok); }
   else if(q.src==="mk"){ mkGrade(q.id,ok); }
   else { const x=mgQEnsure(q.id); x.pick=pick; mgGrade(q._raw,x); }
   return ok;
@@ -4699,7 +4767,7 @@ function qzHome(main){
      '<button class="qz-btn sm" id="qzLawImp">法律题库 · 载入/更新</button>'+
      '<button class="qz-btn sm" id="qzSjImp">习思想题库 · 载入/更新</button>'+
      '<button class="qz-btn sm" id="qzMzImp">马哲题库 · 载入/更新</button>'+
-     '<button class="qz-btn sm" id="qzGsImp">国省情题库 · 载入/更新</button></div>';
+     '<button class="qz-btn sm" id="qzGsImp">国省情题库 · 载入/更新</button><button class="qz-btn sm" id="qzKsImp">常识题库 · 载入/更新</button><button class="qz-btn sm" id="qzEcImp">经济题库 · 载入/更新</button></div>';
   const ex=qzState().exams;
   if(ex.length){ h+='<div class="qz-lb">最近的模拟卷</div><div class="qz-hist">'+
     ex.slice(-6).reverse().map(e=>'<div class="qz-hrow"><span>'+e.date+'</span><span>'+e.n+' 题</span>'+
@@ -4723,6 +4791,8 @@ function qzHome(main){
   const si=main.querySelector("#qzSjImp"); if(si) si.onclick=sjImport;
   const mi=main.querySelector("#qzMzImp"); if(mi) mi.onclick=mzImport;
   const gi=main.querySelector("#qzGsImp"); if(gi) gi.onclick=gsImport;
+  var _ksi=main.querySelector("#qzKsImp"); if(_ksi) _ksi.onclick=ksImport;
+  var _eci=main.querySelector("#qzEcImp"); if(_eci) _eci.onclick=ecImport;
   const gb=main.querySelector("#qzGo"); if(gb) gb.onclick=()=>{ qz.view="run"; qz.cur=qzPaper().cur||0; render(); };
   const db_=main.querySelector("#qzDrop"); if(db_) db_.onclick=()=>{ if(confirm("放弃这套卷子？已答的记录会保留。")){ qzState().paper=null; save(); render(); } };
 }
@@ -4765,6 +4835,80 @@ function sjImport(){
   };
 }
 
+/* 载入 / 更新经济题库。**只写入 ecBank**，做题记录、错题本、以及日历/背诵库/课程都不受影响。
+   ⚠️ points 必须一起带上 —— 丢了「按知识点选题」和薄弱榜对该科就全废（lawAdopt 当初就是漏了 points）。 */
+async function ecAdopt(data){
+  if(!data||!Array.isArray(data.questions)||!data.questions.length) throw new Error("这个文件里没有题目");
+  var bad=data.questions.filter(function(q){ return !q.id||!q.stem||!q.sec||!q.answer; }).length;
+  if(bad) throw new Error("有 "+bad+" 道题缺 id/题干/题型/答案，没有导入");
+  db.ecBank=data; save();
+  toast("经济题库已载入 "+data.questions.length+" 题 · "+((data.points||[]).length)+" 个知识点 ✓");
+  closeModal(); render();
+}
+function ecImport(){
+  var online=/^https?:/.test(location.protocol);
+  var has=((db.ecBank&&db.ecBank.questions)||[]).length;
+  var h=openModal("载入 / 更新经济题库",
+    '<p class="qz-sub">载入「经济题库.json」（419 题）。<b>只写入题目</b>；你的做题记录、错题本进度、背诵库和课程都不受影响。'+
+    (has?'（当前已有 '+has+' 题）':'')+'</p>'+
+    (online?'<div class="qz-actions" style="margin-bottom:11px"><button class="qz-btn pri" id="qzEcImpNet">📶 从网上载入</button></div>':"")+
+    '<p class="qz-sub">或者自己选文件：</p>'+
+    '<input type="file" id="qzEcImpFile" accept=".json,application/json">'+
+    '<div id="qzEcImpMsg" class="qz-sub" style="margin-top:9px"></div>');
+  var net=h.querySelector("#qzEcImpNet");
+  if(net) net.onclick=async function(){
+    var msg=h.querySelector("#qzEcImpMsg"); msg.textContent="下载中…";
+    try{ var rs=await fetch("./经济题库.json",{cache:"no-store"});
+      if(!rs.ok) throw new Error("HTTP "+rs.status);
+      await ecAdopt(await rs.json());
+    }catch(err){ msg.textContent="没能从网上取到（"+err.message+"）。请用下面的「选择文件」。"; }
+  };
+  h.querySelector("#qzEcImpFile").onchange=function(e){
+    var f=e.target.files&&e.target.files[0]; if(!f) return;
+    var msg=h.querySelector("#qzEcImpMsg"); msg.textContent="读取中…";
+    var rd=new FileReader();
+    rd.onload=async function(){ try{ await ecAdopt(JSON.parse(rd.result)); }
+      catch(err){ msg.textContent="导入失败："+err.message; } };
+    rd.readAsText(f);
+  };
+}
+/* 载入 / 更新常识题库。**只写入 ksBank**，做题记录、错题本、以及日历/背诵库/课程都不受影响。
+   ⚠️ points 必须一起带上 —— 丢了「按知识点选题」和薄弱榜对该科就全废（lawAdopt 当初就是漏了 points）。 */
+async function ksAdopt(data){
+  if(!data||!Array.isArray(data.questions)||!data.questions.length) throw new Error("这个文件里没有题目");
+  var bad=data.questions.filter(function(q){ return !q.id||!q.stem||!q.sec||!q.answer; }).length;
+  if(bad) throw new Error("有 "+bad+" 道题缺 id/题干/题型/答案，没有导入");
+  db.ksBank=data; save();
+  toast("常识题库已载入 "+data.questions.length+" 题 · "+((data.points||[]).length)+" 个知识点 ✓");
+  closeModal(); render();
+}
+function ksImport(){
+  var online=/^https?:/.test(location.protocol);
+  var has=((db.ksBank&&db.ksBank.questions)||[]).length;
+  var h=openModal("载入 / 更新常识题库",
+    '<p class="qz-sub">载入「常识题库.json」（608 题）。<b>只写入题目</b>；你的做题记录、错题本进度、背诵库和课程都不受影响。'+
+    (has?'（当前已有 '+has+' 题）':'')+'</p>'+
+    (online?'<div class="qz-actions" style="margin-bottom:11px"><button class="qz-btn pri" id="qzKsImpNet">📶 从网上载入</button></div>':"")+
+    '<p class="qz-sub">或者自己选文件：</p>'+
+    '<input type="file" id="qzKsImpFile" accept=".json,application/json">'+
+    '<div id="qzKsImpMsg" class="qz-sub" style="margin-top:9px"></div>');
+  var net=h.querySelector("#qzKsImpNet");
+  if(net) net.onclick=async function(){
+    var msg=h.querySelector("#qzKsImpMsg"); msg.textContent="下载中…";
+    try{ var rs=await fetch("./常识题库.json",{cache:"no-store"});
+      if(!rs.ok) throw new Error("HTTP "+rs.status);
+      await ksAdopt(await rs.json());
+    }catch(err){ msg.textContent="没能从网上取到（"+err.message+"）。请用下面的「选择文件」。"; }
+  };
+  h.querySelector("#qzKsImpFile").onchange=function(e){
+    var f=e.target.files&&e.target.files[0]; if(!f) return;
+    var msg=h.querySelector("#qzKsImpMsg"); msg.textContent="读取中…";
+    var rd=new FileReader();
+    rd.onload=async function(){ try{ await ksAdopt(JSON.parse(rd.result)); }
+      catch(err){ msg.textContent="导入失败："+err.message; } };
+    rd.readAsText(f);
+  };
+}
 /* 载入 / 更新国省情题库。**只写入 gsBank**，做题记录、错题本、以及日历/背诵库/课程都不受影响。
    ⚠️ points 必须一起带上 —— 那是按她自己两份笔记的标题划分的知识点，
       丢了「按知识点选题」和薄弱榜对国省情就全废（lawAdopt 当初就是漏了 points）。 */
@@ -5777,7 +5921,7 @@ async function forceUpdateApp(){
 function mountSettings(main){
   const s=db.settings;
   let h='<h2 class="mod-h">设置</h2><div class="mod-sub">考试时间、评分与掌握度、间隔参数、数据同步、备份、扩展模块。改动即时保存。</div>';
-  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-08-26-g</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
+  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-08-31-a</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
      '<button class="btn" onclick="forceUpdateApp()">🔄 强制更新程序</button></div>';
   h+='<div class="card"><h4>考试时间</h4><div class="frow"><div class="field"><label>名称</label><input type="text" id="setExamLabel" value="'+esc(s.examLabel||"考试")+'"></div><div class="field"><label>日期</label><input type="date" id="setExamDate" value="'+(s.examDate||"")+'"></div><div class="field"><label>备考起点(可选)</label><input type="date" id="setExamStart" value="'+(s.examStart||"")+'"><div class="desc">留空＝最早的一条数据</div></div></div></div>';
   h+='<div class="card"><h4>掌握度算法</h4><div class="radios" id="mModel">'+
