@@ -859,6 +859,16 @@
   .qz-qa-foot{padding:6px 14px 8px;background:var(--card);border-top:1px dashed rgba(123,94,167,.24);text-align:right}
   .qz-qadel{border:none;background:none;color:var(--text3);font-size:12.5px;cursor:pointer;padding:3px 0}
   .qz-qadel:active{color:var(--red)}
+  .qz-qa-foot{display:flex;justify-content:flex-end;gap:16px;align-items:center}
+  .qz-qatog{border:none;background:none;color:var(--tint);font-size:12.5px;font-weight:700;cursor:pointer;padding:3px 0}
+  .qz-qatog.on{color:var(--text3);font-weight:600}
+  .qz-qa.done{border-color:rgba(52,199,89,.42)}
+  .qz-qa.done .qz-qa-q{background:rgba(52,199,89,.10);border-bottom-color:rgba(52,199,89,.24)}
+  .qz-qa-ok,.qz-qa-no{display:inline-block;margin-left:7px;padding:1px 7px;border-radius:999px;
+    font-size:10.5px;font-weight:700;letter-spacing:0;vertical-align:1px}
+  .qz-qa-ok{background:rgba(52,199,89,.18);color:var(--green)}
+  .qz-qa-no{background:rgba(255,159,10,.18);color:var(--orange)}
+  .qz-lb-sub{font-weight:400;font-size:11.5px;color:var(--text3);letter-spacing:0}
   .qz-hls{display:flex;flex-direction:column;gap:9px;margin-top:12px}
   .qz-hlrow{position:relative;background:var(--card);border:1px solid var(--sep);border-radius:11px;padding:3px 0}
   .qz-hlmain{display:block;width:100%;text-align:left;border:none;background:none;color:var(--text);
@@ -4160,7 +4170,7 @@ const QZ_SECNAME={"判断题":"判断题","单选题":"单项选择题","多选�
 const QZ_REAL={"单选题":60,"多选题":10,"判断题":20};   // 各题型题数
 const QZ_PTS ={"单选题":0.8,"多选题":1.2,"判断题":0.5}; // 各题型分值
 const QZ_DEF_MIN=120;                                 // 模拟考试默认时长(分钟)
-let qz={ view:"home", pick:{}, kps:{}, orgs:{}, stars:{}, kpg:{}, kpSort:"weak", kpQ:"", scope:"全部", nums:null, take:"real", mode:"practice", mins:QZ_DEF_MIN,
+let qz={ view:"home", pick:{}, kps:{}, orgs:{}, stars:{}, kpg:{}, kpSort:"weak", kpQ:"", scopes:{}, nums:null, take:"real", mode:"practice", mins:QZ_DEF_MIN,
          cur:0, showExp:false, cardOpen:false, showHist:true };
 let qzTimer=null;
 let qzShownCur=-1;   /* 答题卡里当前正显示的题号，用来判断这次重绘有没有换题 */
@@ -4272,14 +4282,22 @@ function gsGrade(id,ok){ const x=gsQEnsure(id); x.n++; x.last=today();
   save(); }
 function qzBankQa(q){ const b={law:db.lawBank,mg:db.mgBank,sj:db.sjBank,mz:db.mzBank,gs:db.gsBank,ec:db.ecBank,ks:db.ksBank}[q.src];
   return (b&&b.qa&&b.qa[q.id])||null; }
-function qzQaDel(q,set){
-  if(q.src==="mg"){ const s=mgS(); if(!s.qaDel) s.qaDel={};
-    if(set===undefined) return !!s.qaDel[q.id];
-    if(set) s.qaDel[q.id]=1; else delete s.qaDel[q.id]; save(); return set; }
-  if(set===undefined){ const x=(q.src==="law"?lawQSt(q.id):q.src==="sj"?sjQSt(q.id):q.src==="gs"?gsQSt(q.id):q.src==="ec"?ecQSt(q.id):q.src==="ks"?ksQSt(q.id):mzQSt(q.id)); return !!(x&&x.qaDel); }
-  const x=(q.src==="law"?lawQEnsure(q.id):q.src==="sj"?sjQEnsure(q.id):q.src==="gs"?gsQEnsure(q.id):q.src==="ec"?ecQEnsure(q.id):q.src==="ks"?ksQEnsure(q.id):mzQEnsure(q.id));
-  if(set) x.qaDel=1; else delete x.qaDel; save(); return set;
+function qzQaFlag(q,f,set){
+  /* 问答卡片的两个标记都记在她自己的 state 里，公开题库不动：
+       qaDel = 删除墓碑　qaOk = 已解决
+     分派规则与原来的 qzQaDel 完全一致（mg 单独一格，其余各存各的，认不出的兜到 mz），
+     只是把写死的字段名换成参数，好让「已解决」复用同一套。 */
+  if(q.src==="mg"){ const s=mgS(); const m=s[f]||(s[f]={});
+    if(set===undefined) return !!m[q.id];
+    if(set) m[q.id]=1; else delete m[q.id]; save(); return set; }
+  const ST={law:lawQSt,sj:sjQSt,gs:gsQSt,ec:ecQSt,ks:ksQSt};
+  const EN={law:lawQEnsure,sj:sjQEnsure,gs:gsQEnsure,ec:ecQEnsure,ks:ksQEnsure};
+  if(set===undefined){ const x=(ST[q.src]||mzQSt)(q.id); return !!(x&&x[f]); }
+  const x=(EN[q.src]||mzQEnsure)(q.id); if(set) x[f]=1; else delete x[f]; save(); return set;
 }
+function qzQaDel(q,set){ return qzQaFlag(q,"qaDel",set); }
+/* 「已解决」——开关式，可以来回切，和删除是两回事 */
+function qzQaOk(q,set){ return qzQaFlag(q,"qaOk",set); }
 function qzQa(q){
   if(qzQaDel(q)) return null;
   const bq=qzBankQa(q), my=qzNoteGet(q), ans=qzAnsGet(q);
@@ -4288,13 +4306,16 @@ function qzQa(q){
   return {q:question,a:answer};
 }
 function qzQaCard(q,withDel){ const _qa=qzQa(q); if(!_qa) return "";
-  return '<div class="qz-qa">'+
-    (_qa.q?'<div class="qz-qa-q"><i>🙋 我的疑问</i>'+qzHlWrap(q,_qa.q)+'</div>':"")+
+  const _ok=qzQaOk(q);
+  return '<div class="qz-qa'+(_ok?" done":"")+'">'+
+    (_qa.q?'<div class="qz-qa-q"><i>🙋 我的疑问'+(_ok?'<b class="qz-qa-ok">已解决</b>':'<b class="qz-qa-no">未解决</b>')+'</i>'+qzHlWrap(q,_qa.q)+'</div>':"")+
     (_qa.a?'<div class="qz-qa-a"><i>💡 解答'+(_qa.q?"":"（补充讲解）")+'</i>'+qzHlWrap(q,_qa.a)+'</div>':"")+
-    (withDel?'<div class="qz-qa-foot"><button class="qz-qadel" id="qzQaDel">🗑 已解决，删除这条问答</button></div>':"")+
+    (withDel?'<div class="qz-qa-foot">'+
+      '<button class="qz-qatog'+(_ok?" on":"")+'" id="qzQaOk">'+(_ok?"↩︎ 标回未解决":"✅ 标为已解决")+'</button>'+
+      '<button class="qz-qadel" id="qzQaDel">🗑 删除这条问答</button></div>':"")+
     '</div>'; }
 function qzQaRemove(q){
-  if(!confirm("删除这道题的提问与解答？\n（只删这条问答的显示，题目、解析和做题记录都不受影响）")) return;
+  if(!confirm("删除这道题的提问与解答？\n（只是不再显示这条问答；题目、解析和做题记录都不受影响。\n如果只是想标记已经弄懂了，用旁边的「✅ 标为已解决」，别删。）")) return;
   qzNoteSet(q,""); qzAnsSet(q,""); qzQaDel(q,true); toast("已删除"); render();
 }
 /* --- 标红：存 qzState.hls = [{t,src,id,txt,d}] --- */
@@ -4473,7 +4494,7 @@ function qzNoteSet(q,t){ t=String(t||"");
   else if(q.src==="ks"){ const x=ksQEnsure(q.id); if(t) x.note=t; else delete x.note; }
   else if(q.src==="ec"){ const x=ecQEnsure(q.id); if(t) x.note=t; else delete x.note; }
   else { const s2=mgS(); if(!s2.note) s2.note={}; if(t) s2.note[q.id]=t; else delete s2.note[q.id]; }
-  if(t) qzQaDel(q,false);   /* 重新提问＝要重新看到问答卡片 */
+  if(t){ qzQaDel(q,false); qzQaOk(q,false); }   /* 重新提问＝重新看到问答卡片，且回到未解决 */
   save(); }
 /* Claude 对这条备注的解答。跟备注放在一起，存她自己的状态里，不写进题库（题库要公开发布）。 */
 function qzAnsGet(q){ if(q.src==="law"){ const x=lawQSt(q.id); return (x&&x.ans)||""; }
@@ -4535,17 +4556,22 @@ function qzTree(){ const t={};
     g.n++; const s=g.subs[q.subject]||(g.subs[q.subject]={name:q.subject,n:0,done:0,wrong:0});
     s.n++; const st=qzSt(q); if(st){ s.done++; if(st.inBook) s.wrong++; } });
   return t; }
-function qzScopeOk(q){
-  if(qz.scope==="书上错的"){ const x=(q.src==="law")?lawQSt(q.id):null; return !!(x&&x.book); }
-  if(qz.scope==="问过问题") return qzAsked(q);
+function qzScope1(q,scope){
+  if(scope==="书上错的"){ const x=(q.src==="law")?lawQSt(q.id):null; return !!(x&&x.book); }
+  if(scope==="问过问题") return qzAsked(q);
+  if(scope==="问过·未解决") return qzAsked(q)&&!qzQaOk(q);
+  if(scope==="问过·已解决") return qzAsked(q)&&!!qzQaOk(q);
   const st=qzSt(q);
-  switch(qz.scope){
+  switch(scope){
     case "未做":   return !st;
     case "做错过": return !!st&&st.inBook;
     case "模糊":   return !!st&&st.fuzzy;
     case "原书标记": return !!q.mark;
     default: return true;
   } }
+/* 范围可以多选：选中的之间是「或」，一个都不选＝全部。
+   （以前只能选一个，她要的是能同时勾「未做」和「做错过」这类组合） */
+function qzScopeOk(q){ const ks=Object.keys(qz.scopes||{}); return !ks.length||ks.some(s=>qzScope1(q,s)); }
 function qzPool(){ const sel=qz.pick, kp=qz.kps, anyKp=Object.keys(kp).length;
   const gs=qzGrpKpSet();                     /* 选了大类就只在大类里出题 */
   return qzAll().filter(q=>sel[q.subject]&&qzScopeOk(q)&&
@@ -4785,7 +4811,7 @@ function qzHome(main){
   main.querySelectorAll("[data-wk]").forEach(b=>b.onclick=()=>{
     qz.pick={}; qz.pick[b.dataset.wksub]=true;
     qz.kps={}; qz.kps[b.dataset.wk]=true; qz.kpg={};
-    qz.scope="全部"; qz.take="all"; qz.view="build"; render(); });
+    qz.scopes={}; qz.take="all"; qz.view="build"; render(); });
   main.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
   const li=main.querySelector("#qzLawImp"); if(li) li.onclick=lawImport;
   const si=main.querySelector("#qzSjImp"); if(si) si.onclick=sjImport;
@@ -5252,8 +5278,10 @@ function qzBuilder(main){
     h+='</div>';
   }
   /* ③ 范围 */
-  h+='<div class="qz-sec"><div class="qz-lb">③ 范围</div><div class="qz-row">'+
-     ["全部","未做","做错过","书上错的","问过问题","模糊","原书标记"].map(v=>'<button class="qz-chip'+(qz.scope===v?" on":"")+'" data-scope="'+v+'">'+v+'</button>').join("")+'</div></div>';
+  h+='<div class="qz-sec"><div class="qz-lb">③ 范围 <span class="qz-lb-sub">可多选，选中的之间是「或」；都不选＝全部</span></div><div class="qz-row">'+
+     '<button class="qz-chip'+(Object.keys(qz.scopes).length?"":" on")+'" data-scope="全部">全部</button>'+
+     ["未做","做错过","书上错的","问过问题","问过·未解决","问过·已解决","模糊","原书标记"]
+       .map(v=>'<button class="qz-chip'+(qz.scopes[v]?" on":"")+'" data-scope="'+v+'">'+v+'</button>').join("")+'</div></div>';
   /* ③ 出题方式 */
   const takes=[["real","按真题（单选60·多选10·判断20，70分）"],["custom","自定题数"],["all","全部题目（选中范围内的题全出）"]];
   h+='<div class="qz-sec"><div class="qz-lb">④ 出多少题</div><div class="qz-row">'+
@@ -5299,7 +5327,9 @@ function qzBuilder(main){
   const kqi=main.querySelector("#qzKpQ");
   if(kqi){ let kt=null; kqi.oninput=()=>{ clearTimeout(kt); kt=setTimeout(()=>{ qz.kpQ=kqi.value; render();
     const el=document.getElementById("qzKpQ"); if(el){ el.focus(); el.setSelectionRange(el.value.length,el.value.length); } },260); }; }
-  main.querySelectorAll("[data-scope]").forEach(b=>b.onclick=()=>{ qz.scope=b.dataset.scope; render(); });
+  main.querySelectorAll("[data-scope]").forEach(b=>b.onclick=()=>{ const v=b.dataset.scope;
+    if(v==="全部") qz.scopes={}; else if(qz.scopes[v]) delete qz.scopes[v]; else qz.scopes[v]=true;
+    render(); });
   main.querySelectorAll("[data-take]").forEach(b=>b.onclick=()=>{
     qz.take=b.dataset.take; if(qz.take==="real") qz.nums=Object.assign({},QZ_REAL); render(); });
   main.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{ qz.mode=b.dataset.mode; render(); });
@@ -5309,7 +5339,7 @@ function qzBuilder(main){
   main.querySelector("#qzStart").onclick=()=>{
     const p=qzBuild(); if(!p){ toast("这个筛选下没有题"); return; }
     const st=qzState(); st.paper=p;
-    st.last={pick:Object.assign({},qz.pick),kps:Object.assign({},qz.kps),orgs:Object.assign({},qz.orgs),stars:Object.assign({},qz.stars),scope:qz.scope,nums:Object.assign({},qz.nums),take:qz.take,mode:qz.mode,mins:qz.mins,showHist:qz.showHist};
+    st.last={pick:Object.assign({},qz.pick),kps:Object.assign({},qz.kps),orgs:Object.assign({},qz.orgs),stars:Object.assign({},qz.stars),scopes:Object.assign({},qz.scopes),nums:Object.assign({},qz.nums),take:qz.take,mode:qz.mode,mins:qz.mins,showHist:qz.showHist};
     qz.cur=0; qz.view="run"; save(); render(); };
 }
 
@@ -5454,6 +5484,8 @@ function qzRun(main){
   if(_ex) _ex.onclick=(e)=>{ const sp=e.target.closest(".qz-hl");
     if(sp&&confirm("取消这条标红？")) qzHlRemove(sp.dataset.hl); };
   const _qd=main.querySelector("#qzQaDel"); if(_qd) _qd.onclick=()=>qzQaRemove(q);
+  const _qk=main.querySelector("#qzQaOk"); if(_qk) _qk.onclick=()=>{
+    const v=!qzQaOk(q); qzQaOk(q,v); toast(v?"已标为解决 ✅":"已标回未解决"); render(); };
   main.querySelector("#qzMark").onclick=()=>{ if(p.marks[key]) delete p.marks[key]; else p.marks[key]=1; rerender(); };
   const cb=main.querySelector("#qzCardBtn"); if(cb) cb.onclick=()=>{ qz.cardOpen=!qz.cardOpen; keepSheet(render); };
   main.querySelectorAll(".qz-cell").forEach(c=>c.onclick=()=>{ qz.cur=+c.dataset.i; qz.cardOpen=false; rerender(); });
@@ -5921,7 +5953,7 @@ async function forceUpdateApp(){
 function mountSettings(main){
   const s=db.settings;
   let h='<h2 class="mod-h">设置</h2><div class="mod-sub">考试时间、评分与掌握度、间隔参数、数据同步、备份、扩展模块。改动即时保存。</div>';
-  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-08-31-c</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
+  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-08-31-d</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
      '<button class="btn" onclick="forceUpdateApp()">🔄 强制更新程序</button></div>';
   h+='<div class="card"><h4>考试时间</h4><div class="frow"><div class="field"><label>名称</label><input type="text" id="setExamLabel" value="'+esc(s.examLabel||"考试")+'"></div><div class="field"><label>日期</label><input type="date" id="setExamDate" value="'+(s.examDate||"")+'"></div><div class="field"><label>备考起点(可选)</label><input type="date" id="setExamStart" value="'+(s.examStart||"")+'"><div class="desc">留空＝最早的一条数据</div></div></div></div>';
   h+='<div class="card"><h4>掌握度算法</h4><div class="radios" id="mModel">'+
