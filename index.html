@@ -1055,6 +1055,34 @@
     padding:3px 10px;font-size:12px;font-family:inherit;flex:none}
   .wr-del:hover{border-color:var(--red);color:var(--red)}
   @media(max-width:600px){ .wr-gh{font-size:14px} .wr-delta{display:none} }
+  /* --- 训练升级（2026-09-02）：材料分节折叠 / 宽屏双栏 / 批改 --- */
+  .wr-mbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+  .wr-mall{border:1px solid var(--sep2);background:none;color:var(--text2);border-radius:7px;
+    padding:3px 10px;font-size:12px;font-family:inherit;cursor:pointer;flex:none}
+  .wr-secs{display:flex;flex-direction:column;gap:8px}
+  .wr-sc{border:1px solid var(--sep2);border-radius:9px;overflow:hidden;background:var(--card)}
+  .wr-sch{width:100%;display:flex;align-items:center;gap:8px;padding:9px 12px;border:none;
+    background:var(--fill);color:var(--text);font-family:inherit;font-size:13.5px;font-weight:700;
+    text-align:left;cursor:pointer}
+  .wr-sch i{font-style:normal;font-size:11px;color:var(--text3);transition:transform .15s}
+  .wr-sc:not(.open) .wr-sch i{transform:rotate(-90deg)}
+  .wr-scb{padding:10px 13px;font-size:14px;line-height:1.9;white-space:normal}
+  .wr-sc:not(.open) .wr-scb{display:none}
+  .wr-goal{font-size:11.5px;color:var(--text3)}
+  .wr-meta .o{color:var(--orange)}
+  .wr-gh{margin:16px 0 7px;font-size:15px;font-weight:800}
+  .wr-gh i{font-style:normal;font-weight:500;font-size:12px;color:var(--text3);margin-left:6px}
+  .wr-tg.fb{background:rgba(123,94,167,.16);color:#7b5ea7}
+  .wr-fb{border:1px solid var(--sep2);border-radius:9px;margin:8px 0;overflow:hidden}
+  .wr-fbh{display:flex;justify-content:space-between;align-items:center;gap:10px;
+    padding:6px 11px;background:var(--fill);font-size:12px;color:var(--text2)}
+  .wr-fbt{padding:10px 13px;font-size:14px;line-height:1.9}
+  @media(min-width:1060px){
+    .wr-wrap:not(.done){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+      gap:18px;align-items:start}
+    .wr-wrap:not(.done) .wr-lcol{position:sticky;top:8px;max-height:calc(100vh - 90px);overflow:auto}
+    .wr-wrap:not(.done) .wr-ta{min-height:56vh}
+  }
   /* ===== 10.11 公文写作 CSS END ===== */
 </style>
 
@@ -5695,16 +5723,99 @@ function wrImport(){
 }
 
 /* ---------- 练笔列表 ---------- */
+/* 把材料按【小标题】切成小节，便于逐节折叠。识别两类标题行：
+   ①以【…】开头且整行不长（【方法卡】【第一组】分论点：… 【材料一】）
+   ②「材料一 / 资料2」这种独占一行的短行
+   一条都不匹配就整块当成一节，行为和以前一样。 */
+function wrSecs(mat){
+  const lines=String(mat||"").split("\n");
+  const CN={一:1,二:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9,十:10};
+  const secs=[]; let cur=null, expect=0;
+  const push=(h,firstLine)=>{ cur={h:h,body:firstLine==null?[]:[firstLine]}; secs.push(cur); };
+  for(const l of lines){
+    const t=l.trim();
+    if(/^[—－\-_=]{6,}$/.test(t)) continue;                 /* w9 里的分隔线，不显示 */
+    /* ① 【方法卡】【第一组】【材料一】这类 */
+    if(/^【[^】]{1,16}】/.test(t)&&t.length<=30){ push(t); continue; }
+    /* ② 「材料一 / 资料2」独占一行 */
+    let m=t.match(/^(?:材料|资料)\s*([一二三四五六七八九十]|[0-9]{1,2})[、.．:：]?$/);
+    if(m){ expect=CN[m[1]]||+m[1]||0; push(t); continue; }
+    /* ③ 段首直接顶着序号：「2.治蜀兴川…」——只在序号正好接上一节时才算分节，
+          否则正文里以数字开头的句子会被误切。 */
+    m=t.match(/^([0-9]{1,2})\s*[.．、]\s*\S/);
+    if(m&&expect&&+m[1]===expect+1){ expect=+m[1]; push("材料 "+m[1], l); continue; }
+    if(!cur) push("");
+    cur.body.push(l);
+  }
+  return secs.filter(s=>s.h||s.body.join("").trim());
+}
+/* 材料区 HTML。折叠靠 class 切换，不重绘，所以草稿框不会被动到。 */
+function wrMatHtml(p){
+  const secs=wrSecs(p.material);
+  if(secs.length<=1) return '<div class="wr-mat">'+wrP(p.material)+'</div>';
+  return '<div class="wr-mbar"><span class="qz-sub">材料分 '+secs.length+' 节，点标题可收起</span>'+
+    '<button class="wr-mall" id="wrMAll">全部收起</button></div>'+
+    '<div class="wr-secs" id="wrSecs">'+secs.map((s,i)=>
+      '<div class="wr-sc open"><button class="wr-sch" data-sc="'+i+'"><i>▾</i><span>'+
+      esc(s.h||("材料 "+(i+1)))+'</span></button><div class="wr-scb">'+wrP(s.body.join("\n").trim())+'</div></div>'
+    ).join("")+'</div>';
+}
+/* 析句类的作答模板：按材料里的【第N组】生成三行一组 */
+function wrTplText(p){
+  const g=String(p.material||"").match(/【第[一二三四五六七八九十0-9]{1,3}组】/g);
+  if(!g||!g.length) return "";
+  return g.map(x=>x.replace(/[【】]/g,"")+"\n第一问答案：\n第二问答案：\n拼装句：").join("\n\n")+"\n";
+}
+/* 大作文分两段给目标时间：审题 15 ＋ 成文 (mins-15) */
+function wrPlan(p){ return (+p.mins>=90)?{a:15,b:+p.mins-15}:null; }
+
+/* ---- 批改意见：只存她自己的 state，不进公开的 公文写作.json ---- */
+function wrFbAll(){ const s=wrState(); return s.fb||(s.fb={}); }
+function wrFb(pid){ const a=wrFbAll()[pid]; return Array.isArray(a)?a:[]; }
+function wrFbAdd(pid){
+  const h=openModal("粘贴批改意见",
+    '<p class="qz-sub">把写作会话给你的批改整段贴进来，之后在这道练笔里随时能翻。<br>'+
+    '<b>只存在你自己的数据里</b>（随 state 云同步），不会写进公开发布的写作资料文件。</p>'+
+    '<textarea id="wrFbTa" class="lw-ta" placeholder="批改意见（含分数、逐条意见）…"></textarea>'+
+    '<div class="qz-actions"><button class="qz-btn pri" id="wrFbOk">保存</button></div>');
+  h.querySelector("#wrFbOk").onclick=()=>{
+    const v=h.querySelector("#wrFbTa").value.trim();
+    if(!v){ toast("还没贴内容"); return; }
+    wrFbAll()[pid]=wrFb(pid).concat([{d:today(),t:v}]);
+    save(); closeModal(); toast("已存下这次批改"); render(); };
+}
+function wrFbDel(pid,i){
+  if(!confirm("删掉这条批改意见？")) return;
+  const a=wrFb(pid).slice(); a.splice(i,1); wrFbAll()[pid]=a; save(); render();
+}
+function wrFbHtml(pid){
+  const a=wrFb(pid);
+  return '<div class="wr-sec"><b>📝 Claude 的批改</b>'+
+    (a.length?a.map((x,i)=>'<div class="wr-fb"><div class="wr-fbh"><span>'+esc(x.d)+'</span>'+
+      '<button class="wr-del" data-fbd="'+i+'">删除</button></div><div class="wr-fbt">'+wrP(x.t)+'</div></div>').join("")
+      :'<div class="qz-sub" style="padding:6px 0">还没有批改。把作文发给写作会话，拿到意见后点下面的按钮贴进来。</div>')+
+    '<div class="qz-actions"><button class="qz-btn sm" id="wrFbNew">📥 粘贴批改意见</button></div></div>';
+}
 function wrList(host){
   const ps=wrPapers();
-  let h='<p class="qz-sub" style="margin:2px 0 12px">材料＋题目在上，写完才出提纲和范文。写的过程自动存草稿，中途走开也不会丢。</p><div class="wr-plist">';
-  ps.forEach(p=>{ const d=wrState().drafts[p.id], dn=(wrState().done[p.id]||[]).length;
-    const n=d?wrCount(d.text):0;
-    let tag=dn?'<span class="wr-tg ok">已完成 '+dn+' 次</span>':(n?'<span class="wr-tg go">草稿 '+n+' 字</span>':'<span class="wr-tg">未开始</span>');
-    h+='<button class="wr-prow" data-p="'+esc(p.id)+'"><div class="wr-pt">'+esc(p.name)+'</div>'+
-       '<div class="wr-pm"><span class="wr-type">'+esc(p.type)+'</span><span>'+esc(p.cat)+'</span>'+
-       '<span>建议 '+p.mins+' 分钟</span><span>'+p.minWords+'—'+p.maxWords+' 字</span>'+tag+'</div></button>'; });
-  h+='</div><div class="qz-actions"><button class="qz-btn sm" id="wrRe">🔄 更新写作资料</button></div>';
+  let h='<p class="qz-sub" style="margin:2px 0 12px">材料＋题目在上，写完才出提纲和范文。写的过程自动存草稿，中途走开也不会丢。</p>';
+  /* 按 cat 分组，组内保持原顺序 */
+  const groups=[]; const gi={};
+  ps.forEach(p=>{ const c=p.cat||"其它"; if(gi[c]===undefined){ gi[c]=groups.length; groups.push({c,list:[]}); } groups[gi[c]].list.push(p); });
+  groups.forEach(g=>{
+    h+='<div class="wr-gh">'+esc(g.c)+' <i>'+g.list.length+' 道</i></div><div class="wr-plist">';
+    g.list.forEach(p=>{ const d=wrState().drafts[p.id], dn=(wrState().done[p.id]||[]).length;
+      const n=d?wrCount(d.text):0, fb=wrFb(p.id).length;
+      let tag=dn?'<span class="wr-tg ok">已完成 '+dn+' 次</span>':(n?'<span class="wr-tg go">草稿 '+n+' 字</span>':'<span class="wr-tg">未开始</span>');
+      if(fb) tag+='<span class="wr-tg fb">批改 '+fb+'</span>';
+      const pl=wrPlan(p);
+      h+='<button class="wr-prow" data-p="'+esc(p.id)+'"><div class="wr-pt">'+esc(p.name)+'</div>'+
+         '<div class="wr-pm"><span class="wr-type">'+esc(p.type)+'</span>'+
+         '<span>'+(pl?'限时 '+p.mins+' 分（审题'+pl.a+'＋成文'+pl.b+'）':'建议 '+p.mins+' 分钟')+'</span>'+
+         '<span>'+p.minWords+'—'+p.maxWords+' 字</span>'+tag+'</div></button>'; });
+    h+='</div>';
+  });
+  h+='<div class="qz-actions"><button class="qz-btn sm" id="wrRe">🔄 更新写作资料</button></div>';
   host.innerHTML=h;
   host.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{ wr.pid=b.dataset.p; wr.stage="w"; wr.view="write"; render(); });
   host.querySelector("#wrRe").onclick=wrImport;
@@ -5716,20 +5827,28 @@ function wrWrite(main){
   const d=wrDraft(p.id);
   if(wr.stage==="w"&&!d.runAt) d.runAt=Date.now();
   if(wr.stage!=="w") wrStop();
-  const n=wrCount(d.text), okLen=(n>=p.minWords&&n<=p.maxWords);
+  /* 析句类预填作答模板：只进输入框，不落盘 —— 她一动手 oninput 才存 */
+  const tpl=(!d.text&&p.cat==="析句")?wrTplText(p):"";
+  const shown=d.text||tpl;
+  const n=wrCount(shown), okLen=(n>=p.minWords&&n<=p.maxWords);
+  const pl=wrPlan(p), over=wrElapsed(d)>p.mins*60000;
   let h='<div class="wr-top"><button class="wr-x" id="wrExit">‹ 返回</button>'+
         '<div class="wr-tt">'+esc(p.name)+'</div>'+
-        '<div class="wr-meta"><span id="wrClk">'+wrMs(wrElapsed(d))+'</span>'+
+        '<div class="wr-meta"><span id="wrClk" class="'+(over?"r":"")+'">'+wrMs(wrElapsed(d))+'</span>'+
+        '<span class="wr-goal">/ 目标 '+p.mins+' 分</span>'+
         '<span class="'+(okLen?"g":(n>p.maxWords?"r":""))+'" id="wrCnt">'+n+' 字</span></div></div>';
-  /* 题面 */
-  h+='<div class="wr-q"><div class="wr-mat">'+wrP(p.material)+'</div>'+
+  h+='<div class="wr-wrap'+(wr.stage==="w"?"":" done")+'"><div class="wr-lcol">';
+  /* 题面：材料分节可折叠 */
+  h+='<div class="wr-q">'+wrMatHtml(p)+
      '<div class="wr-task"><b>【作答要求】</b><br>'+wrP(p.task)+
-     '<ol class="wr-req">'+p.req.map(r=>"<li>"+esc(r)+"</li>").join("")+'</ol></div></div>';
+     '<ol class="wr-req">'+p.req.map(r=>"<li>"+esc(r)+"</li>").join("")+'</ol></div></div></div><div class="wr-rcol">';
   if(wr.stage==="w"){
-    h+='<div class="wr-bar"><span class="qz-sub">要求 '+p.minWords+'—'+p.maxWords+' 字 · 建议 '+p.mins+' 分钟</span>'+
+    h+='<div class="wr-bar"><span class="qz-sub">要求 '+p.minWords+'—'+p.maxWords+' 字 · '+
+       (pl?'限时 '+p.mins+' 分钟（审题 '+pl.a+' ＋ 成文 '+pl.b+'）':'建议 '+p.mins+' 分钟')+'</span>'+
        '<button class="qz-btn sm" id="wrPeek">'+(d.peek?"审题要点（已看）":"💡 卡住了？看审题要点")+'</button></div>';
     if(d.peek) h+='<div class="wr-tips"><b>审题要点</b><ul>'+p.tips.map(t=>"<li>"+esc(t)+"</li>").join("")+'</ul></div>';
-    h+='<textarea class="wr-ta" id="wrTa" placeholder="在这里作答……（自动保存，中途离开不会丢）">'+esc(d.text)+'</textarea>';
+    if(tpl) h+='<div class="qz-sub" style="margin:0 0 6px">已按三组预填作答模板，直接在每行后面写就行。</div>';
+    h+='<textarea class="wr-ta" id="wrTa" placeholder="在这里作答……（自动保存，中途离开不会丢）">'+esc(shown)+'</textarea>';
     h+='<div class="wr-bar"><span class="qz-sub" id="wrSv">'+(d.savedAt?"已保存 "+d.savedAt:"　")+'</span>'+
        '<div class="wr-acts"><button class="qz-btn sm" id="wrClr">清空重写</button>'+
        '<button class="qz-btn pri" id="wrFin">我写完了 · 看提纲和范文</button></div></div>';
@@ -5747,12 +5866,19 @@ function wrWrite(main){
        p.checks.map((c,i)=>'<label class="wr-ck'+(cs[i]?" on":"")+'"><input type="checkbox" data-c="'+i+'"'+(cs[i]?" checked":"")+'>'+
        '<span><b>'+esc(c.t)+'</b><i>'+esc(c.d)+'</i></span></label>').join("")+'</div>'+
        '<div class="wr-score" id="wrSc">做到 '+cs.filter(Boolean).length+' / '+p.checks.length+' 条</div></div>';
+    h+=wrFbHtml(p.id);
     h+='<div class="wr-acts big"><button class="qz-btn" id="wrEdit">‹ 回去改</button>'+
        '<button class="qz-btn" id="wrOne">📤 发给 Claude 批改</button>'+
        '<button class="qz-btn pri" id="wrSave">存入我的习作</button></div>';
   }
+  h+='</div></div>';
   main.innerHTML=h;
   main.querySelector("#wrExit").onclick=()=>{ wrStop(); save(); wr.view="home"; render(); };
+  /* 材料折叠：只切 class，不重绘，草稿框原样不动 */
+  main.querySelectorAll("[data-sc]").forEach(b=>b.onclick=()=>b.closest(".wr-sc").classList.toggle("open"));
+  const ma=main.querySelector("#wrMAll");
+  if(ma) ma.onclick=()=>{ const secs=main.querySelectorAll(".wr-sc"); const anyOpen=[...secs].some(s=>s.classList.contains("open"));
+    secs.forEach(s=>s.classList.toggle("open",!anyOpen)); ma.textContent=anyOpen?"全部展开":"全部收起"; };
   if(wr.stage==="w"){
     const ta=main.querySelector("#wrTa"), sv=main.querySelector("#wrSv"), cnt=main.querySelector("#wrCnt");
     let t=null;
@@ -5761,17 +5887,20 @@ function wrWrite(main){
       cnt.className=(c>=p.minWords&&c<=p.maxWords)?"g":(c>p.maxWords?"r":"");
       clearTimeout(t); t=setTimeout(()=>{ d.text=v; d.savedAt=new Date().toTimeString().slice(0,5);
         save(); sv.textContent="已保存 "+d.savedAt; },800); };
-    main.querySelector("#wrPeek").onclick=()=>{ d.peek=true; save(); render(); };
+    main.querySelector("#wrPeek").onclick=()=>{ d.text=ta.value; d.peek=true; save(); render(); };
     main.querySelector("#wrClr").onclick=()=>{ if(confirm("清空这篇草稿重写？")){ d.text=""; d.ms=0; d.runAt=Date.now(); save(); render(); } };
     main.querySelector("#wrFin").onclick=()=>{ d.text=ta.value; wrStop(); save(); wr.stage="c"; window.scrollTo({top:0}); render(); };
     if(wrTimer) clearInterval(wrTimer);
     wrTimer=setInterval(()=>{ const el=document.getElementById("wrClk"); if(!el){ clearInterval(wrTimer); wrTimer=null; return; }
-      el.textContent=wrMs(wrElapsed(d)); },1000);
+      const ms=wrElapsed(d); el.textContent=wrMs(ms);
+      el.className=(ms>p.mins*60000)?"r":((ms>p.mins*48000)?"o":""); },1000);
   }else{
     main.querySelectorAll("[data-c]").forEach(b=>b.onchange=()=>{
       const a=d.checks||(d.checks=[]); a[+b.dataset.c]=b.checked; save();
       b.closest(".wr-ck").classList.toggle("on",b.checked);
       main.querySelector("#wrSc").textContent="做到 "+a.filter(Boolean).length+" / "+p.checks.length+" 条"; });
+    const fn=main.querySelector("#wrFbNew"); if(fn) fn.onclick=()=>wrFbAdd(p.id);
+    main.querySelectorAll("[data-fbd]").forEach(b=>b.onclick=()=>wrFbDel(p.id,+b.dataset.fbd));
     main.querySelector("#wrEdit").onclick=()=>{ wr.stage="w"; render(); };
     main.querySelector("#wrOne").onclick=()=>wrExport(p.id);
     main.querySelector("#wrSave").onclick=()=>{
@@ -5953,7 +6082,7 @@ async function forceUpdateApp(){
 function mountSettings(main){
   const s=db.settings;
   let h='<h2 class="mod-h">设置</h2><div class="mod-sub">考试时间、评分与掌握度、间隔参数、数据同步、备份、扩展模块。改动即时保存。</div>';
-  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-08-31-d</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
+  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-09-02-a</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
      '<button class="btn" onclick="forceUpdateApp()">🔄 强制更新程序</button></div>';
   h+='<div class="card"><h4>考试时间</h4><div class="frow"><div class="field"><label>名称</label><input type="text" id="setExamLabel" value="'+esc(s.examLabel||"考试")+'"></div><div class="field"><label>日期</label><input type="date" id="setExamDate" value="'+(s.examDate||"")+'"></div><div class="field"><label>备考起点(可选)</label><input type="date" id="setExamStart" value="'+(s.examStart||"")+'"><div class="desc">留空＝最早的一条数据</div></div></div></div>';
   h+='<div class="card"><h4>掌握度算法</h4><div class="radios" id="mModel">'+
