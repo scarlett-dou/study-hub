@@ -1205,7 +1205,7 @@ function normalizeDb(o){
    一份 db 拆成 18 个文件:index.json(清单) + state.json(热) + content/<id>.json×12 + decks/<id>{,-images}.json×4
    日常只有 state.json 变化,上传量 1.6MB → 49KB。index.json 记录每个文件的指纹,
    拉取时只读它就知道谁变了,不必下载全部。 */
-const SPLIT_VER=3;
+const SPLIT_VER=4;
 /* FNV-1a:够快够稳。两端同算法即可,不需要密码学强度。 */
 function spHash(s){ let h=0x811c9dc5; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=(h+((h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24)))>>>0; } return h.toString(16); }
 function spCPath(c){ return "content/"+c.id+".json"; }
@@ -1243,7 +1243,16 @@ function splitDb(){
   /* 公文写作:范文/文种/格式资料体积大且极少变,同样单独成文件 */
   if(db.wrBank&&((db.wrBank.papers||[]).length)) files["wr/bank.json"]=JSON.stringify(db.wrBank);
   /* 习思想题库:270 题体积大且极少变,同样单独成文件,不随日常打卡重写 */
-  if(db.sjBank&&((db.sjBank.questions||[]).length)) files["sj/bank.json"]=JSON.stringify(db.sjBank);
+  /* 习思想：整包 998KB 逼近 1MB，故把题目切片。sj/bank.json 只留非题目部分。
+     切片前按 id 排序，保证同样的内容永远切出同样的片，不会因为顺序抖动而全量重传。 */
+  if(db.sjBank&&((db.sjBank.questions||[]).length)){
+    const sb=db.sjBank, meta={};
+    Object.keys(sb).forEach(k=>{ if(k!=="questions") meta[k]=sb[k]; });
+    files["sj/bank.json"]=JSON.stringify(meta);
+    const qs=(sb.questions||[]).slice().sort((a,b)=>String(a.id)<String(b.id)?-1:(String(a.id)>String(b.id)?1:0));
+    const N=250;
+    for(let i=0;i*N<qs.length;i++) files["sj/q"+i+".json"]=JSON.stringify(qs.slice(i*N,(i+1)*N));
+  }
   if(db.mzBank&&((db.mzBank.questions||[]).length)) files["mz/bank.json"]=JSON.stringify(db.mzBank);
   /* 国省情题库：120 题 + 43 个知识点（知识点是按她自己两份笔记的标题划分的） */
   if(db.gsBank&&((db.gsBank.questions||[]).length)) files["gs/bank.json"]=JSON.stringify(db.gsBank);
@@ -1303,7 +1312,15 @@ function mergeFiles(files){
     }
     if(typeof files["mg/bank.json"]==="string") out.mgBank=JSON.parse(files["mg/bank.json"]);
     if(typeof files["wr/bank.json"]==="string") out.wrBank=JSON.parse(files["wr/bank.json"]);
-    if(typeof files["sj/bank.json"]==="string") out.sjBank=JSON.parse(files["sj/bank.json"]);
+    if(typeof files["sj/bank.json"]==="string"){
+      out.sjBank=JSON.parse(files["sj/bank.json"]);
+      /* 新布局里 bank.json 不含题目，题目在 sj/qN.json 里；按序号拼回。
+         少任何一片，上面的 need 循环已经先返回 null 了。 */
+      if(!Array.isArray(out.sjBank.questions)) out.sjBank.questions=[];
+      need.filter(p=>/^sj\/q\d+\.json$/.test(p))
+          .sort((a,b)=>(+a.replace(/\D/g,""))-(+b.replace(/\D/g,"")))
+          .forEach(p=>{ out.sjBank.questions=out.sjBank.questions.concat(JSON.parse(files[p])); });
+    }
     if(typeof files["mz/bank.json"]==="string") out.mzBank=JSON.parse(files["mz/bank.json"]);
     if(typeof files["gs/bank.json"]==="string") out.gsBank=JSON.parse(files["gs/bank.json"]);
     if(typeof files["mock/bank.json"]==="string") out.mockBank=JSON.parse(files["mock/bank.json"]);
@@ -4356,7 +4373,14 @@ function qzHlWrap(q,raw){
   });
   return html.replace(/\n/g,"<br>");
 }
-function qzExpHtml(q){ return qzHlWrap(q,q.explain||"（无解析）"); }
+function qzExpHtml(q){ return qzHlWrap(q,q.explain||"（无解析）")+qzNoteHtml(q); }
+/* 题上自带的只读附注（目前只有「金标尺选调题库」那批有）：源站全站正确率 + 点赞最多的一条题友笔记。
+   存在题库文件里，跟她自己的备注（sjState 的 note）无关；别的题库没这些字段就什么都不显示。 */
+function qzNoteHtml(q){ const r=q._raw||q; let h="";
+  if(r.rate!=null&&r.rate!=="") h+='<div class="qz-sub" style="margin-top:7px">全站正确率 '+esc(String(r.rate))+'%</div>';
+  if(r.note) h+='<div class="qz-sub" style="margin-top:6px;white-space:pre-wrap;line-height:1.7"><b>📝 题友笔记</b>'+
+    (r.noteBy?'（'+esc(r.noteBy)+(r.noteUp?' · 👍'+(+r.noteUp):"")+'）':"")+'\n'+esc(r.note)+'</div>';
+  return h; }
 function qzHlAdd(q,txt){
   txt=String(txt||"").trim(); if(!txt) return;
   const hs=qzHls();
