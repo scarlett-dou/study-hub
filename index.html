@@ -4491,10 +4491,17 @@ function qzSrcs(){ return [
     type:q=>q.type||(q.sec==="判断题"?"tf":"mc"),
     pts:()=>(((db.ksBank&&db.ksBank.points)||[]).map(x=>({id:x.id,subject:"常识",name:x.name,grp:x.chapter||"",hint:x.chapter||""}))),
     kps:q=>q.kps||[] },
-  { key:"gs",  group:"国省情", qs:()=>((db.gsBank&&db.gsBank.questions)||[]), subj:()=>"国省情",
+  /* 国情/省情是两个独立科目。⚠️ 科目只认 q.sub，**不要**跟着上下两路写成 q.subject ——
+     gs 的题另有一个 subject 字段是脏的（金标尺 120 题写着"国省情"，另 13 题与 sub 相反），
+     拿知识点回查：sub 吻合 282/282，subject 只吻合 149/282。 */
+  { key:"gs",  group:"国省情", qs:()=>((db.gsBank&&db.gsBank.questions)||[]), subj:q=>q.sub||"国省情",
     type:q=>q.type||(q.sec==="判断题"?"tf":"mc"),
     /* 知识点＝她自己两份笔记的一级/二级标题；grp 用一级标题，组卷时可先按章筛 */
-    pts:()=>(((db.gsBank&&db.gsBank.points)||[]).map(p=>({id:p.id,subject:"国省情",name:p.subject+"·"+p.name,grp:p.chapter||"",hint:p.chapter||""}))),
+    /* subject 必须和上面的 subj 同源：首页薄弱榜的 data-wksub 取的就是这里的 subject，
+       而 qzPool 过滤用的是 subj(q)，两边对不上就是「这个筛选下没有题」。
+       name 不再加「国情·」前缀（科目轴已经分开了），但科目名要塞进 hint —— 
+       搜索框只 filter name 与 hint，而章节名里一个「国情/省情」都没有。 */
+    pts:()=>(((db.gsBank&&db.gsBank.points)||[]).map(p=>({id:p.id,subject:p.subject||"国省情",name:p.name,grp:p.chapter||"",hint:(p.subject||"")+" "+(p.chapter||"")}))),
     kps:q=>q.kps||[] },
   /* 马哲库里现在还装着无非的党史毛概/邓论/三个代表/科学发展观，
      所以科目标签读每题自己的 subject，让它们在刷题中心各自成科、可单独组卷。 */
@@ -5006,7 +5013,7 @@ function gsImport(){
   const online=/^https?:/.test(location.protocol);
   const has=((db.gsBank&&db.gsBank.questions)||[]).length;
   const h=openModal("载入 / 更新国省情题库",
-    '<p class="qz-sub">载入「国省情题库.json」（120 题，知识点按你自己的国情/省情笔记划分）。<b>只写入题目</b>；你的做题记录、错题本进度、背诵库和课程都不受影响。'+
+    '<p class="qz-sub">载入「国省情题库.json」（国情 140 ＋ 省情 142 题，知识点按你自己的国情/省情笔记划分）。<b>只写入题目</b>；你的做题记录、错题本进度、背诵库和课程都不受影响。'+
     (has?'（当前已有 '+has+' 题）':'')+'</p>'+
     (online?'<div class="qz-actions" style="margin-bottom:11px"><button class="qz-btn pri" id="qzGsNet">📶 从网上载入</button></div>':"")+
     '<p class="qz-sub">或者自己选文件：</p>'+
@@ -6129,7 +6136,7 @@ async function forceUpdateApp(){
 function mountSettings(main){
   const s=db.settings;
   let h='<h2 class="mod-h">设置</h2><div class="mod-sub">考试时间、评分与掌握度、间隔参数、数据同步、备份、扩展模块。改动即时保存。</div>';
-  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-09-04</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
+  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-09-04-b</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
      '<button class="btn" onclick="forceUpdateApp()">🔄 强制更新程序</button></div>';
   h+='<div class="card"><h4>考试时间</h4><div class="frow"><div class="field"><label>名称</label><input type="text" id="setExamLabel" value="'+esc(s.examLabel||"考试")+'"></div><div class="field"><label>日期</label><input type="date" id="setExamDate" value="'+(s.examDate||"")+'"></div><div class="field"><label>备考起点(可选)</label><input type="date" id="setExamStart" value="'+(s.examStart||"")+'"><div class="desc">留空＝最早的一条数据</div></div></div></div>';
   h+='<div class="card"><h4>掌握度算法</h4><div class="radios" id="mModel">'+
