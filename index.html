@@ -4695,9 +4695,11 @@ function qzItems(){ const p=qzPaper(); if(!p) return [];
 
 /* ---------- 知识点（法律题库按法典编章挂点，管理题库自带 points） ---------- */
 /* 选中科目下的全部知识点，带题数。不选科目就返回全部。 */
+/* 机构筛选：没选＝全部。与 qzPool 里那条判断是同一套逻辑，改一处要两处都改。 */
+function qzOrgOk(q){ const o=qz.orgs||{}; return !Object.keys(o).length||(q.org&&o[q.org]); }
 function qzPoints(){
   const sel=qz.pick, any=Object.keys(sel).length;
-  const cnt={}; qzAll().forEach(q=>{ if(any&&!sel[q.subject]) return;
+  const cnt={}; qzAll().forEach(q=>{ if(any&&!sel[q.subject]) return; if(!qzOrgOk(q)) return;
     (q.kps||[]).forEach(k=>cnt[k]=(cnt[k]||0)+1); });
   const out=[];
   qzSrcs().forEach(s=>{ if(!s.pts) return;
@@ -4713,7 +4715,7 @@ function qzKpNames(q){
 }
 /* 一个知识点的掌握情况：做了多少、错多少、蒙对多少（答对但标了模糊）、薄弱指数 */
 function qzKpStat(id){
-  const qs=qzAll().filter(q=>(q.kps||[]).indexOf(id)>=0);
+  const qs=qzAll().filter(q=>(q.kps||[]).indexOf(id)>=0&&qzOrgOk(q));
   let done=0,wrong=0,luck=0;
   qs.forEach(q=>{ const st=qzSt(q); if(!st||!st.done) return; done++;
     if(st.inBook) wrong++; else if(st.fuzzy) luck++; });
@@ -4731,7 +4733,7 @@ function qzGrps(pts){ if(!qz.kpg) qz.kpg={};
     if(!g2[p.grp]){ g2[p.grp]={name:p.grp,n:0,done:0,wrong:0,luck:0}; order.push(p.grp); } });
   if(!order.length) return [];
   const sel=qz.pick, any=Object.keys(sel).length;
-  qzAll().forEach(q=>{ if(any&&!sel[q.subject]) return;
+  qzAll().forEach(q=>{ if(any&&!sel[q.subject]) return; if(!qzOrgOk(q)) return;
     const seen={}; (q.kps||[]).forEach(k=>{ const g=kp2g[k]; if(g) seen[g]=1; });
     const ks=Object.keys(seen); if(!ks.length) return;
     const st=qzSt(q);
@@ -5374,7 +5376,14 @@ function qzBuilder(main){
     Object.keys(qz.kps).forEach(k2=>{ if(!ok[k2]) delete qz.kps[k2]; });
     qzReRender(); });
   main.querySelectorAll("[data-org]").forEach(b=>b.onclick=()=>{      /* QZORGSTAR */
-    const k=b.dataset.org; if(qz.orgs[k]) delete qz.orgs[k]; else qz.orgs[k]=true; qzReRender(); });
+    const k=b.dataset.org; if(qz.orgs[k]) delete qz.orgs[k]; else qz.orgs[k]=true;
+    /* 机构变了，原来选中的大类/知识点可能在新机构下根本没有题——摘掉，
+       否则会留下一个看不见又取消不了的筛选条件（切科目时本来就是这么处理的）。 */
+    const okp={}, ogp={};
+    qzPoints().forEach(p=>{ okp[p.id]=1; if(p.grp) ogp[p.grp]=1; });
+    Object.keys(qz.kps).forEach(x=>{ if(!okp[x]) delete qz.kps[x]; });
+    Object.keys(qz.kpg||{}).forEach(x=>{ if(!ogp[x]) delete qz.kpg[x]; });
+    qzReRender(); });
   main.querySelectorAll("[data-star]").forEach(b=>b.onclick=()=>{
     const k=b.dataset.star; if(qz.stars[k]) delete qz.stars[k]; else qz.stars[k]=true; qzReRender(); });
   main.querySelectorAll("[data-kp]").forEach(b=>b.onclick=()=>{
@@ -6118,7 +6127,7 @@ async function forceUpdateApp(){
 function mountSettings(main){
   const s=db.settings;
   let h='<h2 class="mod-h">设置</h2><div class="mod-sub">考试时间、评分与掌握度、间隔参数、数据同步、备份、扩展模块。改动即时保存。</div>';
-  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-09-02-b</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
+  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-09-03-b</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
      '<button class="btn" onclick="forceUpdateApp()">🔄 强制更新程序</button></div>';
   h+='<div class="card"><h4>考试时间</h4><div class="frow"><div class="field"><label>名称</label><input type="text" id="setExamLabel" value="'+esc(s.examLabel||"考试")+'"></div><div class="field"><label>日期</label><input type="date" id="setExamDate" value="'+(s.examDate||"")+'"></div><div class="field"><label>备考起点(可选)</label><input type="date" id="setExamStart" value="'+(s.examStart||"")+'"><div class="desc">留空＝最早的一条数据</div></div></div></div>';
   h+='<div class="card"><h4>掌握度算法</h4><div class="radios" id="mModel">'+
