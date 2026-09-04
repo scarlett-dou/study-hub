@@ -5587,17 +5587,27 @@ function qzRun(main){
 /* 答完题后的「把握程度」条：答对了也能标模糊 + 逐个标不确定的选项。
    法律题写 lawState(fuzzy/fzo)，管理题写 mgState(qUns/unsure)，两边的错题本规则各自沿用。 */
 function qzFuzzyBar(host,q){
-  const read=()=>{ if(q.src==="law"){ const x=lawQEnsure(q.id); return {on:!!x.fuzzy,opt:x.fzo||[],n:x.fz||0}; }
-                   if(q.src==="sj"){ const x=sjQEnsure(q.id); return {on:!!x.fuzzy,opt:x.fzo||[],n:x.fz||0}; }
-                   if(q.src==="mz"){ const x=mzQEnsure(q.id); return {on:!!x.fuzzy,opt:x.fzo||[],n:x.fz||0}; }
+  /* 查表分派 —— 别改回一串 if/else。以前只列了 law/sj/mz，gs/ec/ks/mk 全掉进最后
+     那个 mgQEnsure 兜底：她在国省情、经济题上点的模糊标记被写进了管理的记录，
+     结果 gsState 里一条都没有、组卷的「模糊」范围筛不出这些题、按钮读回来永远显示
+     「有把握」（2026-09-04 修，她那儿已积了 145 条错位记录）。
+     **加新科目必须往这张表里加一行**，同 qzGrade、qzQaFlag。
+     mk 的 fzo 是对象而非数组、两个 setter 也不自己 save，故包一层；
+     mg 用的是另一套字段(qUns/unsure)，仍走兜底。 */
+  const FZ={law:[lawQEnsure,lawSetFuzzy,lawToggleOpt], sj:[sjQEnsure,sjSetFuzzy,sjToggleOpt],
+            mz:[mzQEnsure,mzSetFuzzy,mzToggleOpt],     gs:[gsQEnsure,gsSetFuzzy,gsToggleOpt],
+            ec:[ecQEnsure,ecSetFuzzy,ecToggleOpt],     ks:[ksQEnsure,ksSetFuzzy,ksToggleOpt],
+            mk:[mkQEnsure,
+                (id,on)=>{ const x=mkQEnsure(id); x.fuzzy=!!on; if(!on) x.fzo={}; save(); },
+                (id,k)=>{ mkToggleOpt(id,k); const x=mkQEnsure(id);
+                          if(Object.keys(x.fzo||{}).length) x.fuzzy=true; save(); }]};
+  const fzArr=v=>Array.isArray(v)?v:Object.keys(v||{});
+  const read=()=>{ const f=FZ[q.src];
+                   if(f){ const x=f[0](q.id); return {on:!!x.fuzzy,opt:fzArr(x.fzo),n:x.fz||0}; }
                    const x=mgQEnsure(q.id); return {on:!!x.qUns,opt:x.unsure||[],n:0}; };
-  const setAll=on=>{ if(q.src==="law") lawSetFuzzy(q.id,on);
-                     else if(q.src==="sj") sjSetFuzzy(q.id,on);
-                     else if(q.src==="mz") mzSetFuzzy(q.id,on);
+  const setAll=on=>{ const f=FZ[q.src]; if(f) f[1](q.id,on);
                      else { const x=mgQEnsure(q.id); x.qUns=!!on; if(!on) x.unsure=[]; save(); } };
-  const setOpt=k=>{ if(q.src==="law") lawToggleOpt(q.id,k);
-                    else if(q.src==="sj") sjToggleOpt(q.id,k);
-                    else if(q.src==="mz") mzToggleOpt(q.id,k);
+  const setOpt=k=>{ const f=FZ[q.src]; if(f) f[2](q.id,k);
                     else { const x=mgQEnsure(q.id); const i=x.unsure.indexOf(k);
                            if(i>=0) x.unsure.splice(i,1); else { x.unsure.push(k); x.qUns=true; } save(); } };
   const draw=()=>{ const s=read(), keys=(q.type==="tf")?["√","×"]:Object.keys(q.options||{});
@@ -6136,7 +6146,7 @@ async function forceUpdateApp(){
 function mountSettings(main){
   const s=db.settings;
   let h='<h2 class="mod-h">设置</h2><div class="mod-sub">考试时间、评分与掌握度、间隔参数、数据同步、备份、扩展模块。改动即时保存。</div>';
-  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-09-04-b</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
+  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-09-04-c</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
      '<button class="btn" onclick="forceUpdateApp()">🔄 强制更新程序</button></div>';
   h+='<div class="card"><h4>考试时间</h4><div class="frow"><div class="field"><label>名称</label><input type="text" id="setExamLabel" value="'+esc(s.examLabel||"考试")+'"></div><div class="field"><label>日期</label><input type="date" id="setExamDate" value="'+(s.examDate||"")+'"></div><div class="field"><label>备考起点(可选)</label><input type="date" id="setExamStart" value="'+(s.examStart||"")+'"><div class="desc">留空＝最早的一条数据</div></div></div></div>';
   h+='<div class="card"><h4>掌握度算法</h4><div class="radios" id="mModel">'+
