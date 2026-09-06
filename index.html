@@ -4468,7 +4468,9 @@ function qzSrcs(){ return [
     type:q=>q.type||(q.sec==="判断题"?"tf":"mc"),
     /* 「知识点」＝每套模考卷，组卷时可按卷筛；grp＝科目，可先按科目筛 */
     pts:()=>qzMocks().map(p=>({id:"mkp-"+p.id,subject:"模考",name:p.name,grp:"模考卷",hint:p.date||""})),
-    kps:q=>(q.paperId?["mkp-"+q.paperId]:[]) },
+    /* 「哪张卷」之外再挂章节：习思想题带 ch（她笔记的章 / 时政专题）与 tags，
+       与 sj 那一路共用 sjc-* 知识点，按章节组卷时模考题也一起出来。 */
+    kps:q=>[].concat(q.paperId?["mkp-"+q.paperId]:[], q.ch?["sjc-"+q.ch]:[], (q.tags||[]).map(t=>"sjc-"+t)) },
   { key:"law", group:"法律", qs:()=>((db.lawBank&&db.lawBank.questions)||[]), subj:q=>q.subject||"法律",
     type:q=>q.type||(q.sec==="判断题"?"tf":"mc"), pts:()=>((db.lawBank&&db.lawBank.points)||[]),
     kps:q=>q.kps||[] },
@@ -6146,7 +6148,7 @@ async function forceUpdateApp(){
 function mountSettings(main){
   const s=db.settings;
   let h='<h2 class="mod-h">设置</h2><div class="mod-sub">考试时间、评分与掌握度、间隔参数、数据同步、备份、扩展模块。改动即时保存。</div>';
-  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-09-04-c</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
+  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-09-06</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
      '<button class="btn" onclick="forceUpdateApp()">🔄 强制更新程序</button></div>';
   h+='<div class="card"><h4>考试时间</h4><div class="frow"><div class="field"><label>名称</label><input type="text" id="setExamLabel" value="'+esc(s.examLabel||"考试")+'"></div><div class="field"><label>日期</label><input type="date" id="setExamDate" value="'+(s.examDate||"")+'"></div><div class="field"><label>备考起点(可选)</label><input type="date" id="setExamStart" value="'+(s.examStart||"")+'"><div class="desc">留空＝最早的一条数据</div></div></div></div>';
   h+='<div class="card"><h4>掌握度算法</h4><div class="radios" id="mModel">'+
