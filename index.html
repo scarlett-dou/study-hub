@@ -1147,6 +1147,10 @@ function hasLS(){ try{ return typeof localStorage!=="undefined" && localStorage;
 function idbOpen(){ return new Promise((res,rej)=>{ const r=indexedDB.open("sh-fs",1); r.onupgradeneeded=()=>r.result.createObjectStore("kv"); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
 async function idbGet(k){ try{ const d2=await idbOpen(); return await new Promise((res,rej)=>{ const g=d2.transaction("kv","readonly").objectStore("kv").get(k); g.onsuccess=()=>res(g.result); g.onerror=()=>rej(g.error); }); }catch(e){ return null; } }
 async function idbSet(k,v){ try{ const d2=await idbOpen(); await new Promise((res,rej)=>{ const tx=d2.transaction("kv","readwrite"); tx.objectStore("kv").put(v,k); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }catch(e){} }
+/* 整库存 IndexedDB（键 "db"，存的是 JSON 字符串）。2026-09-07 起这是主存：
+   localStorage 有 5–10MB 上限，整包早已超过（5.3M 字符），setItem 一直静默失败，
+   她每次打开题库都是空的。返回是否写成功。 */
+async function idbPutDb(p){ try{ const d2=await idbOpen(); await new Promise((res,rej)=>{ const tx=d2.transaction("kv","readwrite"); tx.objectStore("kv").put(p,"db"); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); return true; }catch(e){ return false; } }
 async function fhPerm(h,request){ const o={mode:"readwrite"}; try{ if((await h.queryPermission(o))==="granted") return true; if(request&&(await h.requestPermission(o))==="granted") return true; }catch(e){} return false; }
 function normalizeDb(o){
   o=o||{}; const d=blankDb();
@@ -1388,12 +1392,21 @@ async function load(){
   if(fsSupported()){ try{ const h=await idbGet("dataDir"); if(h){ dataDir=h; if((await h.queryPermission({mode:"readwrite"}))==="granted"){ if(await readDir()){ updateFs(); return; } } else needReconnect=true; } }catch(e){}
     /* 旧版单文件绑定已停用:只做提示,数据照常从 localStorage 读,不会丢 */
     try{ if(!dataDir && await idbGet("fh")) legacyFhFound=true; }catch(e){} }
-  if(hasLS()){ try{ const raw=localStorage.getItem(STORE_KEY); if(raw){ db=normalizeDb(JSON.parse(raw)); return; } }catch(e){}
-    for(const k of OLD_KEYS){ try{ const r=localStorage.getItem(k); if(r){ db=normalizeDb(JSON.parse(r)); return; } }catch(e){} } }
+  /* IndexedDB 里的整库优先。localStorage 那份很可能是超配额前最后一次成功写入的旧副本（题库全空），
+     只在 IndexedDB 没有、或它的 savedAt 明确更新时才用。 */
+  let fromIdb=null; try{ const raw=await idbGet("db"); if(raw) fromIdb=JSON.parse(raw); }catch(e){}
+  if(hasLS()){ try{ const raw=localStorage.getItem(STORE_KEY); if(raw){ const o=JSON.parse(raw);
+      const lsNewer=!!(o.savedAt&&fromIdb&&fromIdb.savedAt&&String(o.savedAt)>String(fromIdb.savedAt));
+      db=normalizeDb(fromIdb&&!lsNewer?fromIdb:o); return; } }catch(e){}
+    if(!fromIdb) for(const k of OLD_KEYS){ try{ const r=localStorage.getItem(k); if(r){ db=normalizeDb(JSON.parse(r)); return; } }catch(e){} } }
+  if(fromIdb){ try{ db=normalizeDb(fromIdb); return; }catch(e){} }
   db=blankDb();
 }
 function setSave(t){ const el=document.getElementById("saveState"); if(!el) return; el.textContent=t; if(t==="已保存 ✓") setTimeout(()=>{ if(el.textContent==="已保存 ✓") el.textContent=""; },1600); }
-async function save(opts){ opts=opts||{}; setSave("保存中…"); db.version=7; if(!opts.keepSavedAt) db.savedAt=new Date().toISOString(); const p=JSON.stringify(db); let ok=false; if(hasLS()){ try{ localStorage.setItem(STORE_KEY,p); ok=true; }catch(e){} } if(dataDir&&!needReconnect){ if(await writeDir()) ok=true; } setSave(ok?"已保存 ✓":"保存失败(请用导出备份)"); if(!opts.noSync) csSchedulePush(); }
+async function save(opts){ opts=opts||{}; setSave("保存中…"); db.version=7; if(!opts.keepSavedAt) db.savedAt=new Date().toISOString(); const p=JSON.stringify(db); let ok=false;
+  if(await idbPutDb(p)) ok=true;                       /* 主存：IndexedDB，见 idbPutDb 的注释 */
+  if(hasLS()){ try{ localStorage.setItem(STORE_KEY,p); ok=true; }catch(e){ /* 超配额：只是兜底镜像，失败不算保存失败 */ } }
+  if(dataDir&&!needReconnect){ if(await writeDir()) ok=true; } setSave(ok?"已保存 ✓":"保存失败(请用导出备份)"); if(!opts.noSync) csSchedulePush(); }
 
 /* ===== 2.5 云同步 (GitHub Contents API;私有仓库存【多文件】,全平台含 iPhone 都能用) =====
    仓库里是一组小文件,与「本地数据文件夹」用的是同一套 splitDb/mergeFiles 内核:
@@ -1766,7 +1779,7 @@ function capDailyMemos(){
   let changed=false;
   list.forEach(o=>{ let d=o.cp.due<tdy?tdy:o.cp.due; while((cnt[d]||0)>=cap) d=addDays(d,1); if(d!==o.cp.due){ o.cp.due=d; o.r.date=d; changed=true; } cnt[d]=(cnt[d]||0)+1; });
   return changed; }
-function reschedule(){ const chR=capDailyReviews(),chM=capDailyMemos(); if(chR||chM){ try{ localStorage.setItem(STORE_KEY,JSON.stringify(db)); }catch(e){} } const h=addDays(today(),400),sched={},load={};
+function reschedule(){ const chR=capDailyReviews(),chM=capDailyMemos(); if(chR||chM){ const p=JSON.stringify(db); idbPutDb(p); try{ localStorage.setItem(STORE_KEY,p); }catch(e){} } const h=addDays(today(),400),sched={},load={};
   db.recites.forEach(r=>{ if(r.paused) return; reviewCps(r).forEach(cp=>{ if(!cp.done&&cp.due<=h) load[cp.due]=(load[cp.due]||0)+1; }); });
   db.plans.forEach(p=>{ if(!p.done) load[p.date]=(load[p.date]||0)+1; });
   db.courses.filter(c=>c.mode!=="range").forEach(c=>{ const it=scheduleCadence(c,h); sched[c.id]=it; it.forEach(x=>{ if(x.upcoming) load[x.date]=(load[x.date]||0)+1; }); });
@@ -6148,7 +6161,7 @@ async function forceUpdateApp(){
 function mountSettings(main){
   const s=db.settings;
   let h='<h2 class="mod-h">设置</h2><div class="mod-sub">考试时间、评分与掌握度、间隔参数、数据同步、备份、扩展模块。改动即时保存。</div>';
-  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-09-06-b</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
+  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-09-08</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
      '<button class="btn" onclick="forceUpdateApp()">🔄 强制更新程序</button></div>';
   h+='<div class="card"><h4>考试时间</h4><div class="frow"><div class="field"><label>名称</label><input type="text" id="setExamLabel" value="'+esc(s.examLabel||"考试")+'"></div><div class="field"><label>日期</label><input type="date" id="setExamDate" value="'+(s.examDate||"")+'"></div><div class="field"><label>备考起点(可选)</label><input type="date" id="setExamStart" value="'+(s.examStart||"")+'"><div class="desc">留空＝最早的一条数据</div></div></div></div>';
   h+='<div class="card"><h4>掌握度算法</h4><div class="radios" id="mModel">'+
