@@ -806,10 +806,15 @@
   .qz-kpm i.r{color:var(--red);font-weight:600}
   .qz-kpm i.o{color:#b06800;font-weight:600}
   .qz-kpm i.g2{color:var(--text3)}
-  .qz-kpm b{margin-left:auto;width:26px;height:4px;border-radius:3px;background:var(--sep)}
-  .qz-kpm b.w1{background:rgba(52,199,89,.65)}
-  .qz-kpm b.w2{background:var(--orange)}
-  .qz-kpm b.w3{background:var(--red)}
+  .qz-kpm i.gg{color:#1e8f43;font-weight:600}
+  /* 分段进度条：绿＝做对 橙＝模糊 红＝错 灰＝没做 */
+  .qz-kpb{display:flex;height:5px;border-radius:3px;background:var(--sep);overflow:hidden}
+  .qz-kpb i{display:block;height:100%}
+  .qz-kpb i.k1{background:rgba(52,199,89,.85)} .qz-kpb i.k2{background:var(--orange)} .qz-kpb i.k3{background:var(--red)}
+  /* 刷完态：整卡变绿；选中时仍以蓝色为准 */
+  .qz-kp.full{border-color:rgba(52,199,89,.55);background:rgba(52,199,89,.08)}
+  .qz-kp.full.on{border-color:var(--tint);background:rgba(0,122,255,.09)}
+  .qz-kpok{font-style:normal;font-weight:600;font-size:10.5px;color:#1e8f43;margin-left:6px;white-space:nowrap}
   /* 首页薄弱排行 */
   /* QZORGSTAR: 按星级的正确率条 */
   .qz-star{display:flex;flex-direction:column;gap:6px;margin:2px 0 14px}
@@ -5357,13 +5362,17 @@ function qzBuilder(main){
        '<button class="qz-chip sm'+(qz.kpSort==="ord"?" on":"")+'" data-ksort="ord">按顺序</button>'+
        (kpOn?'<button class="qz-chip sm" id="qzKpClr">清空所选（'+kpOn+'）</button>':"")+'</div>';
     h+='<div class="qz-kps">'+kshow.map(p=>{
-      const lv=p.done?(p.weak>=1?3:(p.weak>=0.5?2:(p.weak>0?1:0))):0;
-      return '<button class="qz-kp'+(qz.kps[p.id]?" on":"")+'" data-kp="'+esc(p.id)+'">'+
+      /* 对＝已做－错－模糊；正确率把「模糊但答对」算作对（错只算还在错题本的） */
+      const right=Math.max(0,p.done-p.wrong-p.luck), acc=p.done?Math.round(100*(p.done-p.wrong)/p.done):0, full=p.n>0&&p.done>=p.n;
+      const pc=x=>p.n?(100*x/p.n).toFixed(1)+'%':'0%';
+      return '<button class="qz-kp'+(qz.kps[p.id]?" on":"")+(full?" full":"")+'" data-kp="'+esc(p.id)+'">'+
         (p.grp&&!anyG?'<span class="qz-kpg">'+esc(qzGrpShort(p.grp))+'</span>':"")+
-        '<span class="qz-kpn">'+esc(p.name)+'</span>'+
-        '<span class="qz-kpm"><i>'+p.n+' 题</i>'+
-        (p.done?'<i>已做 '+p.done+'</i>'+(p.wrong?'<i class="r">错 '+p.wrong+'</i>':"")+(p.luck?'<i class="o">蒙对 '+p.luck+'</i>':""):'<i class="g2">没做过</i>')+
-        '<b class="w'+lv+'"></b></span></button>'; }).join("")+'</div>';
+        '<span class="qz-kpn">'+esc(p.name)+(full?'<em class="qz-kpok">✓ 刷完</em>':"")+'</span>'+
+        '<span class="qz-kpb"><i class="k1" style="width:'+pc(right)+'"></i><i class="k2" style="width:'+pc(p.luck)+'"></i><i class="k3" style="width:'+pc(p.wrong)+'"></i></span>'+
+        '<span class="qz-kpm">'+(p.done
+          ?'<i>已做 '+p.done+'/'+p.n+'</i><i class="'+(acc>=85?"gg":(acc>=70?"o":"r"))+'">正确率 '+acc+'%</i>'+(p.wrong?'<i class="r">错 '+p.wrong+'</i>':"")+(p.luck?'<i class="o">模糊 '+p.luck+'</i>':"")
+          :'<i>'+p.n+' 题</i><i class="g2">没做过</i>')+
+        '</span></button>'; }).join("")+'</div>';
     if(!kshow.length) h+='<div class="qz-sub" style="padding:8px 2px">没有匹配的知识点</div>';
     h+='</div>';
   }
@@ -6161,7 +6170,7 @@ async function forceUpdateApp(){
 function mountSettings(main){
   const s=db.settings;
   let h='<h2 class="mod-h">设置</h2><div class="mod-sub">考试时间、评分与掌握度、间隔参数、数据同步、备份、扩展模块。改动即时保存。</div>';
-  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-09-08</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
+  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-09-08-b</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
      '<button class="btn" onclick="forceUpdateApp()">🔄 强制更新程序</button></div>';
   h+='<div class="card"><h4>考试时间</h4><div class="frow"><div class="field"><label>名称</label><input type="text" id="setExamLabel" value="'+esc(s.examLabel||"考试")+'"></div><div class="field"><label>日期</label><input type="date" id="setExamDate" value="'+(s.examDate||"")+'"></div><div class="field"><label>备考起点(可选)</label><input type="date" id="setExamStart" value="'+(s.examStart||"")+'"><div class="desc">留空＝最早的一条数据</div></div></div></div>';
   h+='<div class="card"><h4>掌握度算法</h4><div class="radios" id="mModel">'+
