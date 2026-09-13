@@ -727,6 +727,12 @@
   .qz-vdt{margin-left:10px;font-weight:400;font-size:12.5px;opacity:.85;white-space:nowrap}
   .qz-rvt{flex:0 0 auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:var(--text3);white-space:nowrap}
   .qz-rvt.o{color:var(--orange)} .qz-rvt.r{color:var(--red)}
+  /* 出处小标：做题后标明这题是无非的还是金标尺的 */
+  .qz-orgtag{display:inline-block;margin-left:10px;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600;line-height:18px;vertical-align:1px;white-space:nowrap;border:1px solid transparent}
+  .qz-orgtag.jb{background:rgba(255,159,10,.14);color:#b3640a;border-color:rgba(255,159,10,.35)}
+  .qz-orgtag.wf{background:rgba(88,86,214,.12);color:#4a48b8;border-color:rgba(88,86,214,.32)}
+  .qz-orgtag.mk{background:rgba(120,120,128,.14);color:#555;border-color:rgba(120,120,128,.3)}
+  .qz-rvh .qz-orgtag{margin-left:6px;flex:0 0 auto}
   /* 左栏底部交卷 */
   .qz-submit{width:100%;margin-top:12px}
   /* 答题卡新增状态 */
@@ -5478,6 +5484,13 @@ function qzQHist(q){ const a=(qzState().qt||{})[q.src+"|"+q.id]; if(!a||!a.lengt
   return {n:a.length,last:a[a.length-1].s,avg:Math.round(a.reduce((t,x)=>t+x.s,0)/a.length)}; }
 function qzSec(ms){ const s=Math.round(ms/1000); return s>=60?Math.floor(s/60)+"分"+(s%60?(s%60)+"秒":""):s+"秒"; }
 function qzMmss(ms){ return qzFmtTime(ms).replace(/^00:/,""); }
+/* 出处小标（2026-09-13 她要求「做题后注明是无非的题还是金标尺的题」）：按题上的 org 分两家，模考卷单列 */
+function qzOrgTag(q){ const o=q.org||""; let cls="",txt="";
+  if(q.src==="mk"){ cls="mk"; txt="模考卷"; }
+  else if(/^金标尺/.test(o)){ cls="jb"; txt=(o==="金标尺选调题库")?"金标尺·选调题库":"金标尺"; }
+  else if(/^无非/.test(o)){ cls="wf"; txt=(o==="无非日常刷题")?"无非·日常刷题":"无非"; }
+  else if(o){ cls="mk"; txt=o; }
+  return txt?'<span class="qz-orgtag '+cls+'" title="这道题的出处">'+esc(txt)+'</span>':""; }
 /* 顶栏的钟每秒走一次：练习模式显示已用、考试模式显示剩余（到点自动交卷）；右边那只是本题用时。
    离开答题页后 #qzClock 不在了，就把计时暂停掉（和「‹ 返回」一样），免得切到别的模块还在空转。 */
 function qzArmTimer(p){ if(qzTimer){ clearInterval(qzTimer); qzTimer=null; }
@@ -5574,7 +5587,7 @@ function qzRun(main){
     const ok=(pick===q.answer);
     const _ms=qzQMs(p,key), _hq=qzQHist(q);
     h+='<div class="qz-vd '+(ok?"ok":"no")+'">'+(ok?"✅ 回答正确":'❌ 回答错误：你选了「'+esc(pick)+'」，正确答案「<b>'+esc(q.answer)+'</b>」')+
-       (_ms?'<span class="qz-vdt">⏱ 本题 '+qzSec(_ms)+(_hq&&_hq.n>1?' · 历次平均 '+qzSec(_hq.avg*1000):"")+'</span>':"")+'</div>'+
+       (_ms?'<span class="qz-vdt">⏱ 本题 '+qzSec(_ms)+(_hq&&_hq.n>1?' · 历次平均 '+qzSec(_hq.avg*1000):"")+'</span>':"")+qzOrgTag(q)+'</div>'+
        '<div id="qzExpWrap"><div class="qz-exp" id="qzExp"><b>【答案】'+esc(q.answer)+'</b><br>'+qzExpHtml(q)+'</div>'+
        '<div class="qz-hlbar" id="qzHlBar" style="display:none"><button class="qz-btn sm pri" id="qzHlDo">🖍 标红选中的内容</button><span class="qz-sub">解析和解答里的文字都能标 · 汇总在首页「🖍 标注」</span></div>'+
        qzQaCard(q,true)+'</div>';
@@ -5742,7 +5755,7 @@ function qzResult(main){
     h+='<div class="qz-rv'+(pick?(ok?" ok":" no"):" un")+'"><button class="qz-rvh" data-i="'+i+'">'+
        '<span class="qz-rvn">'+(i+1)+'</span><span class="qz-rvs">'+esc(x.stem.slice(0,40))+(x.stem.length>40?"…":"")+'</span>'+
        '<span class="qz-rvr">'+(pick?(ok?"✓":"✗ 你选"+esc(pick)):"未答")+'</span>'+
-       (function(){ const ms=qzQMs(p,k); if(!ms) return ""; const s=Math.round(ms/1000); return '<span class="qz-rvt'+(s>=120?" r":(s>=60?" o":""))+'">'+qzSec(ms)+'</span>'; })()+'</button>'+
+       (function(){ const ms=qzQMs(p,k); if(!ms) return ""; const s=Math.round(ms/1000); return '<span class="qz-rvt'+(s>=120?" r":(s>=60?" o":""))+'">'+qzSec(ms)+'</span>'; })()+qzOrgTag(x)+'</button>'+
        '<div class="qz-rvb" id="qzrv'+i+'"><b>【答案】'+esc(x.answer)+'</b><br>'+qzExpHtml(x)+qzQaCard(x,false)+
        (qzKpNames(x).length?'<div class="qz-kpline"><span>'+(x.src==="sj"?"所属章节":"知识点")+'</span>'+qzKpNames(x).map(n=>'<b>'+esc(n)+'</b>').join("")+'</div>':"")+
        '</div></div>'; });
@@ -6208,7 +6221,7 @@ async function forceUpdateApp(){
 function mountSettings(main){
   const s=db.settings;
   let h='<h2 class="mod-h">设置</h2><div class="mod-sub">考试时间、评分与掌握度、间隔参数、数据同步、备份、扩展模块。改动即时保存。</div>';
-  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-09-11</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
+  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-09-13</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
      '<button class="btn" onclick="forceUpdateApp()">🔄 强制更新程序</button></div>';
   h+='<div class="card"><h4>考试时间</h4><div class="frow"><div class="field"><label>名称</label><input type="text" id="setExamLabel" value="'+esc(s.examLabel||"考试")+'"></div><div class="field"><label>日期</label><input type="date" id="setExamDate" value="'+(s.examDate||"")+'"></div><div class="field"><label>备考起点(可选)</label><input type="date" id="setExamStart" value="'+(s.examStart||"")+'"><div class="desc">留空＝最早的一条数据</div></div></div></div>';
   h+='<div class="card"><h4>掌握度算法</h4><div class="radios" id="mModel">'+
