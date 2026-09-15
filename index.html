@@ -3608,7 +3608,7 @@ function lawRenderQ(host,q,qs){
     '<div class="lw-nav"><button id="lwPrev">上一题</button><button id="lwNext" class="pri">下一题</button></div></div>';
   const vd=host.querySelector("#lwV"), ex=host.querySelector("#lwE");
   const finish=(pick)=>{
-    const ok=(pick===q.answer);
+    const ok=(qzNormAns(pick)===qzNormAns(q.answer));
     if(!law.shown){ lawGrade(q.id,ok); law.shown=true; }
     host.querySelectorAll(".lw-opt").forEach(o=>{ const v=o.dataset.v;
       const inA=q.answer.indexOf(v)>=0, inP=pick.indexOf(v)>=0;
@@ -4612,8 +4612,10 @@ function qzAsked(q){ return !!(qzNoteGet(q)||qzAnsGet(q)); }
 function qzNoted(){ return qzAll().filter(q=>qzNoteGet(q)); }
 
 /* 判分并写回原模块的状态（错题本规则完全沿用各自模块的） */
+/* 多选字母顺序无关：两边都排序再比（2026-09-16，wfsj-m6-14 答案「CB」被判错） */
+function qzNormAns(s){ s=String(s==null?"":s); return /^[A-Ha-h]{2,}$/.test(s)?s.toUpperCase().split("").sort().join(""):s; }
 function qzGrade(q,pick){
-  const ok=(pick===q.answer);
+  const ok=(qzNormAns(pick)===qzNormAns(q.answer));
   if(q.src==="law"){ lawGrade(q.id,ok); }
   else if(q.src==="sj"){ sjGrade(q.id,ok); }
   else if(q.src==="mz"){ mzGrade(q.id,ok); }
@@ -5584,7 +5586,7 @@ function qzRun(main){
   h+='</div>';
   if(q.sec==="多选题"&&!(!exam&&answered)) h+='<div class="qz-hintbar">多选题：选完后点「确认作答」</div><button class="qz-btn pri" id="qzOk">确认作答</button>';
   if(!exam&&answered){
-    const ok=(pick===q.answer);
+    const ok=(qzNormAns(pick)===qzNormAns(q.answer));
     const _ms=qzQMs(p,key), _hq=qzQHist(q);
     h+='<div class="qz-vd '+(ok?"ok":"no")+'">'+(ok?"✅ 回答正确":'❌ 回答错误：你选了「'+esc(pick)+'」，正确答案「<b>'+esc(q.answer)+'</b>」')+
        (_ms?'<span class="qz-vdt">⏱ 本题 '+qzSec(_ms)+(_hq&&_hq.n>1?' · 历次平均 '+qzSec(_hq.avg*1000):"")+'</span>':"")+qzOrgTag(q)+'</div>'+
