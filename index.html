@@ -1225,7 +1225,10 @@ function normalizeDb(o){
    一份 db 拆成 18 个文件:index.json(清单) + state.json(热) + content/<id>.json×12 + decks/<id>{,-images}.json×4
    日常只有 state.json 变化,上传量 1.6MB → 49KB。index.json 记录每个文件的指纹,
    拉取时只读它就知道谁变了,不必下载全部。 */
-const SPLIT_VER=4;
+const SPLIT_VER=5;   /* 5（2026-09-20）：法律分片从「只拆无非」改成「教材金标尺之外的都拆」，见 lawSplitPre */
+/* 法律题按出题来源分片：教材金标尺（含无 org 的老题）留在 law/bank.json（已 0.95MB，不能再涨）；
+   无非 → law/wf-<科目码>、金标尺题海 → law/th-<科目码>、其它 → law/ex-<科目码>。科目码取题 id 第二段。 */
+function lawSplitPre(org){ org=org||""; if(!org||org==="金标尺") return null; if(/^无非/.test(org)) return "wf"; if(org==="金标尺题海") return "th"; return "ex"; }
 /* FNV-1a:够快够稳。两端同算法即可,不需要密码学强度。 */
 function spHash(s){ let h=0x811c9dc5; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=(h+((h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24)))>>>0; } return h.toString(16); }
 function spCPath(c){ return "content/"+c.id+".json"; }
@@ -1251,12 +1254,14 @@ function splitDb(){
   if(db.lawBank&&(((db.lawBank.questions||[]).length)||((db.lawBank.cards||[]).length))){
     const lb=db.lawBank, wfq={}, base=[];
     (lb.questions||[]).forEach(q=>{
-      if(q&&/^无非/.test(q.org||"")){ let k=String(q.id||"").split("-")[1]||"x"; if(!/^[a-z0-9]+$/.test(k)) k="x";
-        (wfq[k]||(wfq[k]=[])).push(q); }
+      const pre=lawSplitPre(q&&q.org);
+      if(pre){ let k=String(q.id||"").split("-")[1]||"x"; if(!/^[a-z0-9]+$/.test(k)) k="x";
+        (wfq[pre+"-"+k]||(wfq[pre+"-"+k]=[])).push(q); }
       else base.push(q); });
-    const o={}; Object.keys(lb).forEach(k=>{ if(k!=="questions") o[k]=lb[k]; }); o.questions=base;
+    const o={}; Object.keys(lb).forEach(k=>{ if(k!=="questions"&&k!=="cards") o[k]=lb[k]; }); o.questions=base;
     files["law/bank.json"]=JSON.stringify(o);
-    Object.keys(wfq).forEach(k=>{ files["law/wf-"+k+".json"]=JSON.stringify(wfq[k]); });
+    files["law/cards.json"]=JSON.stringify(lb.cards||[]);          /* 388 张卡片 330KB 也拆出去，bank.json 才能离 1MB 远一点 */
+    Object.keys(wfq).forEach(k=>{ files["law/"+k+".json"]=JSON.stringify(wfq[k]); });
   }
   /* 管理题库:题目+逐选项知识点体积大且极少变,同样单独成文件 */
   if(db.mgBank&&((db.mgBank.questions||[]).length)) files["mg/bank.json"]=JSON.stringify(db.mgBank);
@@ -1327,8 +1332,9 @@ function mergeFiles(files){
       /* 无非的题按科目分在 law/wf-*.json,在这里合回同一个 lawBank。
          走 need(=index 引用的文件清单),所以少任何一片上面的 need 循环已经先返回 null 了。 */
       if(!Array.isArray(out.lawBank.questions)) out.lawBank.questions=[];
-      need.forEach(p=>{ if(p.indexOf("law/wf-")===0)
+      need.forEach(p=>{ if(p.indexOf("law/")===0&&p!=="law/bank.json"&&p!=="law/cards.json")
         out.lawBank.questions=out.lawBank.questions.concat(JSON.parse(files[p])); });
+      if(typeof files["law/cards.json"]==="string") out.lawBank.cards=JSON.parse(files["law/cards.json"]);
     }
     if(typeof files["mg/bank.json"]==="string") out.mgBank=JSON.parse(files["mg/bank.json"]);
     if(typeof files["wr/bank.json"]==="string") out.wrBank=JSON.parse(files["wr/bank.json"]);
@@ -5489,8 +5495,8 @@ function qzMmss(ms){ return qzFmtTime(ms).replace(/^00:/,""); }
 /* 出处小标（2026-09-13 她要求「做题后注明是无非的题还是金标尺的题」）：按题上的 org 分两家，模考卷单列 */
 function qzOrgTag(q){ const o=q.org||""; let cls="",txt="";
   if(q.src==="mk"){ cls="mk"; txt="模考卷"; }
-  else if(/^金标尺/.test(o)){ cls="jb"; txt=(o==="金标尺选调题库")?"金标尺·选调题库":"金标尺"; }
-  else if(/^无非/.test(o)){ cls="wf"; txt=(o==="无非日常刷题")?"无非·日常刷题":"无非"; }
+  else if(/^金标尺/.test(o)){ cls="jb"; txt=(o==="金标尺")?"金标尺":"金标尺·"+o.slice(3).replace(/^选调题库$/,"选调题库"); }
+  else if(/^无非/.test(o)){ cls="wf"; txt=(o==="无非")?"无非":"无非·"+o.slice(2); }
   else if(o){ cls="mk"; txt=o; }
   return txt?'<span class="qz-orgtag '+cls+'" title="这道题的出处">'+esc(txt)+'</span>':""; }
 /* 顶栏的钟每秒走一次：练习模式显示已用、考试模式显示剩余（到点自动交卷）；右边那只是本题用时。
@@ -6223,7 +6229,7 @@ async function forceUpdateApp(){
 function mountSettings(main){
   const s=db.settings;
   let h='<h2 class="mod-h">设置</h2><div class="mod-sub">考试时间、评分与掌握度、间隔参数、数据同步、备份、扩展模块。改动即时保存。</div>';
-  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-09-13</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
+  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-09-20</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
      '<button class="btn" onclick="forceUpdateApp()">🔄 强制更新程序</button></div>';
   h+='<div class="card"><h4>考试时间</h4><div class="frow"><div class="field"><label>名称</label><input type="text" id="setExamLabel" value="'+esc(s.examLabel||"考试")+'"></div><div class="field"><label>日期</label><input type="date" id="setExamDate" value="'+(s.examDate||"")+'"></div><div class="field"><label>备考起点(可选)</label><input type="date" id="setExamStart" value="'+(s.examStart||"")+'"><div class="desc">留空＝最早的一条数据</div></div></div></div>';
   h+='<div class="card"><h4>掌握度算法</h4><div class="radios" id="mModel">'+
