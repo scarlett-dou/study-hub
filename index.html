@@ -3019,13 +3019,25 @@ function renderLqModal(){
     body.querySelector("#lqStart").onclick=()=>{ const n=clamp(parseInt(body.querySelector("#lqN").value)||1,1,m); _lq.count=n;
       const sj=_lq.pool.filter(q=>q.suji),rest=_lq.pool.filter(q=>!q.suji),need=Math.max(0,n-sj.length);
       const picked=sj.map(q=>({q})).concat(weightedPick(rest.map(q=>({q})),Math.min(need,rest.length)));
-      _lq.items=shuffle(picked).map(o=>({q:o.q,resp:undefined})); _lq.phase="quiz"; _lq.submitted=false; renderLqModal(); };
+      _lq.items=shuffle(picked).map(o=>({q:o.q,resp:undefined})); _lq.phase="quiz"; _lq.submitted=false; _lq.i=0; renderLqModal(); };
     body.querySelector("#lqCancel").onclick=()=>{ closeModal(); _lq=null; };
   } else if(_lq.phase==="quiz"){
-    const body=openModal('<div class="d">'+title+'</div>','<div class="msub">'+_lq.items.length+' 题 · 全部作答后点交卷</div><div id="lqCards" style="margin-top:8px"></div><div class="btnrow"><button class="btn" id="lqSubmit">交卷判分</button><button class="btn sec" id="lqExit">退出</button></div>');
-    const host=body.querySelector("#lqCards"); _lq.items.forEach((it,i)=>host.appendChild(lqCard(it,i)));
-    body.querySelector("#lqSubmit").onclick=()=>{ lqReadAnswers(host); gradeLq(); recordExam(_lq.reciteId,{pct:_lq.pct,part:"whole",date:_lq.onDate}); _lq.phase="result"; _lq.submitted=true; save(); renderLqModal(); };
+    /* 一题一屏：输完回车 → 当场对答案 → 回车进下一题（2026-09-25 她要求） */
+    if(_lq.i==null||_lq.i<0) _lq.i=0;
+    if(_lq.i>=_lq.items.length){ lqFinish(); return; }
+    const i=_lq.i,it=_lq.items[i],n=_lq.items.length;
+    let okN=0; for(let k=0;k<i;k++){ if((typeof _lq.items[k]._sc==="number"?_lq.items[k]._sc:0)>=0.9) okN++; }
+    const body=openModal('<div class="d">'+title+'</div>',
+      '<div class="msub">第 <b>'+(i+1)+'</b> / '+n+' 题 · 已对 <b>'+okN+'</b>'+(i?(' · 正确率 '+Math.round(okN/i*100)+'%'):'')+' · 输完按回车对答案</div>'+
+      '<div id="lqCards" style="margin-top:8px"></div>'+
+      '<div class="btnrow" id="lqBtns"><button class="btn" id="lqOne">提交本题</button><button class="btn sec" id="lqSkip">不会,看答案</button><button class="btn sec" id="lqExit">退出</button></div>');
+    const host=body.querySelector("#lqCards"); host.appendChild(lqCard(it,i));
+    const first=host.querySelector('input.fillgap,input[type="radio"],select'); if(first){ try{ first.focus(); }catch(e){} }
+    const commit=()=>{ lqReadAnswers(host); const sc=gradeScore(it); it._sc=sc; it._done=true; recordQuestionResult(it.q,quizPassed(it),sc); lqShowAns(host,body,it,i); save(); };
+    body.querySelector("#lqOne").onclick=()=>{ lqReadAnswers(host); if(!lqHasResp(it)){ toast("还没作答 —— 不会就点「不会,看答案」"); return; } commit(); };
+    body.querySelector("#lqSkip").onclick=()=>{ lqReadAnswers(host); commit(); };
     body.querySelector("#lqExit").onclick=()=>{ closeModal(); _lq=null; };
+    body.onkeydown=(e)=>{ if(e.key!=="Enter") return; const nx=body.querySelector("#lqNext"); if(nx){ e.preventDefault(); nx.click(); return; } const ok=body.querySelector("#lqOne"); if(ok){ e.preventDefault(); ok.click(); } };
   } else {
     const mm=db.settings.mastery,sw=(+mm.selfWeight||0),ew=(+mm.examWeight||0);
     const body=openModal('<div class="d">'+title+' · 结果</div>',
@@ -3078,6 +3090,38 @@ function readQuizAnswers(items,host){
   });
 }
 function lqReadAnswers(host){ readQuizAnswers(_lq.items,host); }
+/* 这道题动过手没有（全空就别当错题记进去，提示她点「不会,看答案」） */
+function lqHasResp(it){ const q=it.q,r=it.resp;
+  if(q.type==="mc") return r!=null&&r!=="";
+  if(q.type==="tf") return r===true||r===false;
+  if(q.type==="fill") return (Array.isArray(r)?r:[]).some(v=>String(v==null?"":v).replace(/\s/g,""));
+  if(q.type==="match"){ const o=r||{}; return Object.keys(o).some(k=>o[k]); }
+  return false; }
+/* 判完一道题就把答案摊开：输入框标色、底下出正确答案条、按钮换成「下一题」（渲染口径与背诵库考试交卷后一致） */
+function lqShowAns(host,body,it,i){
+  const q=it.q,card=host.querySelector('[data-qi="'+i+'"]'); if(!card) return;
+  card.querySelectorAll("input,select").forEach(el=>{ el.disabled=true; });
+  if(q.type==="fill"){ const fp=fillParts(q.fillText);
+    fp.answers.forEach((a,k)=>{ const inp=card.querySelector('input[data-blank="'+k+'"]'); if(!inp) return;
+      const bs=(it._asim&&it._asim[k]!=null)?it._asim[k]:blankScore((it.resp||[])[k]||"",a);
+      inp.classList.add(bs>=0.999?"ok":bs>0?"partial":"no"); });
+    card.appendChild(revelScore(it._sc,"正确答案:"+fp.answers.map((a,k)=>(k+1)+"."+a).join("　"))); }
+  else if(q.type==="mc") card.appendChild(revel(it.resp===q.mcAnswer,"正确答案:"+q.mcAnswer));
+  else if(q.type==="tf") card.appendChild(revel(it.resp===q.truth,"正确答案:"+(q.truth?"✓ 对":"✗ 错")));
+  else if(q.type==="match"){ q.pairs.forEach((p,k)=>{ const sel=card.querySelector('select[data-pi="'+k+'"]'); if(sel) sel.style.borderColor=(((it.resp||{})[k]||"")===p.right)?"var(--green)":"var(--red)"; });
+    card.appendChild(revel(q.pairs.every((p,k)=>(((it.resp||{})[k]||"")===p.right)),"正确配对:"+q.pairs.map(p=>p.left+"→"+p.right).join("；"))); }
+  const last=(i+1>=_lq.items.length);
+  const btns=body.querySelector("#lqBtns");
+  btns.innerHTML='<button class="btn" id="lqNext">'+(last?"看总成绩 →":"下一题 →")+'</button><button class="btn sec" id="lqExit2">退出</button>';
+  btns.querySelector("#lqNext").onclick=()=>{ _lq.i=i+1; renderLqModal(); };
+  btns.querySelector("#lqExit2").onclick=()=>{ closeModal(); _lq=null; };
+  if(card.scrollIntoView){ try{ card.scrollIntoView({block:"nearest"}); }catch(e){} } }
+/* 全部做完：把各题已判的分汇总成总成绩并写回这一节（每题的统计在提交那一刻已记过，这里不再重复记） */
+function lqFinish(){ let sum=0,pass=0;
+  _lq.items.forEach(it=>{ const sc=(typeof it._sc==="number")?it._sc:gradeScore(it); sum+=sc; if(sc>=0.9) pass++; });
+  _lq.correct=pass; _lq.pct=_lq.items.length?Math.round(sum/_lq.items.length*100):0;
+  recordExam(_lq.reciteId,{pct:_lq.pct,part:"whole",date:_lq.onDate});
+  _lq.phase="result"; _lq.submitted=true; save(); renderLqModal(); }
 function gradeLq(){ let sum=0,pass=0; _lq.items.forEach(it=>{ const sc_=gradeScore(it); sum+=sc_; const p=quizPassed(it); if(p)pass++; recordQuestionResult(it.q,p,sc_); }); _lq.correct=pass; _lq.pct=_lq.items.length?Math.round(sum/_lq.items.length*100):0; }
 async function applyLqRating(key){
   const r=db.recites.find(x=>x.id===_lq.reciteId); if(!r){ closeModal(); _lq=null; return; }
@@ -6229,7 +6273,7 @@ async function forceUpdateApp(){
 function mountSettings(main){
   const s=db.settings;
   let h='<h2 class="mod-h">设置</h2><div class="mod-sub">考试时间、评分与掌握度、间隔参数、数据同步、备份、扩展模块。改动即时保存。</div>';
-  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-09-20</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
+  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-09-25</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
      '<button class="btn" onclick="forceUpdateApp()">🔄 强制更新程序</button></div>';
   h+='<div class="card"><h4>考试时间</h4><div class="frow"><div class="field"><label>名称</label><input type="text" id="setExamLabel" value="'+esc(s.examLabel||"考试")+'"></div><div class="field"><label>日期</label><input type="date" id="setExamDate" value="'+(s.examDate||"")+'"></div><div class="field"><label>备考起点(可选)</label><input type="date" id="setExamStart" value="'+(s.examStart||"")+'"><div class="desc">留空＝最早的一条数据</div></div></div></div>';
   h+='<div class="card"><h4>掌握度算法</h4><div class="radios" id="mModel">'+
