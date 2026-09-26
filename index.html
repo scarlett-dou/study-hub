@@ -4695,8 +4695,13 @@ function qzHist(q){
 }
 
 /* 层级：科目组 → 子科目 */
-function qzTree(){ const t={};
-  qzAll().forEach(q=>{ const g=t[q.group]||(t[q.group]={name:q.group,subs:{},n:0});
+function qzTree(){ const t={}, all=qzAll(), home={};
+  /* 模考题并进同名科目所在的题库组（她 09-27：拉通）；没有同名题库科目的（行测）留在「模考」组。
+     先题库题后模考题，组和卡片的顺序保持题库原样。 */
+  all.forEach(q=>{ if(q.src!=="mk"&&!home[q.subject]) home[q.subject]=q.group; });
+  all.filter(q=>q.src!=="mk").concat(all.filter(q=>q.src==="mk")).forEach(q=>{
+    const gk=(q.src==="mk"&&home[q.subject])||q.group;
+    const g=t[gk]||(t[gk]={name:gk,subs:{},n:0});
     g.n++; const s=g.subs[q.subject]||(g.subs[q.subject]={name:q.subject,n:0,done:0,wrong:0});
     s.n++; const st=qzSt(q); if(st){ s.done++; if(st.inBook) s.wrong++; } });
   return t; }
