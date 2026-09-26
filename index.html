@@ -4549,7 +4549,7 @@ function qzSrcs(){ return [
     pts:()=>qzMocks().map(p=>({id:"mkp-"+p.id,subject:"模考",name:p.name,grp:"模考卷",hint:p.date||""})),
     /* 「哪张卷」之外再挂章节：习思想题带 ch（她笔记的章 / 时政专题）与 tags，
        与 sj 那一路共用 sjc-* 知识点，按章节组卷时模考题也一起出来。 */
-    kps:q=>[].concat(q.paperId?["mkp-"+q.paperId]:[], q.ch?["sjc-"+q.ch]:[], (q.tags||[]).map(t=>"sjc-"+t)) },
+    kps:q=>[].concat(q.paperId?["mkp-"+q.paperId]:[], q.ch?["sjc-"+q.ch]:[], (q.tags||[]).map(t=>"sjc-"+t), (q.kps||[])) },
   { key:"law", group:"法律", qs:()=>((db.lawBank&&db.lawBank.questions)||[]), subj:q=>q.subject||"法律",
     type:q=>q.type||(q.sec==="判断题"?"tf":"mc"), pts:()=>((db.lawBank&&db.lawBank.points)||[]),
     kps:q=>q.kps||[] },
