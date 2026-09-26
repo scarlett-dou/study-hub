@@ -4781,6 +4781,8 @@ function qzState(){ const s=db.qzState||(db.qzState={paper:null,last:null,exams:
   if(!Array.isArray(s.exams)) s.exams=[]; if(!Array.isArray(s.hls)) s.hls=[]; return s; }
 function qzPaper(){ return qzState().paper; }
 function qzItems(){ const p=qzPaper(); if(!p) return [];
+  if(Array.isArray(p.qs)) return p.qs;   /* 模考错题/按科目练的卷子把整题内嵌在 qs 里，不是 items 引用 */
+  if(!Array.isArray(p.items)) return [];
   const map={}; qzAll().forEach(q=>map[q.src+"|"+q.id]=q);
   return p.items.map(it=>map[it.src+"|"+it.id]).filter(Boolean); }
 
@@ -4863,8 +4865,8 @@ function qzHome(main){
   const p=qzPaper();
   let h='<div class="qz-hd"><h2>刷题</h2><span class="qz-sub">选一个科目直接练，或自由组卷做一套模拟卷</span></div>';
   if(p&&!p.submitted){
-    const done=Object.keys(p.picks).length;
-    h+='<div class="qz-resume"><div><b>有一套没做完的'+QZ_MODE[p.mode]+'</b><span class="qz-sub">共 '+p.items.length+' 题 · 已答 '+done+' 题</span></div>'+
+    const done=Object.keys(p.picks||{}).length;
+    h+='<div class="qz-resume"><div><b>有一套没做完的'+QZ_MODE[p.mode]+'</b><span class="qz-sub">共 '+((p.items||p.qs||[]).length)+' 题 · 已答 '+done+' 题</span></div>'+
        '<div class="qz-ract"><button class="qz-btn pri" id="qzGo">继续</button><button class="qz-btn" id="qzDrop">放弃</button></div></div>';
   }
   if(!groups.length){
