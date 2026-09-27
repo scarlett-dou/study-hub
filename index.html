@@ -1116,6 +1116,89 @@
     .wr-wrap:not(.done) .wr-ta{min-height:56vh}
   }
   /* ===== 10.11 公文写作 CSS END ===== */
+
+  /* ===== 机考样式（2026-09-27，照四川紧缺选调机考仿真系统）MACHINE_STYLE_V1 ===== */
+  .qz-exam{--mk-blue:#3f7cf4;--mk-green:#34c77b;--mk-red:#f0564c;--mk-line:#b9c0cc}
+  .qz-top{background:var(--mk-blue);border-radius:6px 6px 0 0;padding:8px 14px}
+  .qz-tl b{font-weight:600;letter-spacing:.5px}
+  .qz-tr{align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .qz-aa{background:none;border:0;color:#fff;font:700 16px/1 inherit;padding:0 4px;cursor:pointer}
+  .qz-aa small{font-size:11px}
+  .qz-done,.qz-top .qz-clock,.qz-lockb{border:1px solid rgba(255,255,255,.8);border-radius:999px;padding:1px 11px;font-size:13px;line-height:1.7;
+    background:transparent;color:#fff;font-family:inherit;font-weight:400;letter-spacing:0;opacity:1;white-space:nowrap}
+  .qz-top .qz-clock{font-variant-numeric:tabular-nums}
+  .qz-lockb{cursor:pointer} .qz-lockb:hover{background:rgba(255,255,255,.15)}
+  .qz-body{position:relative;border-radius:0 0 6px 6px}
+  .qz-side{flex-basis:230px;background:var(--card);padding:14px 14px 12px}
+  .qz-body.sidehide .qz-side{display:none}
+  .qz-fold{position:absolute;left:230px;top:40%;z-index:2;width:14px;height:56px;border:0;border-radius:0 8px 8px 0;
+    background:var(--mk-blue);color:#fff;font-size:11px;padding:0;cursor:pointer}
+  .qz-body.sidehide .qz-fold{left:0}
+  .qz-slb{display:none}
+  .qz-sgh{font-size:14px;color:var(--text);font-weight:600;margin-bottom:8px}
+  .qz-sgh::before{content:"∨";font-weight:400;color:var(--text2);margin-right:2px}
+  .qz-sgh b{font-weight:400;color:var(--text2);font-size:12px}
+  .qz-sgrp{margin-bottom:12px}
+  .qz-sheet{grid-template-columns:repeat(5,30px);gap:8px}
+  .qz-cell{width:30px;height:30px;border:1px solid var(--mk-line);border-radius:3px;background:var(--card);color:var(--text);font-size:13px;overflow:hidden}
+  .qz-cell.done{background:var(--mk-green);border-color:var(--mk-green);color:#fff}
+  .qz-cell.part{background:linear-gradient(90deg,var(--mk-green) 50%,var(--card) 50%);border-color:var(--mk-green);color:var(--text)}
+  .qz-cell.right{background:var(--mk-green);border-color:var(--mk-green);color:#fff}
+  .qz-cell.wrong{background:var(--mk-red);border-color:var(--mk-red);color:#fff}
+  .qz-cell.cur{outline:none;background:var(--mk-blue);border-color:var(--mk-blue);color:#fff}
+  .qz-cell.cur.right,.qz-cell.cur.done{background:var(--mk-green);border-color:var(--mk-green);box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--mk-blue)}
+  .qz-cell.cur.wrong{background:var(--mk-red);border-color:var(--mk-red);box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--mk-blue)}
+  .qz-cell.mk::after{top:auto;left:auto;right:0;bottom:0;width:0;height:0;border:solid transparent;border-width:0 0 10px 10px;border-bottom-color:var(--mk-red)}
+  .qz-legend{display:grid;grid-template-columns:repeat(3,auto);justify-content:space-between;gap:5px 8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--sep)}
+  .qz-legend i{width:11px;height:11px;border-radius:2px;border:1px solid var(--mk-line);position:relative;overflow:hidden}
+  .qz-legend i.cur{background:var(--mk-blue);border-color:var(--mk-blue);outline:none}
+  .qz-legend i.done,.qz-legend i.right{background:var(--mk-green);border-color:var(--mk-green)}
+  .qz-legend i.wrong{background:var(--mk-red);border-color:var(--mk-red)}
+  .qz-legend i.part{background:linear-gradient(90deg,var(--mk-green) 50%,var(--card) 50%);border-color:var(--mk-green)}
+  .qz-legend i.mk{background:var(--card);border-color:var(--mk-line)}
+  .qz-legend i.mk::after{content:"";position:absolute;right:0;bottom:0;border:solid transparent;border-width:0 0 6px 6px;border-bottom-color:var(--mk-red)}
+  .qz-submit{height:36px;border-radius:4px;background:var(--mk-blue);border-color:var(--mk-blue);color:#fff;font-size:15px}
+  .qz-main{padding:14px 20px 0}
+  .qz-qhd{align-items:flex-start;border-bottom:1px solid var(--sep);padding-bottom:8px;margin-bottom:14px}
+  .qz-qh1{flex:1;min-width:0;color:var(--text)}
+  .qz-qh1 b{font-size:16px}
+  .qz-qh1 span{display:block;font-weight:600;font-size:14px}
+  .qz-qhd .qz-qsrc{border:1px solid var(--sep);border-radius:4px;padding:0 7px;color:var(--text2);font-size:12px;margin-top:3px}
+  .qz-qhd .qz-qmark{margin-left:0;margin-top:3px;color:var(--mk-red)}
+  .qz-no{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 5px;margin-right:8px;
+    background:var(--mk-blue);color:#fff;border-radius:3px;font-size:13px;font-weight:600;vertical-align:2px;white-space:nowrap}
+  .qz-opts{gap:2px}
+  .qz-opts.tf{flex-direction:column}
+  .qz-opts.tf .qz-opt{justify-content:flex-start}
+  .qz-opt{border:1px solid transparent;background:transparent;border-radius:4px;padding:6px 8px;cursor:pointer}
+  .qz-opt:hover{background:var(--fill)}
+  .qz-ok{width:auto;height:auto;border:0;border-radius:0;background:none!important;color:var(--text)!important;font-size:inherit;font-weight:700;gap:0;line-height:1.6}
+  .qz-ok::before{content:"";flex:none;width:16px;height:16px;box-sizing:border-box;border:1.5px solid #9aa3b2;border-radius:50%;background:var(--card);margin-right:10px}
+  .qz-ok::after{content:"."}
+  .qz-opts.tf .qz-ok{font-size:0;gap:0} .qz-opts.tf .qz-ok::after{content:""}
+  .qz-opts.multi .qz-ok::before{border-radius:3px}
+  .qz-opt.on{background:transparent;border-color:transparent}
+  .qz-opt.on .qz-ok::before{border-color:var(--mk-blue);background:radial-gradient(circle,var(--mk-blue) 0 3.5px,var(--card) 4px)}
+  .qz-opts.multi .qz-opt.on .qz-ok::before{background:var(--mk-blue);box-shadow:inset 0 0 0 2.5px var(--card)}
+  .qz-opt.hit{background:rgba(52,199,123,.13);border-color:transparent}
+  .qz-opt.hit .qz-ok::before{border-color:var(--mk-green)}
+  .qz-opt.miss{background:rgba(240,86,76,.11);border-color:transparent}
+  .qz-opt.miss .qz-ok::before{border-color:var(--mk-red)}
+  .qz-nav{position:sticky;bottom:0;z-index:1;background:var(--card);margin:18px -20px 0;padding:9px 20px;border-top:1px solid var(--sep);align-items:center}
+  .qz-nav .qz-btn{flex:0 0 auto}
+  .qz-nav #qzMark{border:0;background:none;color:var(--text2);padding-left:0}
+  .qz-nav #qzMark.on{color:var(--mk-red)}
+  .qz-nav #qzPrev,.qz-nav #qzNext{min-width:112px;background:var(--mk-blue);border-color:var(--mk-blue);color:#fff;border-radius:4px}
+  .qz-exam.fs0 .qz-stem{font-size:14.5px} .qz-exam.fs0 .qz-opt{font-size:13.5px} .qz-exam.fs0 .qz-exp{font-size:13px}
+  .qz-exam.fs2 .qz-stem{font-size:19px}   .qz-exam.fs2 .qz-opt{font-size:17px}   .qz-exam.fs2 .qz-exp{font-size:16px}
+  .qz-lockov{position:fixed;inset:0;z-index:9999;background:linear-gradient(#5b8ff7,#3f7cf4);color:#fff;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:12px;font-size:19px;text-align:center;padding:20px}
+  .qz-lockov small{font-size:13px;opacity:.85}
+  .qz-lockov button{border:1px solid #fff;background:transparent;color:#fff;border-radius:4px;padding:6px 24px;font:inherit;font-size:15px;cursor:pointer}
+  @media (max-width:760px){ .qz-fold{display:none} .qz-sheet{grid-template-columns:repeat(8,30px)} .qz-main{padding:12px 14px 0} .qz-nav{margin:16px -14px 0;padding:9px 14px}
+    .qz-top{flex-wrap:wrap;row-gap:6px} .qz-tl{flex:none;white-space:nowrap} .qz-tr{flex:1 1 auto;gap:6px}
+    .qz-top .only-narrow{display:inline-block;border:1px solid rgba(255,255,255,.8);border-radius:999px;background:transparent;color:#fff;padding:1px 11px;font-size:13px}   /* 以前 .only-narrow{display:none} 写在媒体查询后面，手机上答题卡按钮一直出不来 */
+    .qz-nav #qzPrev,.qz-nav #qzNext{min-width:88px} .qz-lockb{display:none} }
 </style>
 
 <div class="wrap">
@@ -5620,6 +5703,14 @@ function qzArmTimer(p){ if(qzTimer){ clearInterval(qzTimer); qzTimer=null; }
 document.addEventListener("visibilitychange",()=>{ const p=qzPaper(); if(!p||p.submitted||qz.view!=="run") return;
   if(document.hidden){ qzQFlush(p); if(p.mode!=="exam") qzPause(); save(); }
   else { qzResume(); if(p.qKey&&!qzQFrozen(p,p.qKey)) p.qAt=Date.now(); qzArmTimer(p); } });
+function qzFs(){ const l=(db.qzState&&db.qzState.last)||{}; return (l.fs===0||l.fs===2)?l.fs:1; }   /* MACHINE_STYLE_V1 字号 */
+function qzLock(p,exam){   /* 暂离锁屏：练习模式暂停计时，考试模式照走（跟考场一样） */
+  if(!exam) qzPause(); save();
+  const ov=document.createElement("div"); ov.className="qz-lockov";
+  ov.innerHTML='<div>⏸ 暂离中</div><small>'+(exam?'考试模式：跟考场一样，计时照走':'练习模式：计时已暂停')+'</small><button>继续作答</button>';
+  document.body.appendChild(ov);
+  ov.querySelector("button").onclick=()=>{ ov.remove(); render(); };
+}
 function qzRun(main){
   const p=qzPaper(), qs=qzItems();
   if(!p||!qs.length){ qz.view="home"; render(); return; }
@@ -5637,16 +5728,16 @@ function qzRun(main){
   const noOf={}; groups.forEach(g=>g.list.forEach(it=>{ noOf[it.i]=it.no; }));
   const curSec=q.sec, curNo=noOf[qz.cur];
 
-  let h='<div class="qz-exam">';
+  let h='<div class="qz-exam fs'+qzFs()+'">';   /* MACHINE_STYLE_V1 */
   /* 顶栏：返回 / 考试名 / 计时 / 交卷 */
   const doneN=Object.keys(p.picks).filter(k=>k.indexOf("_tmp")!==0).length;
   h+='<div class="qz-top"><div class="qz-tl"><button class="qz-btn sm" id="qzExit">‹ 返回</button>'+
      '<b>综合测试</b><span class="qz-tag">'+QZ_MODE[p.mode]+'</span></div>'+
-     '<div class="qz-tr"><span class="qz-done">已完成 '+doneN+'/'+qs.length+' 题</span>'+
+     '<div class="qz-tr"><button class="qz-aa" id="qzAA" title="字号：小／中／大">A<small>A</small></button><span class="qz-done">已完成 '+doneN+'/'+qs.length+' 题</span>'+
      '<span class="qz-clock" id="qzClock">'+(exam?'剩余 '+qzFmtTime(qzLeft(p)):'⏱ '+qzFmtTime(qzUsed(p)))+'</span>'+
      '<span class="qz-clock qz-qclk" id="qzQClock">本题 '+qzMmss(qzQMs(p,key))+'</span>'+
-     '<button class="qz-btn sm only-narrow" id="qzCardBtn">答题卡</button></div></div>';
-  h+='<div class="qz-body">';
+     '<button class="qz-lockb" id="qzLockB">⏸ 暂离锁屏</button><button class="qz-btn sm only-narrow" id="qzCardBtn">答题卡</button></div></div>';
+  h+='<div class="qz-body'+(qz.sideHide?" sidehide":"")+'"><button class="qz-fold" id="qzFold" title="收起／展开试题列表">'+(qz.sideHide?"›":"‹")+'</button>';
   /* 左：答题卡（按题型分组） */
   h+='<div class="qz-side'+(qz.cardOpen?" open":"")+'"><div class="qz-slb">答题卡</div><div class="qz-sheet-wrap">';
   groups.forEach(g=>{
@@ -5666,14 +5757,14 @@ function qzRun(main){
     h+='</div></div>'; });
   h+='</div><div class="qz-legend">'+
      '<span><i class="cur"></i>当前</span><span><i></i>未完成</span>'+
-     '<span><i class="part"></i>部分完成</span><span><i class="done"></i>已完成</span>'+
+     '<span><i class="part"></i>部分完成</span><span><i class="done"></i>已完成</span>'+(!exam?'<span><i class="right"></i>对</span><span><i class="wrong"></i>错</span>':'')+
      '<span><i class="mk"></i>标记</span><span><i class="nt"></i>问过问题</span>'+
      (qz.showHist?'<span><i class="hg"></i>以前做对</span><span><i class="hb"></i>以前做错</span>':"")+'</div>'+
      '<button class="qz-btn pri qz-submit" id="qzSubmit">交卷</button></div>';
   /* 右：题目 */
+  const _sg=groups.find(g=>g.sec===curSec), _sn=_sg?_sg.list.length:1;   /* MACHINE_STYLE_V1 题头 */
   h+='<div class="qz-main"><div class="qz-qhd">'+
-     '<span class="qz-qsec">'+esc(QZ_SECNAME[curSec]||curSec)+'</span><span class="qz-qno">第 '+curNo+' 题</span>'+
-     '<span class="qz-qpt">'+QZ_PTS[curSec]+' 分</span>'+
+     '<div class="qz-qh1"><b>'+esc(QZ_SECNAME[curSec]||curSec)+'</b><span>（共 '+_sn+' 题，共 '+(Math.round(_sn*(QZ_PTS[curSec]||1)*10)/10)+' 分。）</span></div>'+
      '<span class="qz-qsrc">'+esc(q.subject)+(q.page?' · 原书第'+esc(String(q.page))+'页':'')+'</span>'+   /* QZ_PAGE_LABEL */
      (marked?'<span class="qz-qmark">▲ 已标记</span>':"")+'</div>';
   /* 以前做过的话，把历史亮出来（组卷时可关掉） */
@@ -5686,9 +5777,9 @@ function qzRun(main){
       ((hi.book?hi.sysW:hi.w)?' · 累计错 '+(hi.book?hi.sysW:hi.w)+' 次':"")+(hi.mastered?' · <span class="g">已掌握</span>':"")+
       (hi.fuzzy?' · <span class="o">标过模糊</span>':"")+
       (qzNoteGet(q)?' · 有备注':"")+(function(){ const t=qzQHist(q); return t?' · 上次用时 '+qzSec(t.last*1000):""; })()+'</div>'; }
-  h+='<div class="qz-stem">'+esc(q.stem)+'</div>';
+  h+='<div class="qz-stem"><span class="qz-no">'+curNo+'</span>'+esc(q.stem)+'</div>';
   const keys=(q.type==="tf")?["√","×"]:Object.keys(q.options||{});
-  h+='<div class="qz-opts'+(q.type==="tf"?" tf":"")+'">';
+  h+='<div class="qz-opts'+(q.type==="tf"?" tf":"")+(q.sec==="多选题"?" multi":"")+'">';
   keys.forEach(k=>{ const on=pick.indexOf(k)>=0;
     let cls="qz-opt"+(on?" on":"");
     if(!exam&&answered){ const inA=q.answer.indexOf(k)>=0;
@@ -5762,6 +5853,10 @@ function qzRun(main){
   const cb=main.querySelector("#qzCardBtn"); if(cb) cb.onclick=()=>{ qz.cardOpen=!qz.cardOpen; keepSheet(render); };
   main.querySelectorAll(".qz-cell").forEach(c=>c.onclick=()=>{ qz.cur=+c.dataset.i; qz.cardOpen=false; rerender(); });
   main.querySelector("#qzSubmit").onclick=()=>qzSubmit(qs);
+  /* MACHINE_STYLE_V1：字号、收起试题列表、暂离锁屏 */
+  const _aa=main.querySelector("#qzAA"); if(_aa) _aa.onclick=()=>{ const st=qzState(); st.last=st.last||{}; st.last.fs=(qzFs()+1)%3; rerender(); };
+  const _fd=main.querySelector("#qzFold"); if(_fd) _fd.onclick=()=>{ qz.sideHide=!qz.sideHide; keepSheet(render); };
+  const _lk=main.querySelector("#qzLockB"); if(_lk) _lk.onclick=()=>{ p.cur=qz.cur; qzLock(p,exam); };
   /* 中途返回：进度和计时都保留，首页可「继续」 */
   main.querySelector("#qzExit").onclick=()=>{ p.cur=qz.cur; qzPause(); qz.view="home"; save(); render(); };
   const fz=main.querySelector("#qzFz");
