@@ -319,6 +319,22 @@
   .tfbtns button.sel{ background:var(--text); color:var(--bg2); border-color:var(--text) } .tfbtns button.correct{ background:var(--G-bg); border-color:var(--green); color:var(--green) } .tfbtns button.wrong{ background:var(--R-bg); border-color:var(--red); color:var(--red) }
   .matchgrid{ display:flex; flex-direction:column; gap:9px; margin-top:12px } .mline{ display:flex; align-items:center; gap:10px }
   .mline .lf{ flex:1; font-family:var(--serif); font-size:14.5px; background:var(--fill); border-radius:8px; padding:9px 12px } .mline select{ flex:1 }
+  /* 连线题（MATCH_WIDGET_V1）：左右两列、中间留空画线；左项连上即标绿/红 */
+  .mtw{ position:relative; display:flex; align-items:flex-start; margin-top:12px }
+  .mtw-col{ display:flex; flex-direction:column; gap:8px; min-width:0 }
+  .mtw-l{ flex:1.3 1 0 } .mtw-r{ flex:1 1 0 } .mtw-gap{ flex:0 0 44px }
+  .mtw-it{ position:relative; z-index:1; font-family:var(--serif); font-size:14px; line-height:1.5; background:var(--fill); border:1.5px solid transparent; border-radius:8px; padding:8px 10px; cursor:pointer; -webkit-user-select:none; user-select:none; overflow-wrap:anywhere }
+  .mtw-it:hover{ border-color:var(--sep2) }
+  .mtw-it.sel{ border-color:var(--tint); background:var(--tint-soft) }
+  .mtw-r .mtw-it.used{ border-color:var(--sep2) }
+  .mtw-l .mtw-it.ok{ border-color:var(--green); background:rgba(52,199,89,.15); cursor:default }
+  .mtw-l .mtw-it.bad{ border-color:var(--red); background:rgba(255,59,48,.12); cursor:default }
+  .mtw-l .mtw-it.miss{ border-color:var(--red); border-style:dashed; cursor:default }
+  .mtw-to{ display:block; font-size:12px; margin-top:3px; opacity:.9 }
+  .mtw-l .ok .mtw-to{ color:#248a3d } .mtw-l .bad .mtw-to,.mtw-l .miss .mtw-to{ color:#d70015 }
+  .mtw.lock .mtw-it{ cursor:default }
+  .mtw-svg{ position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; overflow:visible; z-index:0 }
+  @media (max-width:520px){ .mtw-gap{ flex-basis:26px } .mtw-it{ font-size:13px; padding:7px 8px } }
   .ansrev{ margin-top:10px; font-size:13px; color:var(--green); background:var(--G-bg); border-radius:8px; padding:8px 12px; line-height:1.6 } .ansrev.bad{ color:var(--red); background:var(--R-bg) } .ansrev b{ font-weight:700 }
   .scorebar{ background:var(--card); border:1px solid var(--sep); border-radius:var(--r-lg); padding:20px; margin-bottom:16px; text-align:center; box-shadow:var(--shadow) }
   .scorebar .big{ font-weight:700; font-size:44px; line-height:1; color:var(--tint) } .scorebar .lab{ font-size:13px; color:var(--text2); margin-top:6px }
@@ -2922,13 +2938,51 @@ function paperQ(it,i){ const q=it.q,done=_exam.submitted,card=document.createEle
     const btns=document.createElement("div"); btns.className="tfbtns"; [["对",true],["错",false]].forEach(arr=>{ const t=arr[0],v=arr[1],bb=document.createElement("button"); bb.textContent=t; if(it.resp===v)bb.classList.add("sel");
       if(done){ if(v===q.truth)bb.classList.add("correct"); else if(it.resp===v)bb.classList.add("wrong"); bb.disabled=true; } bb.onclick=()=>{ it.resp=v; render(); }; btns.appendChild(bb); }); card.appendChild(btns);
     if(done) card.appendChild(revel(it.resp===q.truth,"正确答案:"+(q.truth?"✓ 对":"✗ 错"))); }
-  else if(q.type==="match"){ const b=document.createElement("div"); b.className="qbody"; b.textContent="把左右正确配对:"; card.appendChild(b);
-    if(!it._rights) it._rights=shuffle(q.pairs.map(p=>p.right)); it.resp=it.resp||{}; const grid=document.createElement("div"); grid.className="matchgrid";
-    q.pairs.forEach((p,k)=>{ const line=document.createElement("div"); line.className="mline"; const lf=document.createElement("div"); lf.className="lf"; lf.textContent=p.left; line.appendChild(lf);
-      const sel=document.createElement("select"); sel.disabled=done; sel.innerHTML='<option value="">— 选择 —</option>'+it._rights.map(r=>'<option value="'+esc(r)+'">'+esc(r)+'</option>').join("");
-      sel.value=it.resp[k]||""; sel.onchange=()=>{ it.resp[k]=sel.value; }; if(done) sel.style.borderColor=(it.resp[k]===p.right)?"var(--green)":"var(--red)"; line.appendChild(sel); grid.appendChild(line); });
-    card.appendChild(grid); if(done){ const okk=q.pairs.every((p,k)=>(it.resp[k]||"")===p.right); card.appendChild(revel(okk,"正确配对:"+q.pairs.map(p=>p.left+"→"+p.right).join(";"))); } }
+  else if(q.type==="match"){ const b=document.createElement("div"); b.className="qbody"; b.innerHTML=MTW_TIP; card.appendChild(b);   /* MATCH_WIDGET_V1 */
+    card.appendChild(matchWidget(it,{locked:done}));
+    if(done){ card.appendChild(revelScore(gradeScore(it),"正确配对:"+q.pairs.map(p=>p.left+"→"+p.right).join(";"))); } }
   return card; }
+/* ===== 连线题：点左边、再点右边＝连一条线（2026-09-27 她要求）  MATCH_WIDGET_V1 =====
+   以前每个左项一个下拉框，下拉里把各对的右项逐个列出——几个左项答案相同时，同一项会出现好几遍。
+   现在右边只列不重复的答案；先点左边一项再点右边（先右后左也行）就连上，左项当场标绿/红；连了不能改（否则能一直试到对）。
+   作答照旧写 it.resp={左项序号:右项文字}，判分口径不变。连满时调 it._onAll()（「先测验」用它自动对答案）。 */
+const MTW_TIP='把左右连起来：<b>先点左边一项，再点右边</b>对应的一项（先右后左也行）。连上立刻判对错、不能改；右边同一项可以连多次。';
+function matchWidget(it,opt){ opt=opt||{};   /* MATCH_FIX_V2：选中状态存在 it._selL/_selR（整页重绘不丢）；ResizeObserver 重画线 */
+  const ps=it.q.pairs||[];
+  if(!it._rights){ const u=[]; ps.forEach(p=>{ if(u.indexOf(p.right)<0) u.push(p.right); }); it._rights=shuffle(u); }
+  if(!it.resp||typeof it.resp!=="object") it.resp={};
+  let locked=!!opt.locked; if(locked){ it._selL=null; it._selR=null; }
+  const wrap=document.createElement("div"); wrap.className="mtw";
+  const L=document.createElement("div"); L.className="mtw-col mtw-l";
+  const G=document.createElement("div"); G.className="mtw-gap";
+  const R=document.createElement("div"); R.className="mtw-col mtw-r";
+  const svg=document.createElementNS("http://www.w3.org/2000/svg","svg"); svg.setAttribute("class","mtw-svg");
+  const lEls=ps.map(p=>{ const d=document.createElement("div"); d.className="mtw-it"; const t=document.createElement("span"); t.textContent=p.left; d.appendChild(t); L.appendChild(d); return d; });
+  const rEls=it._rights.map(r=>{ const d=document.createElement("div"); d.className="mtw-it"; d.textContent=r; R.appendChild(d); return d; });
+  function draw(){ if(!wrap.isConnected) return; const W=wrap.getBoundingClientRect(); let h="";
+    ps.forEach((p,k)=>{ const v=it.resp[k],x=it._rights.indexOf(v); if(!v||x<0) return;
+      const a=lEls[k].getBoundingClientRect(),b=rEls[x].getBoundingClientRect();
+      h+='<line x1="'+(a.right-W.left)+'" y1="'+(a.top+a.height/2-W.top)+'" x2="'+(b.left-W.left)+'" y2="'+(b.top+b.height/2-W.top)+'" style="stroke:'+(v===p.right?"var(--green)":"var(--red)")+';stroke-width:2;stroke-linecap:round"/>'; });
+    svg.innerHTML=h; }
+  function paint(){
+    ps.forEach((p,k)=>{ const d=lEls[k],v=it.resp[k]; d.classList.remove("ok","bad","sel","miss"); const old=d.querySelector(".mtw-to"); if(old) old.remove();
+      let tag="";
+      if(v){ d.classList.add(v===p.right?"ok":"bad"); tag="→ "+v; }
+      else if(locked){ d.classList.add("miss"); tag="（没连）"; }
+      else if(it._selL===k) d.classList.add("sel");
+      if(tag){ const s=document.createElement("span"); s.className="mtw-to"; s.textContent=tag; d.appendChild(s); } });
+    rEls.forEach((d,x)=>{ d.classList.toggle("sel",!locked&&it._selR===x); d.classList.toggle("used",ps.some((p,k)=>it.resp[k]===it._rights[x])); });
+    wrap.classList.toggle("lock",locked); draw(); }
+  function link(k,x){ if(locked||it.resp[k]) return; it.resp[k]=it._rights[x]; it._selL=null; it._selR=null; paint();
+    if(ps.every((p,j)=>it.resp[j])&&typeof it._onAll==="function") it._onAll(); }
+  lEls.forEach((d,k)=>{ d.onclick=()=>{ if(locked||it.resp[k]) return; if(it._selR!=null){ link(k,it._selR); return; } it._selL=(it._selL===k?null:k); paint(); }; });
+  rEls.forEach((d,x)=>{ d.onclick=()=>{ if(locked) return; if(it._selL!=null){ link(it._selL,x); return; } it._selR=(it._selR===x?null:x); paint(); }; });
+  wrap.append(L,G,R,svg);
+  it._mtwLock=()=>{ locked=true; it._selL=null; it._selR=null; paint(); };
+  if(typeof ResizeObserver==="function"){ const ro=new ResizeObserver(()=>{ if(!wrap.isConnected){ ro.disconnect(); return; } draw(); }); ro.observe(wrap); }
+  else { const onRs=()=>{ if(!wrap.isConnected){ window.removeEventListener("resize",onRs); return; } draw(); }; window.addEventListener("resize",onRs); }
+  paint(); setTimeout(draw,60); if(window.requestAnimationFrame) requestAnimationFrame(()=>draw());
+  return wrap; }
 function revel(ok,txt){ const d=document.createElement("div"); d.className="ansrev"+(ok?"":" bad"); d.innerHTML=(ok?"✓ 答对":"✗ 答错")+" · "+esc(txt); return d; }
 function lcsLen(a,b){ const n=b.length; if(!a.length||!n) return 0; let prev=new Array(n+1).fill(0);
   for(let i=0;i<a.length;i++){ const cur=new Array(n+1).fill(0); for(let j=0;j<n;j++){ cur[j+1]=a[i]===b[j]?prev[j]+1:Math.max(prev[j+1],cur[j]); } prev=cur; } return prev[n]; }
@@ -2944,7 +2998,7 @@ function fillAssign(resps,answers){ const n=answers.length,pairs=[];
 function gradeScore(it){ const q=it.q;
   if(q.type==="mc") return it.resp===q.mcAnswer?1:0;
   if(q.type==="tf") return it.resp===q.truth?1:0;
-  if(q.type==="match") return (q.pairs.length&&q.pairs.every((p,k)=>((it.resp||{})[k]||"")===p.right))?1:0;
+  if(q.type==="match"){ const ps=q.pairs||[]; if(!ps.length) return 0; return ps.filter((p,k)=>((it.resp||{})[k]||"")===p.right).length/ps.length; }   /* MATCH_PARTIAL_V1：按连对的比例给分，与思想回顾模块一致 */
   if(q.type==="fill"){ const ans=fillParts(q.fillText).answers; if(!ans.length) return 0; if(ans.length===1){ const s1=blankScore((it.resp||[])[0]||"",ans[0]); it._asim=[s1]; return s1; } const A=fillAssign(it.resp,ans); it._asim=A.respSim; return A.total/ans.length; }
   return 0; }
 function gradeItem(it){ return gradeScore(it)>=0.999; }
@@ -3036,8 +3090,9 @@ function renderLqModal(){
     const commit=()=>{ lqReadAnswers(host); const sc=gradeScore(it); it._sc=sc; it._done=true; recordQuestionResult(it.q,quizPassed(it),sc); lqShowAns(host,body,it,i); save(); };
     body.querySelector("#lqOne").onclick=()=>{ lqReadAnswers(host); if(!lqHasResp(it)){ toast("还没作答 —— 不会就点「不会,看答案」"); return; } commit(); };
     body.querySelector("#lqSkip").onclick=()=>{ lqReadAnswers(host); commit(); };
+    it._onAll=()=>{ setTimeout(()=>{ if(_lq&&_lq.items&&_lq.items[_lq.i]===it&&!it._done&&host.isConnected&&document.getElementById("scrim").classList.contains("on")) commit(); },450); };   /* 连线连满自动对答案 */
     body.querySelector("#lqExit").onclick=()=>{ closeModal(); _lq=null; };
-    body.onkeydown=(e)=>{ if(e.key!=="Enter") return; const nx=body.querySelector("#lqNext"); if(nx){ e.preventDefault(); nx.click(); return; } const ok=body.querySelector("#lqOne"); if(ok){ e.preventDefault(); ok.click(); } };
+    body.onkeydown=(e)=>{ if(e.key!=="Enter"||e.isComposing||e.keyCode===229) return; const nx=body.querySelector("#lqNext"); if(nx){ e.preventDefault(); nx.click(); return; } const ok=body.querySelector("#lqOne"); if(ok){ e.preventDefault(); ok.click(); } };
   } else {
     const mm=db.settings.mastery,sw=(+mm.selfWeight||0),ew=(+mm.examWeight||0);
     const body=openModal('<div class="d">'+title+' · 结果</div>',
@@ -3072,12 +3127,9 @@ function lqCard(it,i){
       const inp=document.createElement("input"); inp.type="radio"; inp.name="lq"+i; inp.value=a[1];
       lab.appendChild(inp); lab.appendChild(document.createTextNode(a[0])); btns.appendChild(lab); });
     card.appendChild(btns);
-  } else if(q.type==="match"){ if(!it._rights) it._rights=shuffle(q.pairs.map(p=>p.right));
-    const b=document.createElement("div"); b.className="qbody"; b.textContent="把左右正确配对:"; card.appendChild(b);
-    const grid=document.createElement("div"); grid.className="matchgrid";
-    q.pairs.forEach((p,k)=>{ const line=document.createElement("div"); line.className="mline"; const lf=document.createElement("div"); lf.className="lf"; lf.textContent=p.left; line.appendChild(lf);
-      const sel=document.createElement("select"); sel.dataset.pi=k; sel.innerHTML='<option value="">— 选择 —</option>'+it._rights.map(rr=>'<option value="'+esc(rr)+'">'+esc(rr)+'</option>').join(""); line.appendChild(sel); grid.appendChild(line); });
-    card.appendChild(grid);
+  } else if(q.type==="match"){   /* MATCH_WIDGET_V1 */
+    const b=document.createElement("div"); b.className="qbody"; b.innerHTML=MTW_TIP; card.appendChild(b);
+    card.appendChild(matchWidget(it,{}));
   }
   return card;
 }
@@ -3086,7 +3138,7 @@ function readQuizAnswers(items,host){
     if(q.type==="mc"){ const s=card.querySelector('input[name="lq'+i+'"]:checked'); it.resp=s?s.value:undefined; }
     else if(q.type==="tf"){ const s=card.querySelector('input[name="lq'+i+'"]:checked'); it.resp=s?(s.value==="1"):undefined; }
     else if(q.type==="fill"){ const fp=fillParts(q.fillText); it.resp=fp.answers.map((a,k)=>{ const inp=card.querySelector('input[data-blank="'+k+'"]'); return inp?inp.value:""; }); }
-    else if(q.type==="match"){ it.resp={}; card.querySelectorAll('select[data-pi]').forEach(sel=>{ it.resp[+sel.dataset.pi]=sel.value; }); }
+    else if(q.type==="match"){ if(!it.resp||typeof it.resp!=="object") it.resp={}; }   /* MATCH_WIDGET_V1：连线由 matchWidget 直接写 it.resp */
   });
 }
 function lqReadAnswers(host){ readQuizAnswers(_lq.items,host); }
@@ -3108,13 +3160,14 @@ function lqShowAns(host,body,it,i){
     card.appendChild(revelScore(it._sc,"正确答案:"+fp.answers.map((a,k)=>(k+1)+"."+a).join("　"))); }
   else if(q.type==="mc") card.appendChild(revel(it.resp===q.mcAnswer,"正确答案:"+q.mcAnswer));
   else if(q.type==="tf") card.appendChild(revel(it.resp===q.truth,"正确答案:"+(q.truth?"✓ 对":"✗ 错")));
-  else if(q.type==="match"){ q.pairs.forEach((p,k)=>{ const sel=card.querySelector('select[data-pi="'+k+'"]'); if(sel) sel.style.borderColor=(((it.resp||{})[k]||"")===p.right)?"var(--green)":"var(--red)"; });
-    card.appendChild(revel(q.pairs.every((p,k)=>(((it.resp||{})[k]||"")===p.right)),"正确配对:"+q.pairs.map(p=>p.left+"→"+p.right).join("；"))); }
+  else if(q.type==="match"){ if(it._mtwLock) it._mtwLock();   /* MATCH_WIDGET_V1 */
+    card.appendChild(revelScore(it._sc,"正确配对:"+q.pairs.map(p=>p.left+"→"+p.right).join("；"))); }
   const last=(i+1>=_lq.items.length);
   const btns=body.querySelector("#lqBtns");
   btns.innerHTML='<button class="btn" id="lqNext">'+(last?"看总成绩 →":"下一题 →")+'</button><button class="btn sec" id="lqExit2">退出</button>';
   btns.querySelector("#lqNext").onclick=()=>{ _lq.i=i+1; renderLqModal(); };
   btns.querySelector("#lqExit2").onclick=()=>{ closeModal(); _lq=null; };
+  try{ btns.querySelector("#lqNext").focus({preventScroll:true}); }catch(e){}   /* 判完输入框都被禁用、焦点丢了，回车没人接——交给「下一题」 */
   if(card.scrollIntoView){ try{ card.scrollIntoView({block:"nearest"}); }catch(e){} } }
 /* 全部做完：把各题已判的分汇总成总成绩并写回这一节（每题的统计在提交那一刻已记过，这里不再重复记） */
 function lqFinish(){ let sum=0,pass=0;
@@ -6409,6 +6462,14 @@ document.getElementById("scrim").onclick=e=>{ if(e.target.id==="scrim") closeMod
 document.getElementById("reconnectBtn").onclick=reconnectDir;
 const _bsn=document.getElementById("btnSaveNow"); if(_bsn) _bsn.onclick=saveNow;
 window.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeModal(); hideSelbar(); } });
+/* 回车＝下一题（2026-09-27 她要求，MATCH_WIDGET_V1 同批）：判完一道题后输入框全被禁用、焦点掉回页面本身，
+   弹窗 #mBody 上的 onkeydown 收不到回车。这里在页面层兜底：速记弹窗（先测验 #lq*／思想回顾模块速记测试 #sj*）开着、
+   焦点不在弹窗里时，回车＝点「下一题」，没有就点「提交本题」。输入法选字的回车不算。 */
+window.addEventListener("keydown",e=>{ if(e.key!=="Enter"||e.isComposing||e.keyCode===229||e.defaultPrevented) return;   /* MATCH_FIX_V2：弹窗 onkeydown 处理过（defaultPrevented）就不再点一次 */
+  const sc=document.getElementById("scrim"),mb=document.getElementById("mBody"); if(!sc||!mb||!sc.classList.contains("on")) return;
+  const ae=document.activeElement; if(ae&&ae!==document.body&&mb.contains(ae)) return;
+  const nx=mb.querySelector("#lqNext,#sjNext"); if(nx){ e.preventDefault(); nx.click(); return; }
+  const ok=mb.querySelector("#lqOne,#sjOne"); if(ok){ e.preventDefault(); ok.click(); } });
 document.addEventListener("mousedown",e=>{ if(!e.target.closest("#selbar")&&!e.target.closest(".selwrap")) hideSelbar(); });
 window.addEventListener("scroll",hideSelbar,true);
 window.addEventListener("focus",maybeAutoRefresh);
