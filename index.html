@@ -5278,7 +5278,8 @@ function qzMockList(main){
     const n=(p.items||[]).length,st=p.stat||{},subs=mkSubjects(p);
     let meta=(p.date?esc(p.date)+" · ":"");
     if(st.pts!=null) meta+='<span class="mk-score">'+st.pts+" / "+(st.full||100)+' 分</span> · ';
-    meta+="错题 <b>"+n+"</b> 道 · "+subs.length+" 个科目";
+    const okn=(p.items||[]).filter(it=>it.ok!==undefined), wrongN=okn.filter(it=>it.ok===false).length;   /* MK_LIST_COUNT */
+    meta+=(okn.length?"错题 <b>"+wrongN+"</b> 道 · 共 "+n+" 道":(p.stat?"错题 <b>"+n+"</b> 道":"共 <b>"+n+"</b> 道"))+" · "+subs.length+" 个科目";
     if(st.objRight!=null){
       meta+="<br>客观题 "+st.objRight+"/"+(st.objTotal||90)+" 正确";
       if(st.objSecs) meta+="　·　用时 "+Math.round(st.objSecs/60)+" 分钟";
@@ -5296,14 +5297,15 @@ function qzMockSubs(main){
   const p=qzMockById(qz.mockId);
   if(!p){ qz.view="mock"; render(); return; }
   const subs=mkSubjects(p);
+  const hasOk=(p.items||[]).some(function(it){return it.ok!==undefined;}), fresh=!p.stat&&!hasOk;   /* MK_SUBS_WORDING */
   let h='<div class="mk-hd"><button class="mk-back" id="qzBack">‹ 模考</button><h2>'+esc(p.name)+'</h2></div>';
   if(p.note) h+='<div class="mk-sub" style="margin:-8px 0 12px;line-height:1.9">'+esc(p.note)+'</div>';
   h+='<div class="mk-subs">'+subs.map(function(s){
     return '<div class="mk-scard" data-s="'+esc(s.name)+'"><div class="nm">'+esc(s.name)+
-      '</div><div class="n">'+s.items.length+'</div><div class="ct">道错题</div>'+
-      '<button class="mk-redo" data-s="'+esc(s.name)+'">▶️ 重做这科</button></div>';
+      '</div><div class="n">'+s.items.length+'</div><div class="ct">'+(fresh?'道题':hasOk?'道题 · 错 '+s.items.filter(function(it){return it.ok===false;}).length:'道错题')+'</div>'+
+      '<button class="mk-redo" data-s="'+esc(s.name)+'">▶️ '+(fresh?'做这科':'重做这科')+'</button></div>';
   }).join("")+'</div>';
-  h+='<div class="qz-actions"><button class="qz-btn pri big" id="mkRedo">▶️ 重做整卷（'+((p.items||[]).filter(function(x){return x.sec!=="写作题";}).length)+' 道）</button>'+
+  h+='<div class="qz-actions"><button class="qz-btn pri big" id="mkRedo">▶️ '+(fresh?'做整卷':'重做整卷')+'（'+((p.items||[]).filter(function(x){return x.sec!=="写作题";}).length)+' 道）</button>'+
        '<button class="qz-btn big" id="mkAll">📖 按顺序看全部解析</button></div>';
   main.innerHTML=h;
   main.querySelector("#qzBack").onclick=()=>{ qz.view="mock"; render(); };
@@ -5323,7 +5325,7 @@ function mkStartPractice(p,subject){
     q.id=q.id||(p.id+"-"+q.no); q.paperId=p.id; q.paperName=p.name;
     return { src:"mk", id:q.id, group:"模考", subject:q.subject||"模考", sec:q.sec, num:q.no,
              type:q.type||(q.sec==="判断题"?"tf":"mc"), stem:q.stem, options:q.options,
-             answer:q.answer, explain:q.explain, org:"", star:0, mark:"", kps:["mkp-"+p.id], _raw:q };
+             answer:q.answer, explain:q.explain, org:q.org||"", star:0, mark:"", kps:["mkp-"+p.id], _raw:q };   /* MK_ORG_TAG 专区重做也带出处 */
   });
   if(!list.length){ toast("这一组没有可做的题"); return; }
   /* 卷面按 判断→单选→多选 排序，和真卷一致 */
@@ -5545,7 +5547,7 @@ function qzSec(ms){ const s=Math.round(ms/1000); return s>=60?Math.floor(s/60)+"
 function qzMmss(ms){ return qzFmtTime(ms).replace(/^00:/,""); }
 /* 出处小标（2026-09-13 她要求「做题后注明是无非的题还是金标尺的题」）：按题上的 org 分两家，模考卷单列 */
 function qzOrgTag(q){ const o=q.org||""; let cls="",txt="";
-  if(q.src==="mk"){ cls="mk"; txt="模考卷"; }
+  if(q.src==="mk"){ cls="mk"; txt=o?o+"模考":"模考卷"; }   /* MK_ORG_TAG */
   else if(/^金标尺/.test(o)){ cls="jb"; txt=(o==="金标尺")?"金标尺":"金标尺·"+o.slice(3).replace(/^选调题库$/,"选调题库"); }
   else if(/^无非/.test(o)){ cls="wf"; txt=(o==="无非")?"无非":"无非·"+o.slice(2); }
   else if(o){ cls="mk"; txt=o; }
@@ -5619,7 +5621,7 @@ function qzRun(main){
   h+='<div class="qz-main"><div class="qz-qhd">'+
      '<span class="qz-qsec">'+esc(QZ_SECNAME[curSec]||curSec)+'</span><span class="qz-qno">第 '+curNo+' 题</span>'+
      '<span class="qz-qpt">'+QZ_PTS[curSec]+' 分</span>'+
-     '<span class="qz-qsrc">'+esc(q.subject)+' · 原书第'+esc(String(q.page||"-"))+'页</span>'+
+     '<span class="qz-qsrc">'+esc(q.subject)+(q.page?' · 原书第'+esc(String(q.page))+'页':'')+'</span>'+   /* QZ_PAGE_LABEL */
      (marked?'<span class="qz-qmark">▲ 已标记</span>':"")+'</div>';
   /* 以前做过的话，把历史亮出来（组卷时可关掉） */
   if(qz.showHist&&!answered){ const hi=qzHist(q);
