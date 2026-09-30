@@ -4819,10 +4819,10 @@ function qzHist(q){
             sysN:Math.max(0,(x.n||0)-(x.book?1:0)),   /* 扣掉书上补录的那一次,剩下才是系统里做的 */
             sysW:Math.max(0,(x.w||0)-(x.book?1:0)),   /* 同上:系统里错了几次 */
             last: x.w>0&&!x.mastered ? "错" : (x.r>0?"对":"") , date:x.last||""}; }
-  if(q.src==="sj"){ const x=sjQSt(q.id); if(!x||!x.n) return null;
-    return {n:x.n, w:x.w||0, r:x.r||0, mastered:!!x.mastered, fuzzy:!!x.fuzzy,
-            last: x.w>0&&!x.mastered ? "错" : (x.r>0?"对":""), date:x.last||""}; }
-  if(q.src==="mz"){ const x=mzQSt(q.id); if(!x||!x.n) return null;
+  /* QZHIST_DISPATCH_V1（2026-09-30）：以前只认 law/sj/mz，国省情/经济/常识/模考全掉进管理那一格去查，做过的题答题卡上永远没有「以前做过」的颜色。
+     这几科的记录字段与 sj 相同，查表统一处理；law 与管理（最后一行）照旧。加新科目要往这张表里加一行。 */
+  const QH={sj:sjQSt,mz:mzQSt,gs:gsQSt,ks:ksQSt,ec:ecQSt,mk:mkQSt};
+  if(QH[q.src]){ const x=QH[q.src](q.id); if(!x||!x.n) return null;
     return {n:x.n, w:x.w||0, r:x.r||0, mastered:!!x.mastered, fuzzy:!!x.fuzzy,
             last: x.w>0&&!x.mastered ? "错" : (x.r>0?"对":""), date:x.last||""}; }
   const x=mgQSt(q.id); if(!x||!x.ans) return null;
