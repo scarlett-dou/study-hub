@@ -4540,7 +4540,11 @@ function gsGrade(id,ok){ const x=gsQEnsure(id); x.n++; x.last=today();
   const s=gsS(); s.log.push({d:today(),q:id,ok:ok?1:0});
   if(s.log.length>4000) s.log=s.log.slice(-4000);
   save(); }
-function qzBankQa(q){ const b={law:db.lawBank,mg:db.mgBank,sj:db.sjBank,mz:db.mzBank,gs:db.gsBank,ec:db.ecBank,ks:db.ksBank}[q.src];
+/* MK_QA_V1：这道模考题与哪道题是同一道（dupOf 由 模考数据/mark-dup.js 写进 模考卷.json） */
+function qzDupTag(q){ const k=q&&q._raw&&q._raw.dupOf; if(!k) return ""; const i=k.indexOf("|"), src=k.slice(0,i), id=k.slice(i+1); let lab="题库里的一道题";
+  if(src==="mk"){ for(const p of qzMocks()){ const it=(p.items||[]).find(x=>(x.id||(p.id+"-"+x.no))===id); if(it){ lab=p.name+"第 "+it.no+" 题"; break; } } }
+  return '<span class="qz-qmark" title="'+esc(k)+'">≡ 与'+esc(lab)+'是同一道题</span>'; }
+function qzBankQa(q){ const b={law:db.lawBank,mg:db.mgBank,sj:db.sjBank,mz:db.mzBank,gs:db.gsBank,ec:db.ecBank,ks:db.ksBank,mk:db.mockBank}[q.src];   /* MK_QA_V1 */
   return (b&&b.qa&&b.qa[q.id])||null; }
 function qzQaFlag(q,f,set){
   /* 问答卡片的两个标记都记在她自己的 state 里，公开题库不动：
@@ -4550,8 +4554,8 @@ function qzQaFlag(q,f,set){
   if(q.src==="mg"){ const s=mgS(); const m=s[f]||(s[f]={});
     if(set===undefined) return !!m[q.id];
     if(set) m[q.id]=1; else delete m[q.id]; save(); return set; }
-  const ST={law:lawQSt,sj:sjQSt,gs:gsQSt,ec:ecQSt,ks:ksQSt};
-  const EN={law:lawQEnsure,sj:sjQEnsure,gs:gsQEnsure,ec:ecQEnsure,ks:ksQEnsure};
+  const ST={law:lawQSt,sj:sjQSt,gs:gsQSt,ec:ecQSt,ks:ksQSt,mk:mkQSt};
+  const EN={law:lawQEnsure,sj:sjQEnsure,gs:gsQEnsure,ec:ecQEnsure,ks:ksQEnsure,mk:mkQEnsure};
   if(set===undefined){ const x=(ST[q.src]||mzQSt)(q.id); return !!(x&&x[f]); }
   const x=(EN[q.src]||mzQEnsure)(q.id); if(set) x[f]=1; else delete x[f]; save(); return set;
 }
@@ -4848,7 +4852,7 @@ function qzScope1(q,scope){
   if(scope==="问过·已解决") return qzAsked(q)&&!!qzQaOk(q);
   const st=qzSt(q);
   switch(scope){
-    case "未做":   return !st;
+    case "未做":   return !st||!st.done;   /* MK_QA_V1：写备注/点问答标记会建 n=0 的空记录，不算做过 */
     case "做错过": return !!st&&st.inBook;
     case "模糊":   return !!st&&st.fuzzy;
     case "原书标记": return !!q.mark;
@@ -4859,12 +4863,15 @@ function qzScope1(q,scope){
 function qzScopeOk(q){ const ks=Object.keys(qz.scopes||{}); return !ks.length||ks.some(s=>qzScope1(q,s)); }
 function qzPool(){ const sel=qz.pick, kp=qz.kps, anyKp=Object.keys(kp).length;
   const gs=qzGrpKpSet();                     /* 选了大类就只在大类里出题 */
-  return qzAll().filter(q=>sel[q.subject]&&qzScopeOk(q)&&
+  const _r=qzAll().filter(q=>sel[q.subject]&&qzScopeOk(q)&&
     (!anyKp||(q.kps||[]).some(k=>kp[k]))&&
     (!gs||(q.kps||[]).some(k=>gs[k]))&&       /* 大类和知识点都不选＝该科目全部 */
     /* QZORGSTAR2 机构/难度：都不选就是不限 */
     (!Object.keys(qz.orgs||{}).length||(q.org&&qz.orgs[q.org]))&&
-    (!Object.keys(qz.stars||{}).length||(q.star&&qz.stars[q.star]))); }
+    (!Object.keys(qz.stars||{}).length||(q.star&&qz.stars[q.star])));
+  /* MK_QA_V1：同一道题（模考题带 dupOf＝代表那道的 src|id）在一张卷里只出一次；题库题排在前面，所以优先留题库那道 */
+  const _seen=new Set();
+  return _r.filter(q=>{ const k=(q._raw&&q._raw.dupOf)||(q.src+"|"+q.id); if(_seen.has(k)) return false; _seen.add(k); return true; }); }
 
 /* ---------- QZORGSTAR2：出题机构 / 难度星级 ---------- */
 /* 无非题库每题自带 1–5 星难度，金标尺题库没有；两套题合在 lawBank 里靠 org 区分。
@@ -5366,6 +5373,7 @@ async function mockAdopt(data){
     const i=db.mockBank.papers.findIndex(x=>x.id===p.id);
     if(i>=0){ db.mockBank.papers[i]=p; rep++; } else { db.mockBank.papers.push(p); add++; }
   });
+  if(data&&!Array.isArray(data)&&data.qa&&typeof data.qa==="object") db.mockBank.qa=data.qa;   /* MK_QA_V1：模考题的问答 */
   save();
   toast("模考卷已载入：新增 "+add+" 份 / 更新 "+rep+" 份 ✓");
   closeModal(); render();
@@ -5766,7 +5774,7 @@ function qzRun(main){
   h+='<div class="qz-main"><div class="qz-qhd">'+
      '<div class="qz-qh1"><b>'+esc(QZ_SECNAME[curSec]||curSec)+'</b><span>（共 '+_sn+' 题，共 '+(Math.round(_sn*(QZ_PTS[curSec]||1)*10)/10)+' 分。）</span></div>'+
      '<span class="qz-qsrc">'+esc(q.subject)+(q.page?' · 原书第'+esc(String(q.page))+'页':'')+'</span>'+   /* QZ_PAGE_LABEL */
-     (marked?'<span class="qz-qmark">▲ 已标记</span>':"")+'</div>';
+     (marked?'<span class="qz-qmark">▲ 已标记</span>':"")+qzDupTag(q)+'</div>';   /* MK_QA_V1 */
   /* 以前做过的话，把历史亮出来（组卷时可关掉） */
   if(qz.showHist&&!answered){ const hi=qzHist(q);
     if(hi) h+='<div class="qz-hist-tip'+(hi.last==="错"?" bad":" good")+'">'+
