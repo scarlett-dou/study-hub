@@ -383,9 +383,9 @@
   .fc-body{ font-size:16px; line-height:1.7 }
   .fc-p{ margin:7px 0 }
   .fc-bk{ border-radius:5px; padding:0 3px; font-weight:600; border-bottom:2px solid currentColor; cursor:pointer }
-  .fc-bk.R{ color:var(--R) } .fc-bk.B{ color:var(--B) }
+  .fc-bk.R{ color:var(--R) } .fc-bk.B{ color:var(--B) } .fc-bk.G{ color:var(--G) }
   .fc-bk.hidden{ color:transparent; background:var(--fill2); min-width:2.6em; display:inline-block; text-align:center; border-bottom-color:transparent }
-  .fc-bk.shown.R{ background:var(--R-bg) } .fc-bk.shown.B{ background:var(--B-bg) }
+  .fc-bk.shown.R{ background:var(--R-bg) } .fc-bk.shown.B{ background:var(--B-bg) } .fc-bk.shown.G{ background:var(--G-bg) }
   .fc-c.R{ color:var(--R) } .fc-c.B{ color:var(--B) } .fc-c.G{ color:var(--G) } .fc-c.P{ color:var(--P) } .fc-c.O{ color:var(--orange) }
   .fc-cue{ color:var(--text2); font-style:italic; font-size:.92em }
   .fc-tblwrap{ overflow-x:auto; margin:9px 0; -webkit-overflow-scrolling:touch; border-radius:9px }
@@ -413,7 +413,7 @@
   .fc-erow{ display:flex; gap:8px; align-items:flex-start; margin:7px 0 }
   .fc-eblk{ flex:1; line-height:2.05 }
   .fc-chip{ cursor:pointer; border-radius:4px; padding:0 2px }
-  .fc-bc{ border-bottom:2px solid currentColor } .fc-bc.R{ color:var(--R); background:var(--R-bg) } .fc-bc.B{ color:var(--B); background:var(--B-bg) }
+  .fc-bc{ border-bottom:2px solid currentColor } .fc-bc.R{ color:var(--R); background:var(--R-bg) } .fc-bc.B{ color:var(--B); background:var(--B-bg) } .fc-bc.G{ color:var(--G); background:var(--G-bg) }
   .fc-cc{ border-bottom:1px dotted currentColor } .fc-cc.R{ color:var(--R) } .fc-cc.B{ color:var(--B) } .fc-cc.P{ color:var(--P) } .fc-cc.O{ color:var(--orange) } .fc-cc.G{ color:var(--G) }
   .fc-srcbtn{ border:1px solid var(--sep2); background:var(--fill); color:var(--text2); border-radius:7px; padding:3px 9px; font-size:12px; flex:none; cursor:pointer; align-self:flex-start }
   .fc-tbledit td, .fc-tbledit th{ cursor:pointer } .fc-tbledit td:hover, .fc-tbledit th:hover{ outline:2px solid var(--tint); outline-offset:-2px }
@@ -1118,7 +1118,7 @@
   /* ===== 10.11 公文写作 CSS END ===== */
 
   /* ===== 机考样式（2026-09-27，照四川紧缺选调机考仿真系统）MACHINE_STYLE_V1 ===== */
-  .qz-exam{--mk-blue:#3f7cf4;--mk-green:#34c77b;--mk-red:#f0564c;--mk-line:#b9c0cc}
+  .qz-exam,.kl-q,.fc-body{--mk-blue:#3f7cf4;--mk-green:#34c77b;--mk-red:#f0564c;--mk-line:#b9c0cc}
   .qz-top{background:var(--mk-blue);border-radius:6px 6px 0 0;padding:8px 14px}
   .qz-tl b{font-weight:600;letter-spacing:.5px}
   .qz-tr{align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
@@ -1674,7 +1674,8 @@ async function csForcePush(){ if(!csConfigured()){ toast("还没连接云同步"
   if(CS.busy){ toast("正在同步中，稍等"); return false; } CS.busy=true;
   try{ csSetStatus("读取云端…",false);
     const p=await csPeek();
-    if(p){ CS.hashes=Object.assign({},p.idx.files||{}); CS.shas["index.json"]=p.sha; }
+    const base0=Object.assign({},CS.hashes);
+    if(p){ CS.hashes=Object.assign({},p.idx.files||{}); CS.shas["index.json"]=p.sha; if(!(await csTakeRemote(p.idx,base0))){ csSetStatus("云端文件不完整,暂不上传",false); return false; } }
     await save({noSync:true});
     /* 万一本机时钟慢于云端，戳要压过云端，否则别的设备不会来拉 */
     if(p&&p.savedAt&&p.savedAt>=(db.savedAt||"")){
@@ -1703,6 +1704,30 @@ function csWarnModal(){
   h.querySelector("#cwDown").onclick=async()=>{ if(!confirm("用云端数据覆盖本机？本机现在这份会被替换掉。")) return; closeModal(); await csForcePull(); };
   h.querySelector("#cwUp").onclick=async()=>{ if(!confirm("用本机数据覆盖云端？云端现在那份会被替换掉。")) return; closeModal(); await csForcePush(); };
   h.querySelector("#cwLater").onclick=()=>closeModal(); }
+/* CS_TAKE_REMOTE_V1：推送前先并进云端在上次同步后被别处改过、本机没动过的文件（脚本推的题库/卡组、别的设备推的章节）。
+   基准＝上次同步时云端的指纹 CS.hashes。远端改了本机没改→用远端；两边都改的卡组→只搬 units/unitsOther（只有入库脚本写）；
+   远端删了本机没改→本机也删；state.json 不参与（仍后保存者胜）。返回 false＝云端文件取不全，调用方放弃这次推送。 */
+async function csTakeRemote(ridx,base){
+  if(!base||!Object.keys(base).length) return true;
+  const rf=ridx.files||{};
+  const touched=Object.keys(rf).some(p=>p!=="state.json"&&rf[p]!==base[p])||Object.keys(base).some(p=>p!=="state.json"&&!(p in rf));
+  if(!touched) return true;   /* 绝大多数推送走这里：云端只有本机自己推过的东西 */
+  const loc=splitDb(), now=JSON.parse(loc["index.json"]).files, take=[], both=[];
+  Object.keys(rf).forEach(p=>{ if(p==="state.json"||rf[p]===base[p]||rf[p]===now[p]) return;
+    if(p in now ? now[p]===base[p] : !(p in base)) take.push(p);
+    else if(/^decks\/[^/]+\.json$/.test(p)&&!/-images\.json$/.test(p)) both.push(p); });
+  const drop=Object.keys(now).filter(p=>p!=="state.json"&&(p in base)&&!(p in rf)&&now[p]===base[p]);
+  if(!take.length&&!both.length&&!drop.length) return true;
+  const files=Object.assign({},loc), ix=JSON.parse(loc["index.json"]), got={};
+  for(const p of take.concat(both)){ const g=await csGet(p); if(!g||g.missing||typeof g.text!=="string") return false; got[p]=g; }
+  take.forEach(p=>{ files[p]=got[p].text; ix.files[p]=rf[p]; });
+  drop.forEach(p=>{ delete files[p]; delete ix.files[p]; });
+  both.forEach(p=>{ const r=JSON.parse(got[p].text), l=JSON.parse(files[p]); ["units","unitsOther"].forEach(k=>{ if(k in r) l[k]=r[k]; else delete l[k]; }); files[p]=JSON.stringify(l); });
+  files["index.json"]=JSON.stringify(ix);
+  const merged=mergeFiles(files); if(!merged) return false;
+  CS.applying=true; db=normalizeDb(merged); await save({noSync:true,keepSavedAt:true}); CS.applying=false;
+  take.concat(both).forEach(p=>{ CS.shas[p]=got[p].sha; }); take.forEach(p=>{ CS.hashes[p]=rf[p]; }); drop.forEach(p=>{ delete CS.hashes[p]; }); csSaveCfg();
+  return true; }
 async function csSync(opts){ opts=opts||{}; if(!csConfigured()) return; if(CS.busy){ CS.pending=true; return; } CS.busy=true; try{
     ensureStamp(); const lt=db.savedAt||"";
     const g=await csGet("index.json");
@@ -1727,6 +1752,7 @@ async function csSync(opts){ opts=opts||{}; if(!csConfigured()) return; if(CS.bu
       await csAdopt(merged,rt,ridx); render();
       csSetStatus("已拉取云端最新 ✓ "+csFmt(rt),true); if(!opts.silent) toast("已从云端同步最新 ✓"); return; }
     if(lt&&lt>rt){
+      if(!(await csTakeRemote(ridx,CS.hashes))){ csSetStatus("云端文件不完整,暂不上传",false); return; }
       let rst=ridx.stats;   /* 老版本推上去的 index 没有 stats,上传是危险方向,值得多取一次 state.json 来比 */
       if(!rst){ const s=await csGet("state.json");
         if(s&&!s.missing&&s.text){ try{ rst=csStats(JSON.parse(s.text)); }catch(e){} } }
@@ -2012,6 +2038,7 @@ const BUILTIN_MODULES=[
   { id:"library", name:"背诵库", mount:mountLibrary },
   { id:"flash", name:"卡片", mount:mountFlash },
   { id:"quiz", name:"刷题", mount:mountQuiz },
+  { id:"learn", name:"学练", mount:mountLearn },
   { id:"law", name:"法律", mount:mountLaw, hidden:true },
   { id:"mg", name:"管理", mount:mountMg, hidden:true },
   { id:"wr", name:"公文写作", mount:mountWr, hidden:true },
@@ -3383,7 +3410,7 @@ function fcCardById(deck,id){ return deck.cards.find(c=>c.id===id); }
 /* ---- markup 渲染: [[答案|R/B]] 挖空 · ‹文本|R/B/P/O/G› 上色 · 〔提示〕 · ⟦IMG:x⟧ 图 ---- */
 function fcEscBr(s){ return esc(s).replace(/\n/g,"<br>"); }
 function fcRender(md,deck){ const imgs=(deck&&deck.images)||{}; let out="",last=0,m;
-  const re=/\[\[([^\]|]+)\|([RB])\]\]|‹([^|›]*)\|([RBPOG])›|〔([^〕]*)〕|⟦IMG:([^⟧]+)⟧/g;
+  const re=/\[\[([^\]|]+)\|([RBG])\]\]|‹([^|›]*)\|([RBPOG])›|〔([^〕]*)〕|⟦IMG:([^⟧]+)⟧/g;
   while((m=re.exec(md))!==null){ if(m.index>last) out+=fcEscBr(md.slice(last,m.index));
     if(m[1]!==undefined) out+='<span class="fc-bk hidden '+m[2]+'" data-ans="'+esc(m[1])+'" tabindex="0" role="button">＿＿＿</span>';
     else if(m[3]!==undefined) out+='<span class="fc-c '+m[4]+'">'+fcEscBr(m[3])+'</span>';
@@ -3509,7 +3536,7 @@ function fcRenderSession(main,deck){ const S=fc.session; if(!S){ fc.screen="home
   const top=document.createElement("div"); top.className="fc-prog";
   top.innerHTML='<button class="fc-back" style="margin:0" id="fcExit">✕ 退出</button><span style="font-size:13px;color:var(--text2);white-space:nowrap">'+esc(S.label)+'</span><div class="bar"><i style="width:'+Math.round(S.i/total*100)+'%"></i></div><span style="font-size:13px;color:var(--text2);white-space:nowrap">'+(S.i+1)+' / '+total+'</span>';
   wrap.appendChild(top); top.querySelector("#fcExit").onclick=()=>{ if(confirm("退出本轮？已评价的卡片进度已保存。")){ fc.screen="home"; fc.session=null; fc.nav={level:"deck"}; render(); } };
-  if(card.kind!=="quiz"){ const _eb=document.createElement("button"); _eb.className="fc-back"; _eb.style.margin="0"; _eb.textContent=fc.editing?"✓ 完成编辑":"✎ 编辑挖空"; _eb.onclick=()=>{ fc.editing=!fc.editing; hideSelbar(); render(); }; top.appendChild(_eb); }
+  if(card.kind!=="quiz"&&card.kind!=="bankq"){ const _eb=document.createElement("button"); _eb.className="fc-back"; _eb.style.margin="0"; _eb.textContent=fc.editing?"✓ 完成编辑":"✎ 编辑挖空"; _eb.onclick=()=>{ fc.editing=!fc.editing; hideSelbar(); render(); }; top.appendChild(_eb); }
   const cardEl=document.createElement("div"); cardEl.className="fc-card"; wrap.appendChild(cardEl);
   // 情景标题
   const ctxParts=[card.chap,card.sec,card.sub].filter(Boolean);
@@ -3517,8 +3544,9 @@ function fcRenderSession(main,deck){ const S=fc.session; if(!S){ fc.screen="home
   if(card.pretitle) head+='<div class="fc-pre">'+esc(card.pretitle)+'</div>';
   if(card.title) head+='<div class="fc-title">'+esc(card.title)+'</div>';
   const s=fcPeek(card.id); const badge = s&&s.mastered?'<span class="fc-badge">已掌握</span>':(s?'<span class="fc-tag">记'+s.good+'/一般'+s.hard+'/没'+s.again+'</span>':'<span class="fc-tag">新卡</span>');
-  if(fc.editing && card.kind!=="quiz"){ fcRenderClozeEdit(cardEl,card,deck,head,wrap); return; }
+  if(fc.editing && card.kind!=="quiz" && card.kind!=="bankq"){ fcRenderClozeEdit(cardEl,card,deck,head,wrap); return; }
   if(card.kind==="quiz") fcRenderQuizCard(cardEl,card,deck,head,badge,wrap);
+  else if(card.kind==="bankq") fcRenderBankQ(cardEl,card,deck,head,badge,wrap);
   else fcRenderClozeCard(cardEl,card,deck,head,badge,wrap);
 }
 function fcRenderClozeCard(cardEl,card,deck,head,badge,wrap){ const S=fc.session;
@@ -3532,6 +3560,7 @@ function fcRenderClozeCard(cardEl,card,deck,head,badge,wrap){ const S=fc.session
   if(nBlanks){ const rb=document.createElement("button"); rb.className="fc-btn sec sm"; rb.textContent="显示全部答案"; rb.onclick=()=>{ S.reveal=true; cardEl.querySelectorAll(".fc-bk.hidden").forEach(reveal); }; tools.appendChild(rb); }
   else { const t=document.createElement("span"); t.className="mod-sub"; t.textContent="（本卡无挖空 · 看懂即可评价）"; tools.appendChild(t); }
   cardEl.appendChild(tools);
+  if(card.learn&&card.learn.unit){ const lb=document.createElement("button"); lb.className="fc-btn sec sm"; lb.style.marginLeft="8px"; lb.textContent="📖 去学练看原文、做题"; lb.onclick=()=>klJump(card.learn.deck,card.learn.unit); tools.appendChild(lb); }
   const rate=document.createElement("div"); rate.className="fc-rate";
   rate.innerHTML='<button class="again">没记住</button><button class="hard">一般</button><button class="good">记住</button>';
   rate.querySelector(".again").onclick=()=>fcRateNext(card.id,"again");
@@ -3578,19 +3607,20 @@ function fcSummary(wrap,deck){ const S=fc.session;
   wrap.appendChild(btns); }
 
 /* ---- 错题本 ---- */
+function fcStemOf(c){ return String(c.stem||(c.ref&&klQ(c.ref)||{}).stem||""); }
 function fcRenderWrong(main,deck){ const wrap=document.createElement("div"); wrap.className="fc-wrap"; main.appendChild(wrap);
   wrap.appendChild(fcBack("← 返回",()=>{ fc.screen="home"; render(); }));
-  const wrongCards=deck.cards.filter(c=>c.kind==="quiz"&&(()=>{ const s=fcPeek(c.id); return s&&s.wrong; })());
+  const wrongCards=deck.cards.filter(c=>(c.kind==="quiz"||c.kind==="bankq")&&(()=>{ const s=fcPeek(c.id); return s&&s.wrong; })());
   const h=document.createElement("div"); h.innerHTML='<h2 class="mod-h">错题本</h2><p class="mod-sub">做错的真题会留在这里，做对一次就移出。共 '+wrongCards.length+' 题。</p>'; wrap.appendChild(h);
   if(!wrongCards.length){ const e=document.createElement("div"); e.className="kempty"; e.innerHTML='<div class="big">暂无错题</div>做题做错了会自动进来。'; wrap.appendChild(e); return; }
   const b=document.createElement("button"); b.className="fc-btn"; b.style.margin="0 0 12px"; b.textContent="开始重做（"+wrongCards.length+"）";
   b.onclick=()=>fcStartSession(wrongCards,"错题重做",false); wrap.appendChild(b);
   wrongCards.forEach(c=>{ const s=fcPeek(c.id); const row=document.createElement("div"); row.className="fc-row"; row.style.cursor="default";
-    row.innerHTML='<div class="fc-seal" style="background:var(--R-bg);color:var(--R)">✗</div><div style="flex:1;min-width:0"><div class="fc-nm" style="font-weight:500;font-size:14px">'+esc(c.stem.slice(0,46))+(c.stem.length>46?"…":"")+'</div><div class="fc-meta">'+esc([c.chap,c.sec].filter(Boolean).join(" › "))+' · 错 '+(s.wrongN||1)+' 次</div></div>';
+    row.innerHTML='<div class="fc-seal" style="background:var(--R-bg);color:var(--R)">✗</div><div style="flex:1;min-width:0"><div class="fc-nm" style="font-weight:500;font-size:14px">'+esc(fcStemOf(c).slice(0,46))+(fcStemOf(c).length>46?"…":"")+'</div><div class="fc-meta">'+esc([c.chap,c.sec].filter(Boolean).join(" › "))+' · 错 '+(s.wrongN||1)+' 次</div></div>';
     wrap.appendChild(row); }); }
 
 /* ---- 卡片编辑：改挖空 / 上色 / 源码（复用 #selbar 与 openModal） ---- */
-function fcTok(md){ const t=[]; let last=0,m; const re=/\[\[([^\]|]+)\|([RB])\]\]|‹([^|›]*)\|([RBPOG])›|〔([^〕]*)〕|⟦IMG:([^⟧]+)⟧/g;
+function fcTok(md){ const t=[]; let last=0,m; const re=/\[\[([^\]|]+)\|([RBG])\]\]|‹([^|›]*)\|([RBPOG])›|〔([^〕]*)〕|⟦IMG:([^⟧]+)⟧/g;
   while((m=re.exec(md))!==null){ if(m.index>last) t.push({type:"plain",text:md.slice(last,m.index)});
     if(m[1]!==undefined) t.push({type:"blank",ans:m[1],color:m[2]});
     else if(m[3]!==undefined) t.push({type:"color",text:m[3],color:m[4]});
@@ -6423,6 +6453,258 @@ function wrExport(pid,allOfPaper){
     try{ document.execCommand("copy"); toast("已复制 ✓"); }catch(e){ toast("请手动长按复制"); } };
 }
 /* ===== 10.11 公文写作 END ===== */
+/* ===== 10.12 · 学练（看一段笔记 → 马上做这段的题；2026-10-10 她要求「非卡片学习与刷题」） =====
+   数据：卡组对象上的 units（decks/eco.json、decks/mgmt.json；私有，随卡组同步，不进公开题库）：
+     deck.units=[{id,title,summary,chap,sec,cards:[卡id],qs:["ec|wfec-s4-3",…](主要配到这段),q2:[…](也考到这段),part:{key:1}(笔记只讲到主题、细节没写),hot:{lv,why}}]
+     deck.unitsOther=[{id,title,summary?,qs:[…]}]  笔记里没有这个主题的题，按题库原知识点分组
+   正文实时从卡组取（她在卡片里改了，这里跟着变）；判分走 qzGrade —— 错题本、模糊、备注、问答、标红全部沿用刷题中心。
+   进度：db.qzState.kl={u:{单元id:{n,last}},cur:{卡组id:单元id}}（state.json，随云同步）。 */
+let kl={ deck:null, unit:null, hotOnly:false, cloze:false, notesOpen:true, round:null, from:null };
+const KL_PTR=/^〔🖊 本节配套习题/;
+const KL_ROUND=5;
+function klDecks(){ return (db.flashDecks||[]).filter(d=>Array.isArray(d.units)&&d.units.length); }
+function klDeck(){ const ds=klDecks(); return ds.find(d=>d.id===kl.deck)||ds[0]||null; }
+function klS(){ const s=qzState(); if(!s.kl||typeof s.kl!=="object") s.kl={}; if(!s.kl.u) s.kl.u={}; if(!s.kl.cur) s.kl.cur={}; return s.kl; }
+/* 题目查表：key＝src|id，与刷题中心同一套 */
+let klQM=null;
+function klQMap(){ if(!klQM) klQM={}; if(!klQM._n||klQM._n!==klQSig()){ const m={_n:klQSig()}; qzAll().forEach(q=>{ m[q.src+"|"+q.id]=q; }); klQM=m; } return klQM; }
+function klQSig(){ return ["ecBank","mgBank","mockBank","lawBank","sjBank","mzBank","gsBank","ksBank"].map(k=>{ const b=db[k]; return b?((b.version||0)+":"+((b.questions||b.papers||[]).length)):"-"; }).join(","); }
+function klQ(key){ return klQMap()[key]||null; }
+function klUnitKeys(u){ return (u.qs||[]).concat((u.q2||[]).filter(k=>(u.qs||[]).indexOf(k)<0)); }
+function klStat(keys){ let n=0,done=0,book=0,right=0;
+  keys.forEach(k=>{ const q=klQ(k); if(!q) return; n++; const st=qzSt(q); if(st&&st.done){ done++; if(st.inBook) book++; else right++; } });
+  return {n,done,book,right}; }
+/* 易考分级：3＝四川紧缺真题考过，2＝四川公基／省考／国考考过，1＝只有模考频次或机构押题 */
+function klHotTag(u){ const lv=u&&u.hot&&u.hot.lv; if(lv>=3) return '<span class="kl-hot">🔥 紧缺真题考过</span>'; if(lv===2) return '<span class="kl-hot l2">🔥 常考</span>'; if(lv===1) return '<span class="kl-hot l1">模考常见</span>'; return ""; }
+function klIsHot(u){ return !!(u&&u.hot&&u.hot.lv>=2); }
+function klUnitById(d,id){ return (d.units||[]).find(u=>u.id===id)||null; }
+/* 笔记没讲到的题：按题库原知识点分的组，当作没有笔记的「段」 */
+function klOthers(d){ return (Array.isArray(d.unitsOther)?d.unitsOther:[]).filter(g=>g&&Array.isArray(g.qs)&&g.qs.some(k=>klQ(k))).map(g=>({id:g.id,title:g.title,summary:g.summary||"",chap:"笔记没讲到的题",sec:"",cards:[],qs:g.qs,other:true})); }
+function klFind(d,id){ return klUnitById(d,id)||klOthers(d).find(u=>u.id===id)||null; }
+function klSeq(d){ return d.units.concat(klOthers(d)); }
+
+/* 笔记正文：去掉卡片里给刷题中心写的「本节配套习题」指引行；默认显示原文（挖空直接亮出答案），可切「挖空自测」 */
+function klCardHtml(c,d){ let h="";
+  (c.blocks||[]).forEach(b=>{ if(b.t==="p"){ if(KL_PTR.test(b.md)) return; h+='<p class="fc-p">'+fcRender(b.md,d)+"</p>"; }
+    else if(b.t==="table") h+=fcTable(b.rows,d);
+    else if(b.t==="img"){ const src=(d.images||{})[b.src]; if(src) h+='<img class="fc-img" src="'+src+'">'; } });
+  if(!h) return "";
+  const lab=(c.title||"").trim();
+  return '<div class="kl-card">'+(lab?'<div class="kl-clab">'+esc(lab)+'</div>':"")+(c.sub&&c.h4?'<div class="kl-h4">'+esc(c.h4)+'</div>':"")+h+'</div>'; }
+function klReveal(root){ root.querySelectorAll(".fc-bk.hidden").forEach(el=>{ el.classList.remove("hidden"); el.classList.add("shown"); el.textContent=el.dataset.ans; }); }
+function klCss(){ if(document.getElementById("klCss")) return; const st=document.createElement("style"); st.id="klCss";
+  st.textContent=[
+  ".kl-wrap{max-width:860px;margin:0 auto}",
+  ".kl-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}.kl-tabs button{border:1px solid var(--sep2);background:var(--card);color:var(--text);border-radius:10px;padding:7px 14px;font-size:14px;font-weight:600;cursor:pointer}.kl-tabs button.sel{background:var(--tint);border-color:var(--tint);color:#fff}",
+  ".kl-hero{background:var(--card);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:14px 16px;margin-bottom:14px}",
+  ".kl-chap{font-size:13px;font-weight:700;color:var(--text2);margin:16px 2px 8px;letter-spacing:.5px}",
+  ".kl-row{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--sep);border-radius:var(--r);padding:11px 14px;margin-bottom:8px;cursor:pointer;box-shadow:var(--shadow)}.kl-row:hover{border-color:var(--tint)}",
+  ".kl-row .nm{font-weight:650;font-size:15px}.kl-row .sm{font-size:12.5px;color:var(--text2);margin-top:2px;line-height:1.5}.kl-row .mt{font-size:12px;color:var(--text2);margin-top:4px}",
+  ".kl-row.seen .nm::after{content:' · 看过';font-weight:400;font-size:12px;color:var(--G)}",
+  ".kl-hot{display:inline-block;font-size:11.5px;font-weight:700;color:#b4380b;background:rgba(255,120,40,.15);border-radius:6px;padding:1px 6px;margin-right:6px;vertical-align:1px}.kl-hot.l2{color:#a05a00;background:rgba(255,170,40,.15)}.kl-hot.l1{color:var(--text2);background:var(--fill);font-weight:600}",
+  ".kl-bar{height:5px;border-radius:3px;background:var(--fill);overflow:hidden;margin-top:6px;display:flex}.kl-bar i{display:block;height:100%}.kl-bar .r{background:var(--green)}.kl-bar .w{background:var(--red)}",
+  ".kl-notes{background:var(--card);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:6px 18px 14px;margin-bottom:14px;line-height:1.85}",
+  ".kl-nh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 0 6px;border-bottom:1px solid var(--sep);margin-bottom:8px}.kl-nh b{font-size:15px}.kl-nh .sp{flex:1}",
+  ".kl-card{padding:6px 0 8px;border-bottom:1px dashed var(--sep)}.kl-card:last-child{border-bottom:none}",
+  ".kl-clab{font-size:12px;font-weight:700;color:var(--tint);margin:4px 0 2px}.kl-h4{font-size:13px;font-weight:700;margin:2px 0}",
+  ".kl-notes.fold .kl-body{display:none}",
+  ".kl-q{background:var(--card);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:14px 18px 16px;margin-bottom:14px}",
+  ".kl-qmeta{font-size:12.5px;color:var(--text2);margin-bottom:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}",
+  ".kl-part{font-size:12.5px;color:#9a5b00;background:rgba(255,159,10,.13);border-radius:8px;padding:6px 10px;margin:0 0 10px}",
+  ".kl-nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.kl-nav .sp{flex:1}",
+  ".kl-sum{text-align:center;padding:10px 0}.kl-sum .big{font-size:20px;font-weight:700;margin:4px 0 8px}",
+  ".kl-why{font-size:12.5px;color:#b4380b;margin-top:6px;line-height:1.6}"
+  ].join("\n"); document.head.appendChild(st); }
+
+function mountLearn(main){ klCss(); hideSelbar&&hideSelbar();
+  const ds=klDecks();
+  if(!ds.length){ main.innerHTML='<div class="kempty"><div class="big">还没有可学的知识点</div>经济、管理的「学练」数据跟着卡片本一起同步；在设置里同步一次数据就会出现。</div>'; return; }
+  const d=klDeck(); kl.deck=d.id;
+  if(kl.unit){ const u=klFind(d,kl.unit); if(u) return klUnitPage(main,d,u); kl.unit=null; }
+  klHome(main,d); }
+
+function klHome(main,d){
+  const wrap=document.createElement("div"); wrap.className="kl-wrap"; main.appendChild(wrap);
+  let h='<div class="kl-tabs">'+klDecks().map(x=>'<button data-d="'+esc(x.id)+'" class="'+(x.id===d.id?"sel":"")+'">'+esc(x.name)+'</button>').join("")+'</div>';
+  const S=klS(), curId=S.cur[d.id], cur=curId&&klFind(d,curId);
+  const allKeys=[...new Set([].concat(...d.units.map(klUnitKeys)))], st=klStat(allKeys), hotN=d.units.filter(klIsHot).length;
+  const seenN=d.units.filter(u=>S.u[u.id]&&S.u[u.id].n).length;
+  h+='<div class="kl-hero"><div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap">'+
+     '<div><h2 class="mod-h" style="margin:0">学练 · '+esc(d.name)+'</h2><p class="mod-sub" style="margin:3px 0 0">看一段笔记，马上做这段的题 · '+d.units.length+' 段 · 看过 '+seenN+' 段 · 题 '+st.n+' 道（已做 '+st.done+'，错题本里 '+st.book+'）</p></div>'+
+     '<div style="display:flex;gap:8px;flex-wrap:wrap">'+(cur?'<button class="qz-btn pri" id="klGo">继续：'+esc(cur.title)+' ›</button>':'<button class="qz-btn pri" id="klGo">从第一段开始 ›</button>')+
+     (hotN?'<button class="qz-btn'+(kl.hotOnly?" on":"")+'" id="klHot">🔥 只看真题考过、常考的（'+hotN+' 段）</button>':"")+'</div></div></div>';
+  wrap.innerHTML=h;
+  wrap.querySelectorAll(".kl-tabs button").forEach(b=>b.onclick=()=>{ kl.deck=b.dataset.d; kl.unit=null; kl.round=null; kl.from=null; render(); });
+  wrap.querySelector("#klGo").onclick=()=>klOpen((cur||d.units[0]).id);
+  const hb=wrap.querySelector("#klHot"); if(hb) hb.onclick=()=>{ kl.hotOnly=!kl.hotOnly; render(); };
+  let lastChap=null;
+  d.units.forEach(u=>{ if(kl.hotOnly&&!klIsHot(u)) return;
+    if(u.chap!==lastChap){ lastChap=u.chap; const c=document.createElement("div"); c.className="kl-chap"; c.textContent=u.chap; wrap.appendChild(c); }
+    wrap.appendChild(klRow(u,S)); });
+  const os=klOthers(d);
+  if(os.length&&!kl.hotOnly){ const c=document.createElement("div"); c.className="kl-chap"; c.textContent="笔记没讲到的题（按题库知识点分组，没有笔记，直接做题看解析）"; wrap.appendChild(c); os.forEach(o=>wrap.appendChild(klRow(o,S))); }
+}
+function klRow(u,S){ const st=klStat(klUnitKeys(u)), row=document.createElement("div");
+  row.className="kl-row"+(S.u[u.id]&&S.u[u.id].n?" seen":"");
+  const pr=st.n?Math.round(st.right/st.n*100):0, pw=st.n?Math.round(st.book/st.n*100):0;
+  row.innerHTML='<div style="flex:1;min-width:0"><div class="nm">'+klHotTag(u)+esc(u.title)+'</div>'+
+    (u.summary?'<div class="sm">'+esc(u.summary)+'</div>':"")+
+    '<div class="mt">'+(st.n?'题 '+st.n+' 道 · 已做 '+st.done+(st.book?' · <span style="color:var(--red)">错题本里 '+st.book+'</span>':""):"暂时没有配到题")+'</div>'+
+    (st.n?'<div class="kl-bar"><i class="r" style="width:'+pr+'%"></i><i class="w" style="width:'+pw+'%"></i></div>':"")+'</div><span class="fc-chev">›</span>';
+  row.onclick=()=>klOpen(u.id); return row; }
+function klOpen(id){ kl.unit=id; kl.round=null; kl.notesOpen=true;
+  const d=klDeck(), S=klS(); if(!d){ render(); return; }
+  const x=S.u[id]||(S.u[id]={n:0,last:""}); x.n++; x.last=today(); S.cur[d.id]=id; save();
+  render(); window.scrollTo({top:0}); }
+
+function klUnitPage(main,d,u){
+  const wrap=document.createElement("div"); wrap.className="kl-wrap"; main.appendChild(wrap);
+  const list=klSeq(d), i=list.findIndex(x=>x.id===u.id), prev=i>0?list[i-1]:null, next=i>=0&&i<list.length-1?list[i+1]:null;
+  const keys=klUnitKeys(u).filter(k=>klQ(k)), st=klStat(keys);
+  let h='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">'+(kl.from==="flash"&&fc.session&&!fc.session.done?'<button class="qz-btn sm pri" id="klToFc">← 回到卡片（第 '+(fc.session.i+1)+' / '+fc.session.ids.length+' 张）</button>':"")+'<button class="fc-back" style="margin:0" id="klBack">← 全部知识点</button><span style="flex:1"></span>'+
+    (prev?'<button class="qz-btn sm" id="klPrev">‹ 上一段</button>':"")+(next?'<button class="qz-btn sm" id="klNext">下一段 ›</button>':"")+'</div>';
+  h+='<div class="kl-hero"><div class="mod-sub" style="margin:0 0 2px">'+esc([u.chap,u.sec].filter(Boolean).join(" › "))+'</div>'+
+     '<div style="font-size:19px;font-weight:700">'+klHotTag(u)+esc(u.title)+'</div>'+
+     (u.summary?'<div class="mod-sub" style="margin:3px 0 0">'+esc(u.summary)+'</div>':"")+
+     (u.hot&&u.hot.why?'<div class="kl-why">'+(u.hot.lv>=2?"考情：":"依据：")+esc(u.hot.why)+'</div>':"")+'</div>';
+  /* 笔记 */
+  const cards=(u.cards||[]).map(id=>fcCardById(d,id)).filter(Boolean);
+  if(cards.length){
+    h+='<div class="kl-notes'+(kl.notesOpen?"":" fold")+'" id="klNotes"><div class="kl-nh"><b>📖 笔记原文</b><span class="sp"></span>'+
+       '<button class="qz-btn sm'+(kl.cloze?" on":"")+'" id="klCloze">'+(kl.cloze?"挖空自测中（点空看答案）":"挖空自测")+'</button>'+
+       '<button class="qz-btn sm" id="klFold">'+(kl.notesOpen?"收起":"展开笔记")+'</button></div>'+
+       '<div class="kl-body">'+cards.map(c=>klCardHtml(c,d)).join("")+'</div></div>';
+  }
+  h+='<div id="klQs"></div>';
+  wrap.innerHTML=h;
+  wrap.querySelector("#klBack").onclick=()=>{ kl.unit=null; kl.round=null; kl.from=null; render(); window.scrollTo({top:0}); };
+  const tf=wrap.querySelector("#klToFc"); if(tf) tf.onclick=()=>{ kl.from=null; kl.unit=null; kl.round=null; go("flash"); };
+  const pb=wrap.querySelector("#klPrev"); if(pb) pb.onclick=()=>klOpen(prev.id);
+  const nb=wrap.querySelector("#klNext"); if(nb) nb.onclick=()=>klOpen(next.id);
+  const notes=wrap.querySelector("#klNotes");
+  if(notes){ if(!kl.cloze) klReveal(notes);
+    else notes.querySelectorAll(".fc-bk.hidden").forEach(el=>{ el.onclick=()=>{ el.classList.remove("hidden"); el.classList.add("shown"); el.textContent=el.dataset.ans; }; });
+    notes.querySelector("#klCloze").onclick=()=>{ kl.cloze=!kl.cloze; render(); };
+    notes.querySelector("#klFold").onclick=()=>{ kl.notesOpen=!kl.notesOpen; notes.classList.toggle("fold",!kl.notesOpen); notes.querySelector("#klFold").textContent=kl.notesOpen?"收起":"展开笔记"; }; }
+  klQPanel(wrap.querySelector("#klQs"),d,u,keys,st,next);
+}
+
+/* 做题区：一轮 5 题（先没做过的、再错题本里的、再标过模糊的、最后做对过的），也可以一口气做完这段全部 */
+let klPickN=0; const klPickAt={};   /* 本机内存：每道题上一次被抽进一轮的序号，同一天里也能轮换（不进同步数据） */
+function klPickRound(keys,all){
+  if(all) return keys.slice();
+  const tier=k=>{ const q=klQ(k), s=q&&qzSt(q); if(!s||!s.done) return 0; if(s.inBook) return 1; if(s.fuzzy) return 2; return 3; };
+  const out=keys.map((k,i)=>{ const t=tier(k), h=t>=2&&qzHist(klQ(k)); return {k,i,t,d:(h&&h.date)||"",p:klPickAt[k]||0}; })
+    .sort((a,b)=>a.t-b.t||(a.t>=2?((a.d<b.d?-1:a.d>b.d?1:0)||a.p-b.p):0)||a.i-b.i)
+    .slice(0,KL_ROUND).map(x=>x.k);
+  klPickN++; out.forEach(k=>{ klPickAt[k]=klPickN; });
+  return out; }
+function klQPanel(host,d,u,keys,st,next){
+  const R=kl.round;
+  if(!R){
+    let h='<div class="kl-q"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><div style="flex:1;min-width:200px"><b style="font-size:15px">📝 这段的习题</b>'+
+      '<div class="mod-sub" style="margin:2px 0 0">'+(keys.length?('共 '+keys.length+' 道 · 已做 '+st.done+(st.book?' · 错题本里 '+st.book:"")+((u.q2||[]).length?' · 含 '+(u.q2||[]).filter(k=>klQ(k)).length+' 道主要考别段、也考到这段的':"")):'这段笔记暂时没有配到题')+'</div></div>';
+    if(keys.length) h+='<button class="qz-btn pri" id="klStart">做 '+Math.min(KL_ROUND,keys.length)+' 题 ›</button>'+(keys.length>KL_ROUND?'<button class="qz-btn" id="klAll">这段全部 '+keys.length+' 题</button>':"");
+    else if(next) h+='<button class="qz-btn pri" id="klNext2">下一段 ›</button>';
+    h+='</div>'+(keys.length?'<div class="mod-sub" style="margin:8px 0 0">每轮先出没做过的，再出还在错题本里的、标过模糊的。判分和刷题中心是同一套：做错进错题本，备注、问答都在。</div>':"")+'</div>';
+    host.innerHTML=h;
+    const s1=host.querySelector("#klStart"); if(s1) s1.onclick=()=>klStartRound(keys,false);
+    const s2=host.querySelector("#klAll"); if(s2) s2.onclick=()=>klStartRound(keys,true);
+    const n2=host.querySelector("#klNext2"); if(n2) n2.onclick=()=>klOpen(next.id);
+    return;
+  }
+  if(R.i>=R.keys.length){   /* 本轮结束 */
+    let ok=0; R.keys.forEach(k=>{ const q=klQ(k); if(q&&R.picks[k]&&qzNormAns(R.picks[k])===qzNormAns(q.answer)) ok++; });
+    host.innerHTML='<div class="kl-q kl-sum"><div>本轮完成</div><div class="big">'+ok+' / '+R.keys.length+' 题答对</div>'+
+      '<div class="kl-nav" style="justify-content:center"><button class="qz-btn" id="klAgain">再来一轮</button>'+(next?'<button class="qz-btn pri" id="klNext3">下一段：'+esc(next.title)+' ›</button>':'<button class="qz-btn pri" id="klHome">回到目录</button>')+'</div></div>';
+    host.querySelector("#klAgain").onclick=()=>klStartRound(keys,false);
+    const n3=host.querySelector("#klNext3"); if(n3) n3.onclick=()=>klOpen(next.id);
+    const hm=host.querySelector("#klHome"); if(hm) hm.onclick=()=>{ kl.unit=null; kl.round=null; render(); };
+    return;
+  }
+  const key=R.keys[R.i], q=klQ(key);
+  if(!q){ R.i++; return klQPanel(host,d,u,keys,st,next); }
+  const pick=R.picks[key]||"", answered=!!pick, multi=(q.sec==="多选题");
+  const typ=q.type==="tf"?"判断题":(multi?"多选题":"单选题");
+  let h='<div class="kl-q"><div class="kl-qmeta"><b>第 '+(R.i+1)+' / '+R.keys.length+' 题</b><span>'+typ+'</span><span>'+esc(q.subject||"")+'</span>'+(q.src==="mk"&&q._raw&&q._raw.paperName?'<span>'+esc(q._raw.paperName)+'</span>':"")+'</div>';
+  if(u.part&&u.part[key]) h+='<div class="kl-part">这段笔记讲到了这个主题，但这道题考的具体说法笔记里没有——做完看解析补上。</div>';
+  if(!answered){ const hi=qzHist(q); if(hi) h+='<div class="qz-hist-tip'+(hi.last==="错"?" bad":" good")+'">以前做过 '+hi.n+' 次 · 上次<b>'+esc(hi.last||"")+'</b>'+(hi.w?' · 累计错 '+hi.w+' 次':"")+'</div>'; }
+  h+='<div class="qz-stem">'+esc(q.stem)+'</div>';
+  const ks=(q.type==="tf")?["√","×"]:Object.keys(q.options||{});
+  const tmp=R.tmp||"";
+  h+='<div class="qz-opts'+(q.type==="tf"?" tf":"")+(multi?" multi":"")+'">';
+  ks.forEach(k=>{ const on=answered?pick.indexOf(k)>=0:tmp.indexOf(k)>=0; let cls="qz-opt"+(on?" on":"");
+    if(answered){ if(String(q.answer).indexOf(k)>=0) cls+=" hit"; else if(on) cls+=" miss"; }
+    h+='<button class="'+cls+'" data-k="'+esc(k)+'"><span class="qz-ok">'+esc(k)+'</span><span class="qz-ot">'+(q.type==="tf"?(k==="√"?"正确":"错误"):esc(q.options[k]))+'</span></button>'; });
+  h+='</div>';
+  if(multi&&!answered) h+='<div class="qz-hintbar">多选题：选完后点「确认作答」</div><button class="qz-btn pri" id="klOk">确认作答</button>';
+  if(answered){ const ok=qzNormAns(pick)===qzNormAns(q.answer);
+    h+='<div class="qz-vd '+(ok?"ok":"no")+'">'+(ok?"✅ 回答正确":'❌ 回答错误：你选了「'+esc(pick)+'」，正确答案「<b>'+esc(q.answer)+'</b>」')+qzOrgTag(q)+'</div>'+
+       '<div class="qz-exp"><b>【答案】'+esc(q.answer)+'</b><br>'+qzExpHtml(q)+'</div>'+qzQaCard(q,false)+'<div id="klFz"></div>';
+  }
+  h+='<div class="kl-nav">'+(R.i>0?'<button class="qz-btn" id="klQPrev">上一题</button>':"")+'<span class="sp"></span>'+
+     (answered?'<button class="qz-btn pri" id="klQNext">'+(R.i<R.keys.length-1?"下一题 ›":"看本轮结果 ›")+'</button>':'<button class="qz-btn" id="klSkip">跳过</button>')+'</div></div>';
+  host.innerHTML=h;
+  const grade=v=>{ R.picks[key]=v; R.tmp=""; qzGrade(q,v); save(); kl.notesOpen=false; klRedraw(); };
+  host.querySelectorAll(".qz-opt").forEach(b=>b.onclick=()=>{ if(answered) return; const k=b.dataset.k;
+    if(multi){ let cur=(R.tmp||"").split("").filter(Boolean); const j=cur.indexOf(k); if(j>=0) cur.splice(j,1); else cur.push(k); R.tmp=cur.sort().join(""); b.classList.toggle("on"); b.blur(); return; }
+    grade(k); });
+  const okb=host.querySelector("#klOk"); if(okb) okb.onclick=()=>{ if(!R.tmp){ toast("还没选"); return; } grade(R.tmp); };
+  const nx=host.querySelector("#klQNext"); if(nx){ nx.onclick=()=>{ R.i++; R.tmp=""; klRedraw(); }; setTimeout(()=>{ try{ nx.focus({preventScroll:true}); }catch(e){} },0); }
+  const pv=host.querySelector("#klQPrev"); if(pv) pv.onclick=()=>{ R.i--; R.tmp=""; klRedraw(); };
+  const sk=host.querySelector("#klSkip"); if(sk) sk.onclick=()=>{ R.i++; R.tmp=""; klRedraw(); };
+  const _qd=host.querySelector("#qzQaDel"); if(_qd) _qd.onclick=()=>qzQaRemove(q);
+  const fz=host.querySelector("#klFz");
+  if(fz){ const a=document.createElement("div"), b=document.createElement("div"); fz.appendChild(a); fz.appendChild(b); qzFuzzyBar(a,q); qzNoteBox(b,q); }
+}
+function klStartRound(keys,all){ kl.round={keys:klPickRound(keys,all),i:0,picks:{},tmp:""}; kl.notesOpen=false; klRedraw(); }
+/* 只重画做题区和笔记的折叠状态，不整页重绘（整页重绘会把页面滚回顶） */
+function klRedraw(){ const d=klDeck(), u=d&&klFind(d,kl.unit), host=document.getElementById("klQs");
+  if(!d||!u||!host){ render(); return; }
+  const notes=document.getElementById("klNotes");
+  if(notes){ notes.classList.toggle("fold",!kl.notesOpen); const fb=notes.querySelector("#klFold"); if(fb) fb.textContent=kl.notesOpen?"收起":"展开笔记"; }
+  const list=klSeq(d), i=list.findIndex(x=>x.id===u.id), next=i>=0&&i<list.length-1?list[i+1]:null;
+  const keys=klUnitKeys(u).filter(k=>klQ(k));
+  klQPanel(host,d,u,keys,klStat(keys),next);
+  const top=host.getBoundingClientRect().top; if(top<0||top>window.innerHeight*0.6) host.scrollIntoView({block:"start",behavior:"smooth"}); }
+/* 回车＝下一题（弹窗之外、输入框之外；输入法选字的回车不算） */
+window.addEventListener("keydown",e=>{ if(e.key!=="Enter"||e.isComposing||e.keyCode===229||e.defaultPrevented) return;
+  if(state.view!=="learn"||!kl.round) return; const t=e.target; if(t&&(/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)||t.isContentEditable)) return;
+  if(document.getElementById("scrim")&&document.getElementById("scrim").classList.contains("on")) return;
+  const b=document.getElementById("klQNext"); if(b){ e.preventDefault(); b.click(); return; }
+  const ok=document.getElementById("klOk"); if(ok&&(!t||t===document.body||(t.closest&&t.closest("#klQs .qz-opts")))){ e.preventDefault(); ok.click(); } });
+
+/* ---- 卡片里的「题库题」卡（kind:"bankq", ref:"ec|wfec-s4-3"）：易考点卡组用。判分写回题库的做题记录（错题本照常），同时记卡片的 Leitner ---- */
+function fcRenderBankQ(cardEl,card,deck,head,badge,wrap){ const S=fc.session, q=klQ(card.ref);
+  if(!q){ cardEl.innerHTML=head+'<div class="fc-body"><p class="fc-p">（题库里找不到这道题：'+esc(card.ref)+'。可能对应的题库还没载入，去刷题首页底部载入一次。）</p></div>';
+    const nx=document.createElement("div"); nx.className="fc-rate"; nx.innerHTML='<button class="good" style="flex:1">跳过 ›</button>'; nx.querySelector("button").onclick=()=>fcAdvance(); wrap.appendChild(nx); return; }
+  const ans=S.answered, multi=(q.sec==="多选题"), ks=(q.type==="tf")?["√","×"]:Object.keys(q.options||{});
+  let h=head+'<div class="fc-body"><div class="mod-sub" style="margin:0 0 6px">'+(q.type==="tf"?"判断题":(multi?"多选题":"单选题"))+' · '+esc(q.subject||"")+'</div><div class="qz-stem">'+esc(q.stem)+'</div><div class="qz-opts'+(q.type==="tf"?" tf":"")+(multi?" multi":"")+'">';
+  ks.forEach(k=>{ const on=ans?String(ans.pick).indexOf(k)>=0:String(S.tmp||"").indexOf(k)>=0; let cls="qz-opt"+(on?" on":"");
+    if(ans){ if(String(q.answer).indexOf(k)>=0) cls+=" hit"; else if(on) cls+=" miss"; }
+    h+='<button class="'+cls+'" data-k="'+esc(k)+'"><span class="qz-ok">'+esc(k)+'</span><span class="qz-ot">'+(q.type==="tf"?(k==="√"?"正确":"错误"):esc(q.options[k]))+'</span></button>'; });
+  h+='</div>'+(multi&&!ans?'<button class="qz-btn pri" id="fcBqOk" style="margin-top:10px">确认作答</button>':"")+'</div>';
+  if(ans) h+='<div class="qz-vd '+(ans.correct?"ok":"no")+'" style="margin-top:12px">'+(ans.correct?"✅ 回答正确":'❌ 回答错误：你选了「'+esc(ans.pick)+'」，正确答案「<b>'+esc(q.answer)+'</b>」')+qzOrgTag(q)+'</div><div class="qz-exp"><b>【答案】'+esc(q.answer)+'</b><br>'+qzExpHtml(q)+'</div>';
+  cardEl.innerHTML=h;
+  /* 判分这一刻同时记题库做题记录和卡片进度（以前卡片进度要等点「下一张」，中途退出两边就对不上） */
+  const grade=v=>{ const ok=qzGrade(q,v); fcAnswerQuiz(card.id,ok); save(); S.answered={pick:v,correct:ok}; S.tmp=""; render(); };
+  cardEl.querySelectorAll(".qz-opt").forEach(b=>b.onclick=()=>{ if(ans) return; const k=b.dataset.k;
+    if(multi){ let cur=String(S.tmp||"").split("").filter(Boolean); const j=cur.indexOf(k); if(j>=0) cur.splice(j,1); else cur.push(k); S.tmp=cur.sort().join(""); b.classList.toggle("on"); b.blur(); return; }
+    grade(k); });
+  const ob=cardEl.querySelector("#fcBqOk"); if(ob) ob.onclick=()=>{ if(!S.tmp){ toast("还没选"); return; } grade(S.tmp); };
+  if(ans){ const nx=document.createElement("div"); nx.className="fc-rate"; nx.innerHTML='<button class="good" style="flex:1">下一张 ›</button>';
+    nx.querySelector("button").onclick=()=>{ if(ans.correct) S.good++; else { S.again++; S.missIds.push(card.id); } fcAdvance(); };
+    wrap.appendChild(nx); }
+  else { const tip=document.createElement("div"); tip.style.cssText="margin-top:14px;text-align:center;color:var(--text2);font-size:13px"; tip.textContent=multi?"选完点「确认作答」":"选一个答案"; cardEl.appendChild(tip); }
+}
+/* 卡片上带 learn:{deck,unit} 的（易考点的知识点卡）：可以一键跳到学练里这一段 */
+function klJump(deckId,unitId){
+  const d=klDecks().find(x=>x.id===deckId);
+  if(!d||!klFind(d,unitId)){ toast("学练里还找不到这一段（数据可能还没同步完）"); return; }
+  kl.deck=deckId; kl.from=(fc.screen==="session"&&fc.session&&!fc.session.done)?"flash":null;
+  fc.editing=false; hideSelbar&&hideSelbar();   /* 不清 fc.session、不改 fc.screen：点导航「卡片」或「回到卡片」都能接着背 */
+  state.view="learn"; klOpen(unitId); }
+/* ===== 10.12 学练 END ===== */
 /* ===== 11. 设置 ===== */
 /* 强制更新程序：注销 Service Worker + 清空静态缓存 + 重载。只动程序文件，不动学习数据。 */
 async function forceUpdateApp(){
@@ -6438,7 +6720,7 @@ async function forceUpdateApp(){
 function mountSettings(main){
   const s=db.settings;
   let h='<h2 class="mod-h">设置</h2><div class="mod-sub">考试时间、评分与掌握度、间隔参数、数据同步、备份、扩展模块。改动即时保存。</div>';
-  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-09-25</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
+  h+='<div class="card"><h4>程序版本</h4><div class="desc">版本 <b>2026-10-10</b> · 在线版。手机上如果新功能没出现，多半是页面被缓存住了：把 App 从后台划掉重开，或用浏览器打开 https://scarlett-dou.github.io/study-hub/ 刷新一次，再回来看这里的版本对不对得上。</div>'+
      '<button class="btn" onclick="forceUpdateApp()">🔄 强制更新程序</button></div>';
   h+='<div class="card"><h4>考试时间</h4><div class="frow"><div class="field"><label>名称</label><input type="text" id="setExamLabel" value="'+esc(s.examLabel||"考试")+'"></div><div class="field"><label>日期</label><input type="date" id="setExamDate" value="'+(s.examDate||"")+'"></div><div class="field"><label>备考起点(可选)</label><input type="date" id="setExamStart" value="'+(s.examStart||"")+'"><div class="desc">留空＝最早的一条数据</div></div></div></div>';
   h+='<div class="card"><h4>掌握度算法</h4><div class="radios" id="mModel">'+
