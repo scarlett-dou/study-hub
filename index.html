@@ -5026,6 +5026,7 @@ function qzWeakList(min){
   qz.pick=save_; return out; }
 /* ---------- 模块入口 ---------- */
 function mountQuiz(main){
+  if(typeof tzUnstash==="function") tzUnstash();   /* TZ_MODULE_V1：套卷做完，把收起的普通卷子放回去 */
   const p=qzPaper();
   if(p&&!p.submitted&&qz.view==="run") return qzRun(main);
   if(qz.view==="result") return qzResult(main);
@@ -5034,6 +5035,7 @@ function mountQuiz(main){
   if(qz.view==="mockSubs") return qzMockSubs(main);
   if(qz.view==="mockQs")   return qzMockQs(main);
   if(qz.view==="hl")     return qzHlPage(main);
+  if(qz.view==="tz")     return tzPage(main);   /* TZ_MODULE_V1 */
   qzHome(main);
 }
 
@@ -5044,7 +5046,7 @@ function qzHome(main){
   let h='<div class="qz-hd"><h2>刷题</h2><span class="qz-sub">选一个科目直接练，或自由组卷做一套模拟卷</span></div>';
   if(p&&!p.submitted){
     const done=Object.keys(p.picks||{}).length;
-    h+='<div class="qz-resume"><div><b>有一套没做完的'+QZ_MODE[p.mode]+'</b><span class="qz-sub">共 '+((p.items||p.qs||[]).length)+' 题 · 已答 '+done+' 题</span></div>'+
+    h+='<div class="qz-resume"><div><b>'+(p.tz?'习思想套卷第 '+p.tz.g+' 组第 '+(p.tz.d+1)+' 天还没做完':'有一套没做完的'+QZ_MODE[p.mode])+'</b><span class="qz-sub">共 '+((p.items||p.qs||[]).length)+' 题 · 已答 '+done+' 题</span></div>'+
        '<div class="qz-ract"><button class="qz-btn pri" id="qzGo">继续</button><button class="qz-btn" id="qzDrop">放弃</button></div></div>';
   }
   if(!groups.length){
@@ -5072,6 +5074,7 @@ function qzHome(main){
      '<div class="qz-cnum">'+(mk.length?mk.length+' 套整卷':'还没有卷子')+'</div>'+
      '<div class="qz-bar"><i style="width:0%"></i></div>'+
      '<div class="qz-cmeta">'+(mk.length?(mk.length+' 套 · 错题按科目归档'):'把模考题给我，我做进来')+'</div></button>';
+  h+=(typeof tzCard==="function"?tzCard():"");   /* TZ_MODULE_V1：习思想套卷入口 */
   /* 卡片：法律 + 习思想的知识卡与陷阱卡，渲染在法律模块的卡片页里 */
   const cdN=((db.lawBank&&db.lawBank.cards)||[]).length+((db.sjBank&&db.sjBank.cards)||[]).length;
   h+='<button class="qz-card cd" id="qzCards"><div class="qz-cname">🗂️ 卡片</div>'+
@@ -5129,6 +5132,7 @@ function qzHome(main){
     qz.pick={}; qz.pick[b.dataset.subj]=true; qz.kps={}; qz.kpg={}; qz.view="build"; render(); });
   const nb=main.querySelector("#qzNew"); if(nb) nb.onclick=()=>{ qz.view="build"; render(); };
   const mb=main.querySelector("#qzMock"); if(mb) mb.onclick=()=>{ qz.view="mock"; render(); };
+  const tzc=main.querySelector("#qzTz"); if(tzc) tzc.onclick=()=>{ qz.view="tz"; render(); };   /* TZ_MODULE_V1 */
   const wrb=main.querySelector("#qzWr"); if(wrb) wrb.onclick=()=>go("wr");
   const hlb=main.querySelector("#qzHlsGo"); if(hlb) hlb.onclick=()=>{ qz.view="hl"; render(); };
   const cdb=main.querySelector("#qzCards");
@@ -5505,6 +5509,7 @@ function mkStartPractice(p,subject){
   /* 卷面按 判断→单选→多选 排序，和真卷一致 */
   const ord={"判断题":0,"单选题":1,"多选题":2};
   list.sort(function(a,b){ return (ord[a.sec]==null?9:ord[a.sec])-(ord[b.sec]==null?9:ord[b.sec]) || a.num-b.num; });
+  if(typeof tzPark==="function") tzPark();   /* TZ_MODULE_V1 */
   const s=qzState();
   s.paper={ mode:"practice", picks:{}, marks:{}, cur:0, submitted:false, startAt:Date.now(),
             name:(p.name+(subject?(" · "+subject):" · 全部错题")), qs:list };
@@ -5690,6 +5695,7 @@ function qzBuilder(main){
   const hs=main.querySelector("#qzHistSw"); if(hs) hs.onchange=e=>{ qz.showHist=e.target.checked; };
   main.querySelector("#qzStart").onclick=()=>{
     const p=qzBuild(); if(!p){ toast("这个筛选下没有题"); return; }
+    if(typeof tzPark==="function") tzPark();   /* TZ_MODULE_V1：没做完的套卷先挂回那一天 */
     const st=qzState(); st.paper=p;
     st.last={pick:Object.assign({},qz.pick),kps:Object.assign({},qz.kps),orgs:Object.assign({},qz.orgs),stars:Object.assign({},qz.stars),scopes:Object.assign({},qz.scopes),nums:Object.assign({},qz.nums),take:qz.take,mode:qz.mode,mins:qz.mins,showHist:qz.showHist};
     qz.cur=0; qz.view="run"; save(); render(); };
@@ -5770,7 +5776,7 @@ function qzRun(main){
   /* 顶栏：返回 / 考试名 / 计时 / 交卷 */
   const doneN=Object.keys(p.picks).filter(k=>k.indexOf("_tmp")!==0).length;
   h+='<div class="qz-top"><div class="qz-tl"><button class="qz-btn sm" id="qzExit">‹ 返回</button>'+
-     '<b>综合测试</b><span class="qz-tag">'+QZ_MODE[p.mode]+'</span></div>'+
+     '<b>'+(p.tz?'习思想套卷 · 第'+p.tz.g+'组第'+(p.tz.d+1)+'天':'综合测试')+'</b><span class="qz-tag">'+QZ_MODE[p.mode]+'</span></div>'+
      '<div class="qz-tr"><button class="qz-aa" id="qzAA" title="字号：小／中／大">A<small>A</small></button><span class="qz-done">已完成 '+doneN+'/'+qs.length+' 题</span>'+
      '<span class="qz-clock" id="qzClock">'+(exam?'剩余 '+qzFmtTime(qzLeft(p)):'⏱ '+qzFmtTime(qzUsed(p)))+'</span>'+
      '<span class="qz-clock qz-qclk" id="qzQClock">本题 '+qzMmss(qzQMs(p,key))+'</span>'+
@@ -5977,6 +5983,7 @@ function qzSubmit(qs){
   const s=qzState();
   s.exams.push({date:today(),n:qs.length,right:right,pct:p.score.pct,pts:qzR1(got),full:qzR1(full),mode:p.mode,secs:Math.round(qzUsed(p)/1000)});
   if(s.exams.length>60) s.exams=s.exams.slice(-60);
+  if(p.tz&&typeof tzOnSubmit==="function") tzOnSubmit(p,qs);   /* TZ_MODULE_V1：套卷记成绩 */
   qz.view="result"; save(); render();
 }
 
@@ -6007,9 +6014,11 @@ function qzResult(main){
        (qzKpNames(x).length?'<div class="qz-kpline"><span>'+(x.src==="sj"?"所属章节":"知识点")+'</span>'+qzKpNames(x).map(n=>'<b>'+esc(n)+'</b>').join("")+'</div>':"")+
        '</div></div>'; });
   h+='</div>';
+  if(p.tz&&typeof tzReportHtml==="function") h+=tzReportHtml(p.tz,qs.filter(x=>{ const pk=p.picks[x.src+"|"+x.id]; return pk&&qzNormAns(pk)!==qzNormAns(x.answer); }),p.picks);   /* TZ_MODULE_V1 */
   h+='<div class="qz-actions"><button class="qz-btn pri" id="qzAgain">再来一套</button>'+
      '<button class="qz-btn" id="qzWrong">只练这套里的错题</button><button class="qz-btn" id="qzHome">回首页</button></div>';
   main.innerHTML=h;
+  const tzb=main.querySelector("#tzBack"); if(tzb) tzb.onclick=()=>{ qzState().paper=null; qz.view="tz"; save(); render(); };   /* TZ_MODULE_V1 */
   main.querySelectorAll(".qz-rvh").forEach(b=>b.onclick=()=>{
     const el=main.querySelector("#qzrv"+b.dataset.i); el.classList.toggle("open"); });
   main.querySelector("#qzAgain").onclick=()=>{ qzState().paper=null; qz.view="build"; save(); render(); };
@@ -6705,6 +6714,234 @@ function klJump(deckId,unitId){
   fc.editing=false; hideSelbar&&hideSelbar();   /* 不清 fc.session、不改 fc.screen：点导航「卡片」或「回到卡片」都能接着背 */
   state.view="learn"; klOpen(unitId); }
 /* ===== 10.12 学练 END ===== */
+/* ===== 10.13 · 习思想套卷（三天一组，一组三张卷合起来覆盖全部知识点；2026-10-10 她要求） =====
+   题：习思想题库里金标尺（教材／选调题库／题海／进阶）＋模考卷里金标尺模考、优众模考的习思想题，不含无非、不含时政。
+       凡是题上带 kp 字段的就是这批（kp 由 习思想套卷/apply-kp.js 写进题库，公开题库里只有段编号和考点简述，没有笔记原文）。
+   知识点＝她笔记 20 章「逐条详解」层里的一段（p 或知识链接方框）：kp＝"章id:层:序号:FNV校验码"；
+       笔记里没写到的考点 kp＝"none:章key"，每章算一个知识点。段的原文实时从 db.contents 取（她改了笔记这里跟着变；
+       序号挪了就在同一层里按校验码找回）。kp2＝同时考到的其他段，kpt＝考点简述，kpc＝"低"表示笔记里没有原句、就近归的段。
+   组卷：每个知识点每组出 max(1, round(该点题数÷4)) 道，优先级：上一组做错的 > 错题本里的 > 模糊 > 套卷里还没出过的 > 出得最早的。
+       一组的知识点按章、按笔记顺序轮流分到三天，所以每天都碰到每一章。一组三天做完才出下一组（按做完那一刻的记录出）。
+   做题走刷题中心原来的答题页（qzState.paper，带 p.tz={g,d}），判分、错题本、计时、备注、问答全部沿用；交卷时 tzOnSubmit 记下这天的成绩和错题，
+       成绩单下面接「这张卷错了的段」并附笔记原文（tzReportHtml）。
+   状态：db.qzState.tz={v:1,groups:[{no,made,days:[{items:[{src,id}],done,at,n,right,un,wrong:{题key:她选的},secs}]}]}（state.json，随云同步）。 */
+const TZ_DAYS=3;
+let tzUi={ open:{} };
+function tzS(){ const s=qzState(); if(!s.tz||typeof s.tz!=="object") s.tz={v:1,groups:[]}; if(!Array.isArray(s.tz.groups)) s.tz.groups=[]; return s.tz; }
+function tzPool(){ return qzAll().filter(q=>q._raw&&typeof q._raw.kp==="string"&&q._raw.kp); }
+function tzKey(q){ return q.src+"|"+q.id; }
+/* 段的校验码：与 apply-kp.js 同一套（去掉挖空/上色标记后算 FNV-1a） */
+function tzPlain(s){ return String(s||"").replace(/\[\[([^\]|]+)\|[A-Z]\]\]/g,"$1").replace(/‹([^|›]+)\|[^›]*›/g,"$1").replace(/⟦[^⟧]*⟧/g,"").replace(/\*\*/g,""); }
+function tzItemText(it){ return it.t==="box"?tzPlain(it.title)+"\n"+(it.items||[]).map(x=>tzPlain(x.text)).join("\n"):tzPlain(it.text); }
+function tzFnv(s){ let h=0x811c9dc5; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,0x01000193)>>>0; } return h.toString(16); }
+/* 章的顺序与名字：以习思想题库的章节表为准（时政月份不算） */
+function tzChapters(){ return (((db.sjBank&&db.sjBank.chapters)||[]).filter(c=>c.id&&!/^sz/.test(c.key||""))); }
+function tzChOrd(){ const m={}; tzChapters().forEach((c,i)=>{ m[c.id]=i; m["key:"+c.key]=i; }); return m; }
+function tzChShort(name){ return String(name||"").split(/\s+/)[0]; }
+let tzParaMemo={ sig:"", ref:null, m:{} };
+function tzPara(kp){
+  /* 缓存：云同步采用新数据后 db.contents 是新数组（按引用清）；同一天重新导入某章（uploadedAt 只到日期）按层数与条数清 */
+  const sig=(db.contents||[]).map(c=>c.id+":"+(c.uploadedAt||"")+":"+((c.data&&c.data.layers)||[]).map(l=>(l.items||[]).length).join("/")).join(",");
+  if(tzParaMemo.sig!==sig||tzParaMemo.ref!==db.contents) tzParaMemo={ sig, ref:db.contents, m:{} };
+  if(kp in tzParaMemo.m) return tzParaMemo.m[kp];
+  let r=null;
+  if(/^none:/.test(kp)){ const key=kp.slice(5), ch=tzChapters().find(c=>c.key===key); r={ none:true, cid:ch?ch.id:"", chName:ch?ch.name:key, h1:"", h2:"" }; }
+  else {
+    const [cid,li,ii,hh]=kp.split(":"), c=(db.contents||[]).find(x=>x.id===cid), L=c&&c.data&&c.data.layers&&c.data.layers[+li];
+    if(L){ const hash=it=>it&&(it.t==="p"||it.t==="box")?tzFnv(tzItemText(it)):"";
+      let idx=+ii, moved=false; if(hash(L.items[idx])!==hh){ const j=L.items.findIndex(x=>hash(x)===hh); if(j>=0) idx=j; else moved=true; }
+      const it=L.items[idx];
+      /* 序号和校验码都对不上：她改过这段（或前面插了段又改了字），不拿旁边那段充数 */
+      if(moved) r={ cid, chName:c.name, h1:"", h2:"", idx:+ii, moved:true };
+      else if(it&&(it.t==="p"||it.t==="box")){ let h1="",h2="";
+        for(let k=0;k<idx;k++){ const x=L.items[k]; if(x.t!=="h") continue; const t=tzPlain(x.text).replace(/〔[^〕]*〕/g,"").trim();
+          if((x.lvl||1)<=1&&/^[一二三四五六七八九十]+、/.test(t)){ h1=t; h2=""; } else h2=t; }
+        r={ cid, chName:c.name, h1, h2, it, idx }; } }
+  }
+  tzParaMemo.m[kp]=r; return r;
+}
+function tzPtOrd(kp,ord){ const p=tzPara(kp); if(!p) return [999,0]; const o=ord[p.cid]; return [o==null?998:o, p.none?99999:p.idx]; }
+function tzCmp(a,b){ return a[0]-b[0]||a[1]-b[1]; }
+function tzSeed(s){ let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619)>>>0; } return h; }
+/* 套卷里每道题最近一次「真做过」是在第几组：只算交了卷的那几天里答了的题（没答的、没做的天不算出过） */
+function tzSeen(T){ const m={}; T.groups.forEach(g=>g.days.forEach(d=>{ if(!d.done) return; const un=d.unk||{};
+  (d.items||[]).forEach(it=>{ const k=it.src+"|"+it.id; if(!un[k]) m[k]=g.no; }); })); return m; }
+/* 出一组 */
+function tzMakeGroup(){
+  const T=tzS(), pool=tzPool(); if(!pool.length) return null;
+  const last=T.groups[T.groups.length-1], no=(last?last.no:0)+1, seen=tzSeen(T), ord=tzChOrd();
+  const wrongLast={}; if(last) last.days.forEach(d=>Object.keys(d.wrong||{}).forEach(k=>wrongLast[k]=1));
+  const byKp={}; pool.forEach(q=>{ (byKp[q._raw.kp]=byKp[q._raw.kp]||[]).push(q); });
+  /* 错题本、模糊的题：上一组刚出过且做对了，就歇一组（模糊标记要她手动点「有把握」才清，不歇的话题少的段每组都是同一道） */
+  const pri=q=>{ const k=tzKey(q), st=qzSt(q), rest=seen[k]===no-1;
+    if(wrongLast[k]) return 600;
+    if(st&&st.inBook&&!rest) return 500;
+    if(st&&st.fuzzy&&!rest) return 400;
+    if(!seen[k]) return 300;
+    return 100+Math.min(99,no-seen[k]); };
+  const pts=Object.keys(byKp).map(kp=>{ const qs=byKp[kp].slice().sort((a,b)=>pri(b)-pri(a)||tzSeed(tzKey(a)+":"+no)-tzSeed(tzKey(b)+":"+no));
+    const n=Math.max(1,Math.round(qs.length/4)), take=qs.slice(0,n);
+    /* 名额≥2 时至少留 1 个给没出过／出得最早的题，别让标记题占满 */
+    if(n>=2&&take.every(q=>pri(q)>=400)){ const alt=qs.slice(n).find(q=>pri(q)<400); if(alt) take[n-1]=alt; }
+    return { kp, ord:tzPtOrd(kp,ord), take }; });
+  pts.sort((a,b)=>tzCmp(a.ord,b.ord));
+  /* 按章轮流分到三天；每章从当前题最少的那天起 */
+  const days=Array.from({length:TZ_DAYS},()=>[]), load=[0,0,0];
+  const chs=[]; pts.forEach(p=>{ const c=p.ord[0]; if(!chs.length||chs[chs.length-1].c!==c) chs.push({c,ps:[]}); chs[chs.length-1].ps.push(p); });
+  chs.forEach(ch=>{ let start=load.indexOf(Math.min(...load));
+    ch.ps.forEach((p,i)=>{ const d=(start+i)%TZ_DAYS; days[d].push(p); load[d]+=p.take.length; }); });
+  const g={ no, made:today(), days:days.map(ps=>{
+    const items=[]; ps.forEach((p,pi)=>p.take.forEach(q=>items.push({q,pi})));
+    items.sort((a,b)=>QZ_SECS.indexOf(a.q.sec)-QZ_SECS.indexOf(b.q.sec)||a.pi-b.pi);
+    return { items:items.map(x=>({src:x.q.src,id:x.q.id})), kps:ps.length, done:false }; }) };
+  T.groups.push(g); save(); return g;
+}
+/* 开始／继续某一天。刷题同一时间只挂一套卷子（qzState.paper）：
+   · 手上有一套没做完的普通卷子 → 先收进 qzState.tzStash，套卷交卷后回到刷题／套卷页时自动放回（tzUnstash）；
+   · 手上是另一天没做完的套卷 → 收进那一天的 d.saved，以后点那天的「继续」接着做。 */
+function tzStart(g,di,mode){
+  const T=tzS(), d=g.days[di], s=qzState(), p=s.paper;
+  if(p&&!p.submitted){
+    if(p.tz&&p.tz.g===g.no&&p.tz.d===di){ qz.cur=p.cur||0; qz.view="run"; render(); return; }
+    if(p.tz){ const og=T.groups.find(x=>x.no===p.tz.g), od=og&&og.days[p.tz.d]; if(od) od.saved=p; }
+    else { if(s.tzStash&&!s.tzStash.submitted&&!confirm("已经收起过一套没做完的卷子，再收会把更早那套放弃。确定吗？")) return; s.tzStash=p; toast("原来那套没做完的卷子先收起来了，做完套卷会放回去"); }
+  }
+  if(d.saved&&!d.saved.submitted){ s.paper=d.saved; delete d.saved; qz.cur=s.paper.cur||0; qz.view="run"; save(); render(); return; }
+  const n=d.items.length;
+  s.paper={ id:uid(), mode:mode||"practice", mins:Math.max(30,Math.round(n*0.6)), createdAt:new Date().toISOString(), startAt:Date.now(),
+            usedMs:0, resumeAt:Date.now(), items:d.items.map(x=>({src:x.src,id:x.id})), picks:{}, marks:{}, cur:0, submitted:false, score:null,
+            tz:{ g:g.no, d:di } };
+  qz.cur=0; qz.view="run"; save(); render();
+}
+/* 收起的普通卷子放回去（mountQuiz 开头调用）：只在刷题首页或套卷页、手上没有没做完的卷子时放回，并提示一句。
+   组卷页、模考专区这些页不放——放回去她看不见，紧接着开新卷就把它覆盖了。 */
+function tzUnstash(){ const s=qzState(); if(!s.tzStash) return; const p=s.paper;
+  if(qz.view!=="home"&&qz.view!=="tz") return;
+  if(p&&!p.submitted) return;
+  s.paper=s.tzStash; delete s.tzStash; qz.cur=s.paper.cur||0; save();
+  setTimeout(()=>toast("原来收起的那套卷子已经放回来了，在刷题首页「继续」"),0); }
+/* 别的入口（组卷开始做题、模考专区做这科）要换卷子前调用：手上是没做完的套卷，就挂回那一天，以后点「继续」接着做 */
+function tzPark(){ const s=qzState(), p=s.paper; if(!p||p.submitted||!p.tz) return;
+  const g=tzS().groups.find(x=>x.no===p.tz.g), d=g&&g.days[p.tz.d]; if(!d) return;
+  try{ qzPause(); }catch(e){} d.saved=p; s.paper=null; toast("套卷第 "+(p.tz.d+1)+" 天的进度已保存，回套卷页点「继续」接着做"); }
+/* 交卷时记下这一天的成绩（qzSubmit 调用）。一题没答就交的不算做完。 */
+function tzOnSubmit(p,qs){
+  const T=tzS(), g=T.groups.find(x=>x.no===p.tz.g); if(!g) return; const d=g.days[p.tz.d]; if(!d) return;
+  const wrong={}, unk={}; let n=0,right=0,un=0;
+  qs.forEach(x=>{ const k=tzKey(x), pk=p.picks[k]; if(!pk){ un++; unk[k]=1; return; } n++; if(qzNormAns(pk)===qzNormAns(x.answer)) right++; else wrong[k]=pk; });
+  p.tzRec=1;
+  if(!n){ toast("这张卷一题都没答，不算做完"); return; }
+  delete d.saved;
+  Object.assign(d,{ done:true, at:today(), n, right, un, unk, wrong, secs:Math.round(qzUsed(p)/1000) });
+}
+/* 补记：卷子在还没更新的设备上交了（旧代码不记套卷成绩），回到新版时按卷上的作答补记一次 */
+function tzCatchUp(){ const p=qzPaper(); if(!p||!p.submitted||!p.tz||p.tzRec) return;
+  const g=tzS().groups.find(x=>x.no===p.tz.g), d=g&&g.days[p.tz.d]; if(!d||d.done) return;
+  tzOnSubmit(p,qzItems()); save(); }
+/* 一段笔记的样子：章 › 小节，原文（挖空直接亮出答案） */
+function tzParaLabel(kp,q){ if(!kp||kp==="?") return "（这台设备的题库还没更新：同步一次或从网上载入后再看）";
+  const p=tzPara(kp); if(!p) return "（这段笔记找不到了）";
+  if(p.none) return tzChShort(p.chName)+" · 笔记没写到的考点";
+  if(p.moved) return tzChShort(p.chName)+" · （笔记改过，这段对不上了）";
+  return tzChShort(p.chName)+" › "+(p.h1||"")+(p.h2?" › "+p.h2:""); }
+function tzParaHtml(kp){ const p=tzPara(kp); if(!p||p.none) return "";
+  if(p.moved) return '<div class="tz-low">这段笔记改过，按原来的位置找不到了（需要重新归段）。</div>';
+  const it=p.it;
+  if(it.t==="box") return '<div class="tz-para box"><div class="tz-bt">'+renderText(it.title||"",true)+'</div>'+(it.items||[]).map(x=>'<div>'+renderText(x.text||"",true)+'</div>').join("")+'</div>';
+  return '<div class="tz-para">'+renderText(it.text||"",true)+'</div>'; }
+/* 错题报告：按段归在一起，段在前、错的题在后 */
+function tzReportHtml(ref,bad,picks,title){
+  const ord=tzChOrd(), by={};
+  bad.forEach(x=>{ const kp=(x._raw&&x._raw.kp)||"?"; (by[kp]=by[kp]||[]).push(x); });
+  const kps=Object.keys(by).sort((a,b)=>tzCmp(tzPtOrd(a,ord),tzPtOrd(b,ord)));
+  let h='<div class="tz-rep"><div class="qz-lb">'+(title||"这张卷错了的段（附笔记原文）")+(kps.length?"　共 "+kps.length+" 段、"+bad.length+" 题":"")+'</div>';
+  if(!kps.length) h+='<div class="qz-sub" style="padding:6px 2px 10px">这张卷没有错题。</div>';
+  kps.forEach(kp=>{ const qs=by[kp], low=qs.some(x=>x._raw&&x._raw.kpc==="低");
+    h+='<div class="tz-rb"><div class="tz-rh">'+esc(tzParaLabel(kp))+'<span class="tz-rc">错 '+qs.length+'</span></div>'+
+       (/^none:/.test(kp)?'':tzParaHtml(kp))+
+       (low&&!/^none:/.test(kp)?'<div class="tz-low">这段只是最接近的段：题考的那句笔记里没有原话。</div>':'')+
+       qs.map(x=>{ const pk=(picks||{})[tzKey(x)]||""; return '<div class="tz-rq"><span class="tz-rqs">'+esc(String(x.stem||"").slice(0,60))+(String(x.stem||"").length>60?"…":"")+'</span>'+
+         '<span class="tz-rqa">'+(pk?"你选 "+esc(pk)+" · ":"")+"答案 "+esc(x.answer)+'</span>'+(x._raw&&x._raw.kpt?'<span class="tz-kpt">'+esc(x._raw.kpt)+'</span>':'')+'</div>'; }).join("")+'</div>'; });
+  if(ref) h+='<div class="qz-actions"><button class="qz-btn pri" id="tzBack">回到习思想套卷</button></div>';
+  return h+'</div>'; }
+/* 各段在套卷里的累计成绩 */
+function tzKpStat(T,map){ const st={};
+  T.groups.forEach(g=>g.days.forEach(d=>{ if(!d.done) return; const w=d.wrong||{};
+    const un=d.unk||{}; (d.items||[]).forEach(it=>{ const k=it.src+"|"+it.id, q=map[k]; if(!q||un[k]) return; const kp=q._raw.kp, o=st[kp]||(st[kp]={n:0,w:0});
+      o.n++; if(w[k]) o.w++; }); }));
+  return st; }
+function tzCss(){ if(document.getElementById("tzCss")) return; const st=document.createElement("style"); st.id="tzCss";
+  st.textContent=[
+  ".tz-wrap{max-width:860px;margin:0 auto}",
+  ".tz-hero,.tz-grp{background:var(--card);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:14px 16px;margin-bottom:14px}",
+  ".tz-hero .qz-sub{line-height:1.7}",
+  ".tz-gh{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:8px}.tz-gh b{font-size:16px}",
+  ".tz-day{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid var(--sep);border-radius:var(--r);padding:10px 12px;margin-bottom:8px}",
+  ".tz-day .nm{font-weight:650;min-width:4.5em}.tz-day .mt{flex:1;font-size:13px;color:var(--text2);line-height:1.6}.tz-day.done{background:rgba(52,199,123,.07)}",
+  ".tz-day .ok{color:var(--green);font-weight:650}.tz-day .bad{color:var(--red);font-weight:650}",
+  ".tz-rep{margin-top:6px}",
+  ".tz-rb{background:var(--card);border:1px solid var(--sep);border-radius:var(--r);padding:10px 14px;margin-bottom:10px}",
+  ".tz-rh{font-weight:650;font-size:14px;display:flex;gap:8px;align-items:baseline}.tz-rc{margin-left:auto;font-size:12.5px;color:var(--red);white-space:nowrap}",
+  ".tz-para{margin:8px 0 6px;padding:8px 12px;border-left:3px solid var(--tint);background:var(--fill);border-radius:6px;line-height:1.85;font-size:14.5px}",
+  ".tz-para.box .tz-bt{font-weight:650;margin-bottom:4px}",
+  ".tz-low{font-size:12.5px;color:#9a5b00;background:rgba(255,159,10,.13);border-radius:6px;padding:4px 8px;margin:4px 0}",
+  ".tz-rq{font-size:13px;line-height:1.6;padding:5px 0;border-top:1px dashed var(--sep);display:flex;flex-wrap:wrap;gap:4px 10px}",
+  ".tz-rqs{flex:1 1 100%}.tz-rqa{color:var(--red)}.tz-kpt{color:var(--text2)}",
+  ".tz-wk{display:flex;gap:10px;align-items:flex-start;border-top:1px solid var(--sep);padding:8px 0;cursor:pointer}.tz-wk:first-of-type{border-top:none}",
+  ".tz-wk .nm{flex:1;font-size:14px;line-height:1.6}.tz-wk .ct{font-size:12.5px;color:var(--red);white-space:nowrap}",
+  ".tz-hist{font-size:13px;color:var(--text2);line-height:1.8}"
+  ].join("\n"); document.head.appendChild(st); }
+/* 刷题首页的入口卡（qzHome 调用；这批题还没进题库时不出现） */
+function tzCard(){ const pool=tzPool(); if(!pool.length) return ""; tzCatchUp();
+  const T=tzS(), g=T.groups[T.groups.length-1];
+  let st="还没开始", meta="金标尺＋优众 "+pool.length+" 题 · 三天一组";
+  if(g){ const di=g.days.findIndex(d=>!d.done); st=di<0?"第 "+g.no+" 组做完了 · 出下一组":"第 "+g.no+" 组 · 待做第 "+(di+1)+" 天";
+    const dn=g.days.filter(d=>d.done).length; meta+=" · 本组 "+dn+"/3"; }
+  return '<button class="qz-card" id="qzTz"><div class="qz-cname">📚 习思想套卷</div><div class="qz-cnum">'+esc(st)+'</div>'+
+         '<div class="qz-bar"><i style="width:'+(g?Math.round(g.days.filter(d=>d.done).length/3*100):0)+'%"></i></div><div class="qz-cmeta">'+esc(meta)+'</div></button>'; }
+/* 套卷页 */
+function tzPage(main){ tzCss(); tzCatchUp();
+  const pool=tzPool(), T=tzS(), map={}; pool.forEach(q=>map[tzKey(q)]=q);
+  const wrap=document.createElement("div"); wrap.className="tz-wrap"; main.appendChild(wrap);
+  const kpAll={}; pool.forEach(q=>kpAll[q._raw.kp]=1); const nNone=Object.keys(kpAll).filter(k=>/^none:/.test(k)).length;
+  let h='<div class="qz-hd"><h2>习思想套卷</h2><span class="qz-sub">三天一组，一组三张卷合起来把所有知识点过一遍</span></div>'+
+        '<div class="qz-actions" style="margin-top:0"><button class="qz-btn" id="tzHome">← 回刷题首页</button></div>';
+  if(!pool.length){ h+='<div class="empty">这批题还没进题库。<br><span class="qz-sub">在设置里同步一次数据（或重开 App）就会出现。</span></div>'; wrap.innerHTML=h; wrap.querySelector("#tzHome").onclick=()=>{ qz.view="home"; render(); }; return; }
+  h+='<div class="tz-hero"><div class="qz-sub">题：金标尺（教材、选调题库、题海、进阶刷题、模考）＋优众模考，共 <b>'+pool.length+'</b> 道，不含无非和时政。<br>'+
+     '知识点：你笔记里的一段话算一个，有题的段 <b>'+(Object.keys(kpAll).length-nNone)+'</b> 段，另有 '+nNone+' 章各一个「笔记没写到的考点」。<br>'+
+     '每组每段出 1 道起（题多的段多出几道），上一组错的、错题本里的、模糊的先出，没出过的其次；三天做完再出下一组。</div></div>';
+  const g=T.groups[T.groups.length-1];
+  if(!g){ h+='<div class="tz-grp"><div class="tz-gh"><b>还没出过套卷</b></div><button class="qz-btn pri" id="tzMake">出第 1 组</button></div>'; }
+  else {
+    h+='<div class="tz-grp"><div class="tz-gh"><b>第 '+g.no+' 组</b><span class="qz-sub">'+esc(g.made||"")+' 出</span></div>';
+    const p=qzPaper();
+    g.days.forEach((d,di)=>{ const cur=p&&!p.submitted&&p.tz&&p.tz.g===g.no&&p.tz.d===di, sv=d.saved&&!d.saved.submitted?d.saved:null, going=cur||!!sv, gp=cur?p:sv;
+      let mt=d.items.length+' 题 · '+(d.kps||"")+' 个知识点';
+      if(d.done){ const pct=d.n?Math.round(d.right/d.n*100):0; mt+='<br><span class="'+(pct>=80?"ok":"bad")+'">答对 '+d.right+'/'+d.n+'（'+pct+'%）</span> · 错 '+Object.keys(d.wrong||{}).length+' 题'+(d.un?' · 未答 '+d.un:'')+(d.at?' · '+esc(d.at):''); }
+      else if(going){ mt+='<br>做到一半：已答 '+Object.keys(gp.picks||{}).filter(k=>k.indexOf("_tmp")!==0).length+' 题'; }
+      h+='<div class="tz-day'+(d.done?' done':'')+'"><span class="nm">第 '+(di+1)+' 天</span><span class="mt">'+mt+'</span>'+
+         (d.done?'<button class="qz-btn" data-rep="'+di+'">'+(tzUi.open["rep"+g.no+"-"+di]?"收起错题":"看错题和笔记")+'</button>'
+                :(going?'<button class="qz-btn pri" data-go="'+di+'">继续</button>':'<button class="qz-btn pri" data-go="'+di+'">开始</button><button class="qz-btn" data-ex="'+di+'">考试模式</button>'))+'</div>';
+      if(tzUi.open["rep"+g.no+"-"+di]&&d.done){ const bad=Object.keys(d.wrong||{}).map(k=>map[k]).filter(Boolean); h+=tzReportHtml(null,bad,d.wrong,"第 "+(di+1)+" 天错了的段"); } });
+    if(g.days.every(d=>d.done)) h+='<button class="qz-btn pri" id="tzMake">出第 '+(g.no+1)+' 组</button>';
+    h+='</div>';
+  }
+  /* 薄弱的段：套卷里累计错过的段，错得多的在前 */
+  const st=tzKpStat(T,map), wk=Object.keys(st).filter(k=>st[k].w>0).sort((a,b)=>st[b].w-st[a].w||st[b].w/st[b].n-st[a].w/st[a].n).slice(0,30);
+  if(wk.length){ h+='<div class="tz-grp"><div class="tz-gh"><b>错得最多的段</b><span class="qz-sub">套卷里累计；点开看笔记原文</span></div>'+
+    wk.map(k=>{ const o=st[k], open=tzUi.open["wk"+k]; return '<div class="tz-wk" data-wk="'+esc(k)+'"><span class="nm">'+esc(tzParaLabel(k))+(open?tzParaHtml(k):"")+'</span><span class="ct">错 '+o.w+' / 做 '+o.n+'</span></div>'; }).join("")+'</div>'; }
+  /* 以前各组 */
+  const old=T.groups.slice(0,-1);
+  if(old.length) h+='<div class="tz-grp"><div class="tz-gh"><b>以前各组</b></div><div class="tz-hist">'+old.slice().reverse().map(x=>'第 '+x.no+' 组（'+esc(x.made||"")+'）：'+x.days.map((d,i)=>'第'+(i+1)+'天 '+(d.done?(d.n?Math.round(d.right/d.n*100):0)+'%':'没做')).join("　")).join("<br>")+'</div></div>';
+  wrap.innerHTML=h;
+  wrap.querySelector("#tzHome").onclick=()=>{ qz.view="home"; render(); };
+  const mk=wrap.querySelector("#tzMake"); if(mk) mk.onclick=()=>{ const ng=tzMakeGroup(); if(!ng){ toast("没有可出的题"); return; } toast("第 "+ng.no+" 组出好了"); render(); };
+  wrap.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>tzStart(g,+b.dataset.go,"practice"));
+  wrap.querySelectorAll("[data-ex]").forEach(b=>b.onclick=()=>tzStart(g,+b.dataset.ex,"exam"));
+  wrap.querySelectorAll("[data-rep]").forEach(b=>b.onclick=()=>{ const k="rep"+g.no+"-"+b.dataset.rep; tzUi.open[k]=!tzUi.open[k]; render(); });
+  wrap.querySelectorAll("[data-wk]").forEach(b=>b.onclick=()=>{ const k="wk"+b.dataset.wk; tzUi.open[k]=!tzUi.open[k]; render(); });
+}
+/* ===== 10.13 习思想套卷 END ===== */
 /* ===== 11. 设置 ===== */
 /* 强制更新程序：注销 Service Worker + 清空静态缓存 + 重载。只动程序文件，不动学习数据。 */
 async function forceUpdateApp(){
