@@ -3215,6 +3215,12 @@ function renderLqModal(){
     body.querySelector("#lqLater").onclick=()=>{ const dd=_lq.dd; closeModal(); _lq=null; refreshDay(dd); };
   }
 }
+/* FILLGAP_ARROWS_V2（2026-10-15）：多空填空 ↓＝下一个空、↑＝上一个空；输入法选字时的上下键不算；没有可换的空时不拦 */
+document.addEventListener("keydown",function(e){ const t=e.target; if(!t||!t.classList||!t.classList.contains("fillgap")) return;
+  if(e.isComposing||e.keyCode===229||e.altKey||e.ctrlKey||e.metaKey||e.shiftKey) return;
+  const d=(e.key==="ArrowDown")?1:((e.key==="ArrowUp")?-1:0); if(!d) return;
+  const box=t.closest(".fillbody")||t.parentNode; const arr=[...box.querySelectorAll("input.fillgap")].filter(x=>!x.disabled); const nx=arr[arr.indexOf(t)+d];
+  if(!nx) return; e.preventDefault(); nx.focus(); const n=nx.value.length; try{ nx.setSelectionRange(n,n); }catch(er){} });
 function lqCard(it,i){
   const q=it.q,card=document.createElement("div"); card.className="qrcard"; card.dataset.qi=i;
   const head=document.createElement("div"); head.className="qhead"; head.innerHTML='<span class="qnum">第 '+(i+1)+' 题</span><span class="qtag">'+TLABEL[q.type]+'题</span>'; card.appendChild(head);
