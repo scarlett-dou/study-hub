@@ -1993,7 +1993,7 @@ function extractClozes(ch){ const list=[]; (ch.layers||[]).forEach(layer=>{ cons
   visit(layer.items); }); return list; }
 function pool(cz,color,ans){ const seen=new Set([ans]),a=[]; cz.forEach(c=>{ if(c.color===color&&!seen.has(c.answer)){ seen.add(c.answer); a.push(c.answer); } }); const L=ans.length; a.sort((x,y)=>Math.abs(x.length-L)-Math.abs(y.length-L)); return a; }
 function pickDistractors(cz,color,ans,n){ let p=pool(cz,color,ans); const h=p.slice(0,Math.max(n,Math.ceil(p.length*0.6))); for(let i=h.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [h[i],h[j]]=[h[j],h[i]]; } return h.slice(0,n); }
-function norm(s){ return String(s).replace(/\s+/g,"").replace(/[，。、；：“”"'（）()【】《》〖〗▢]/g,"").replace(/[Ａ-Ｚａ-ｚ０-９]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0xFEE0)); }
+function norm(s){ return String(s).replace(/\s+/g,"").replace(/[，。、；：“”"'（）()【】《》〖〗▢「」『』\[\]·—\-～~！!？?‘’]/g,"").replace(/[Ａ-Ｚａ-ｚ０-９]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0xFEE0)); }
 function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [a[i],a[j]]=[a[j],a[i]]; } return a; }
 function stemHtml(stem,color){ return esc(stem).replace(/▢+/g,'<span class="gap '+(color||'R')+'">▢▢▢</span>'); }
 function wtBlanks(text){ return parseTokens(text||"").filter(t=>t.type==="blank"); }
@@ -3112,7 +3112,17 @@ function gradeScore(it){ const q=it.q;
   if(q.type==="fill"){ const ans=fillParts(q.fillText).answers; if(!ans.length) return 0; if(ans.length===1){ const s1=blankScore((it.resp||[])[0]||"",ans[0]); it._asim=[s1]; return s1; } const A=fillAssign(it.resp,ans); it._asim=A.respSim; return A.total/ans.length; }
   return 0; }
 function gradeItem(it){ return gradeScore(it)>=0.999; }
-function quizPassed(it){ return gradeScore(it)>=0.9; } /* 一道题算「对」=得分≥90%,否则计入错题(2026-08-01) */
+/* 一道题算「对」=得分≥70%,否则计入错题(2026-08-01 定 90%；PASS70_V1 2026-10-15 她改成 70%)。
+   PASS70_GUARD_V1：没到 90% 的空里既写了答案里没有的字、又漏了答案里的字＝写错字（十一届/十八届、法治体系/法治道路），这个空不帮她凑 70%；只漏写或只多写的照分数算。显示的分不变。与思想回顾模块 v17 同口径 */
+function blankMiswrite(resp,ans){ const A=norm(ans),R=norm(resp); if(!A.length||!R.length) return false; const L=lcsLen(R,A); if(L/Math.max(A.length,R.length)>=0.9) return false; return L<R.length&&L<A.length; }
+function passScore(it){ const q=it.q; if(q.type!=="fill") return gradeScore(it);
+  const ans=fillParts(q.fillText).answers,rs=it.resp||[]; if(!ans.length) return 0;
+  if(ans.length===1){ const s1=blankScore(rs[0]||"",ans[0]); return (s1<1&&blankMiswrite(rs[0]||"",ans[0]))?0:s1; }
+  const n=ans.length,pairs=[]; for(let i=0;i<n;i++){ for(let j=0;j<n;j++){ pairs.push([blankScore(rs[j]||"",ans[i]),i,j]); } }
+  pairs.sort((a,b)=>b[0]-a[0]); const aU=new Array(n).fill(false),rU=new Array(n).fill(false); let t=0;
+  for(const p of pairs){ if(aU[p[1]]||rU[p[2]]) continue; aU[p[1]]=true; rU[p[2]]=true; t+=(p[0]<1&&blankMiswrite(rs[p[2]]||"",ans[p[1]]))?0:p[0]; }
+  return t/n; }
+function quizPassed(it){ return gradeScore(it)>=0.9||passScore(it)>=0.7; }   /* 原来 90% 能过的照样过（不比以前严）；放宽到 70% 的那段才看写没写错字 */
 function qAnswerText(q){ if(q.type==="mc") return q.mcAnswer||""; if(q.type==="tf") return q.truth?"对":"错"; if(q.type==="fill") return fillParts(q.fillText).answers.join(" / "); if(q.type==="match") return q.pairs.map(p=>p.left+"→"+p.right).join("；"); return ""; }
 function qRespText(it){ const q=it.q,r=it.resp; if(r==null||r==="") return "（未答）"; if(q.type==="mc") return String(r); if(q.type==="tf") return r?"对":"错"; if(q.type==="fill") return (Array.isArray(r)?r:[]).map(x=>(x&&String(x).trim())?x:"（空）").join(" / "); if(q.type==="match") return q.pairs.map((p,k)=>p.left+"→"+((r||{})[k]||"?")).join("；"); return String(r); }
 function qStemText(q){ if(q.type==="mc") return (q.mcStem||"").replace(/<[^>]+>/g,""); if(q.type==="tf") return q.statement||""; if(q.type==="fill") return fillParts(q.fillText).segs.map(s=>s.blank!=null?"____":(s.hint!=null?"〔"+s.hint+"〕":s.text)).join(""); if(q.type==="match") return "连线："+q.pairs.map(p=>p.left).join("、"); return ""; }
@@ -3190,14 +3200,14 @@ function renderLqModal(){
     if(_lq.i==null||_lq.i<0) _lq.i=0;
     if(_lq.i>=_lq.items.length){ lqFinish(); return; }
     const i=_lq.i,it=_lq.items[i],n=_lq.items.length;
-    let okN=0; for(let k=0;k<i;k++){ if((typeof _lq.items[k]._sc==="number"?_lq.items[k]._sc:0)>=0.9) okN++; }
+    let okN=0; for(let k=0;k<i;k++){ if(typeof _lq.items[k]._ok==="boolean"?_lq.items[k]._ok:((_lq.items[k]._sc||0)>=0.7)) okN++; }
     const body=openModal('<div class="d">'+title+'</div>',
       '<div class="msub">第 <b>'+(i+1)+'</b> / '+n+' 题 · 已对 <b>'+okN+'</b>'+(i?(' · 正确率 '+Math.round(okN/i*100)+'%'):'')+' · 输完按回车对答案</div>'+
       '<div id="lqCards" style="margin-top:8px"></div>'+
       '<div class="btnrow" id="lqBtns"><button class="btn" id="lqOne">提交本题</button><button class="btn sec" id="lqSkip">不会,看答案</button><button class="btn sec" id="lqExit">退出</button></div>');
     const host=body.querySelector("#lqCards"); host.appendChild(lqCard(it,i));
     const first=host.querySelector('input.fillgap,input[type="radio"],select'); if(first){ try{ first.focus(); }catch(e){} }
-    const commit=()=>{ lqReadAnswers(host); const sc=gradeScore(it); it._sc=sc; it._done=true; recordQuestionResult(it.q,quizPassed(it),sc); lqShowAns(host,body,it,i); save(); };
+    const commit=()=>{ lqReadAnswers(host); const sc=gradeScore(it); it._sc=sc; it._done=true; it._ok=quizPassed(it); recordQuestionResult(it.q,it._ok,sc); lqShowAns(host,body,it,i); save(); };
     body.querySelector("#lqOne").onclick=()=>{ lqReadAnswers(host); if(!lqHasResp(it)){ toast("还没作答 —— 不会就点「不会,看答案」"); return; } commit(); };
     body.querySelector("#lqSkip").onclick=()=>{ lqReadAnswers(host); commit(); };
     it._onAll=()=>{ setTimeout(()=>{ if(_lq&&_lq.items&&_lq.items[_lq.i]===it&&!it._done&&host.isConnected&&document.getElementById("scrim").classList.contains("on")) commit(); },450); };   /* 连线连满自动对答案 */
@@ -3273,7 +3283,7 @@ function lqShowAns(host,body,it,i){
     fp.answers.forEach((a,k)=>{ const inp=card.querySelector('input[data-blank="'+k+'"]'); if(!inp) return;
       const bs=(it._asim&&it._asim[k]!=null)?it._asim[k]:blankScore((it.resp||[])[k]||"",a);
       inp.classList.add(bs>=0.999?"ok":bs>0?"partial":"no"); });
-    card.appendChild(revelScore(it._sc,"正确答案:"+fp.answers.map((a,k)=>(k+1)+"."+a).join("　"))); }
+    card.appendChild(revelScore(it._sc,(it._sc>0&&it._sc<0.999?(it._ok?"≥70%，算对 · ":(it._sc>=0.7?"有空写错了字，不算对 · ":"不到 70%，算错 · ")):"")+"正确答案:"+fp.answers.map((a,k)=>(k+1)+"."+a).join("　"))); }
   else if(q.type==="mc") card.appendChild(revel(it.resp===q.mcAnswer,"正确答案:"+q.mcAnswer));
   else if(q.type==="tf") card.appendChild(revel(it.resp===q.truth,"正确答案:"+(q.truth?"✓ 对":"✗ 错")));
   else if(q.type==="match"){ if(it._mtwLock) it._mtwLock();   /* MATCH_WIDGET_V1 */
@@ -3287,7 +3297,7 @@ function lqShowAns(host,body,it,i){
   if(card.scrollIntoView){ try{ card.scrollIntoView({block:"nearest"}); }catch(e){} } }
 /* 全部做完：把各题已判的分汇总成总成绩并写回这一节（每题的统计在提交那一刻已记过，这里不再重复记） */
 function lqFinish(){ let sum=0,pass=0;
-  _lq.items.forEach(it=>{ const sc=(typeof it._sc==="number")?it._sc:gradeScore(it); sum+=sc; if(sc>=0.9) pass++; });
+  _lq.items.forEach(it=>{ const sc=(typeof it._sc==="number")?it._sc:gradeScore(it); sum+=sc; if(typeof it._ok==="boolean"?it._ok:quizPassed(it)) pass++; });
   _lq.correct=pass; _lq.pct=_lq.items.length?Math.round(sum/_lq.items.length*100):0;
   recordExam(_lq.reciteId,{pct:_lq.pct,part:"whole",date:_lq.onDate});
   _lq.phase="result"; _lq.submitted=true; save(); renderLqModal(); }
