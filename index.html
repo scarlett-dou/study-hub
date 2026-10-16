@@ -3047,7 +3047,7 @@ function paperQ(it,i){ const q=it.q,done=_exam.submitted,card=document.createEle
   else if(q.type==="tf"){ const b=document.createElement("div"); b.className="qbody"; b.textContent=q.statement; card.appendChild(b);
     const btns=document.createElement("div"); btns.className="tfbtns"; [["对",true],["错",false]].forEach(arr=>{ const t=arr[0],v=arr[1],bb=document.createElement("button"); bb.textContent=t; if(it.resp===v)bb.classList.add("sel");
       if(done){ if(v===q.truth)bb.classList.add("correct"); else if(it.resp===v)bb.classList.add("wrong"); bb.disabled=true; } bb.onclick=()=>{ it.resp=v; render(); }; btns.appendChild(bb); }); card.appendChild(btns);
-    if(done) card.appendChild(revel(it.resp===q.truth,"正确答案:"+(q.truth?"✓ 对":"✗ 错"))); }
+    if(done){ card.appendChild(revel(it.resp===q.truth,"正确答案:"+(q.truth?"✓ 对":"✗ 错"))); tfWhyAppend(card,q); } }
   else if(q.type==="match"){ const b=document.createElement("div"); b.className="qbody"; b.innerHTML=MTW_TIP; card.appendChild(b);   /* MATCH_WIDGET_V1 */
     card.appendChild(matchWidget(it,{locked:done}));
     if(done){ card.appendChild(revelScore(gradeScore(it),"正确配对:"+q.pairs.map(p=>p.left+"→"+p.right).join(";"))); } }
@@ -3123,10 +3123,18 @@ function passScore(it){ const q=it.q; if(q.type!=="fill") return gradeScore(it);
   for(const p of pairs){ if(aU[p[1]]||rU[p[2]]) continue; aU[p[1]]=true; rU[p[2]]=true; t+=(p[0]<1&&blankMiswrite(rs[p[2]]||"",ans[p[1]]))?0:p[0]; }
   return t/n; }
 function quizPassed(it){ return gradeScore(it)>=0.9||passScore(it)>=0.7; }   /* 原来 90% 能过的照样过（不比以前严）；放宽到 70% 的那段才看写没写错字 */
+/* TF_WHY_V1：判断题判完显示错在哪／原句（出处）；q.why={w,o,s} */
+function tfWhyHtml(q){ const y=q&&q.why; if(!y||q.type!=="tf") return ""; let h="";
+  if(!q.truth&&y.w) h+='<div><b>错在：</b>'+esc(y.w)+'</div>';
+  const same=!!y.o&&norm(y.o)===norm(q.statement);
+  if(y.o&&!same) h+='<div><b>原句：</b>'+esc(y.o)+(y.s?'<span style="color:var(--text2,#999)">〔'+esc(y.s)+'〕</span>':'')+'</div>';
+  else if(y.s) h+='<div><b>'+(same?'和原句一致':'出处')+'：</b>'+esc(y.s)+'</div>';   /* TF_WHY_V2 */
+  return h; }
+function tfWhyAppend(card,q){ const h=tfWhyHtml(q); if(!h) return; const d=document.createElement("div"); d.className="tfwhy"; d.style.cssText="font-size:13px;line-height:1.75;margin-top:6px;color:var(--text2,#666)"; d.innerHTML=h; card.appendChild(d); }
 function qAnswerText(q){ if(q.type==="mc") return q.mcAnswer||""; if(q.type==="tf") return q.truth?"对":"错"; if(q.type==="fill") return fillParts(q.fillText).answers.join(" / "); if(q.type==="match") return q.pairs.map(p=>p.left+"→"+p.right).join("；"); return ""; }
 function qRespText(it){ const q=it.q,r=it.resp; if(r==null||r==="") return "（未答）"; if(q.type==="mc") return String(r); if(q.type==="tf") return r?"对":"错"; if(q.type==="fill") return (Array.isArray(r)?r:[]).map(x=>(x&&String(x).trim())?x:"（空）").join(" / "); if(q.type==="match") return q.pairs.map((p,k)=>p.left+"→"+((r||{})[k]||"?")).join("；"); return String(r); }
 function qStemText(q){ if(q.type==="mc") return (q.mcStem||"").replace(/<[^>]+>/g,""); if(q.type==="tf") return q.statement||""; if(q.type==="fill") return fillParts(q.fillText).segs.map(s=>s.blank!=null?"____":(s.hint!=null?"〔"+s.hint+"〕":s.text)).join(""); if(q.type==="match") return "连线："+q.pairs.map(p=>p.left).join("、"); return ""; }
-function lqReviewHtml(){ return '<div class="lqreview" style="margin:4px 0 12px;max-height:42vh;overflow:auto">'+_lq.items.map((it,i)=>{ const sc=gradeScore(it),ok=sc>=0.999,part=sc>0&&sc<0.999; const mark=ok?'<span style="color:var(--green)">✓</span>':part?'<span style="color:var(--orange)">◑</span>':'<span style="color:var(--red)">✗</span>'; return '<div style="border:1px solid var(--sep2);border-radius:9px;padding:8px 10px;margin-bottom:7px">'+'<div style="font-weight:600;font-size:12.5px;margin-bottom:2px">'+mark+' 第'+(i+1)+'题 · '+TLABEL[it.q.type]+'题</div>'+'<div style="font-size:12.5px;color:var(--text2);margin-bottom:3px">'+esc(qStemText(it.q))+'</div>'+'<div style="font-size:12.5px">你的答案：<b style="color:'+(ok?'var(--green)':'var(--red)')+'">'+esc(qRespText(it))+'</b></div>'+(ok?'':'<div style="font-size:12.5px">正确答案：<b style="color:var(--green)">'+esc(qAnswerText(it.q))+'</b></div>')+'</div>'; }).join('')+'</div>'; }
+function lqReviewHtml(){ return '<div class="lqreview" style="margin:4px 0 12px;max-height:42vh;overflow:auto">'+_lq.items.map((it,i)=>{ const sc=gradeScore(it),ok=sc>=0.999,part=sc>0&&sc<0.999; const mark=ok?'<span style="color:var(--green)">✓</span>':part?'<span style="color:var(--orange)">◑</span>':'<span style="color:var(--red)">✗</span>'; return '<div style="border:1px solid var(--sep2);border-radius:9px;padding:8px 10px;margin-bottom:7px">'+'<div style="font-weight:600;font-size:12.5px;margin-bottom:2px">'+mark+' 第'+(i+1)+'题 · '+TLABEL[it.q.type]+'题</div>'+'<div style="font-size:12.5px;color:var(--text2);margin-bottom:3px">'+esc(qStemText(it.q))+'</div>'+'<div style="font-size:12.5px">你的答案：<b style="color:'+(ok?'var(--green)':'var(--red)')+'">'+esc(qRespText(it))+'</b></div>'+(ok?'':'<div style="font-size:12.5px">正确答案：<b style="color:var(--green)">'+esc(qAnswerText(it.q))+'</b></div>'+(it.q.type==="tf"&&tfWhyHtml(it.q)?'<div style="font-size:12.5px;line-height:1.7;color:var(--text2);margin-top:2px">'+tfWhyHtml(it.q)+'</div>':''))+'</div>'; }).join('')+'</div>'; }
 /* 每题考试统计:出现/通过/连胜/曾错;曾错且连胜<出库次数(settings.errStreak,默认5) 视为「错题」,连胜达标视为已恢复 */
 function recordQuestionResult(q,pass,score){ q.seen=(q.seen||0)+1; q.scoreSum=Math.round(((q.scoreSum||0)+(typeof score==="number"?Math.max(0,Math.min(1,score)):(pass?1:0)))*1000)/1000; if(pass){ q.passCount=(q.passCount||0)+1; q.streak=(q.streak||0)+1; } else { q.streak=0; q.wrongEver=true; } } /* scoreSum:历次得分累计,正确率=scoreSum/seen(2026-08-03) */
 function qClass(q){ const K=(db.settings&&db.settings.errStreak)||5; if(!q.seen) return "new"; if(q.wrongEver&&(q.streak||0)<K) return "wrong"; return "correct"; }
@@ -3285,7 +3293,7 @@ function lqShowAns(host,body,it,i){
       inp.classList.add(bs>=0.999?"ok":bs>0?"partial":"no"); });
     card.appendChild(revelScore(it._sc,(it._sc>0&&it._sc<0.999?(it._ok?"≥70%，算对 · ":(it._sc>=0.7?"有空写错了字，不算对 · ":"不到 70%，算错 · ")):"")+"正确答案:"+fp.answers.map((a,k)=>(k+1)+"."+a).join("　"))); }
   else if(q.type==="mc") card.appendChild(revel(it.resp===q.mcAnswer,"正确答案:"+q.mcAnswer));
-  else if(q.type==="tf") card.appendChild(revel(it.resp===q.truth,"正确答案:"+(q.truth?"✓ 对":"✗ 错")));
+  else if(q.type==="tf"){ card.appendChild(revel(it.resp===q.truth,"正确答案:"+(q.truth?"✓ 对":"✗ 错"))); tfWhyAppend(card,q); }
   else if(q.type==="match"){ if(it._mtwLock) it._mtwLock();   /* MATCH_WIDGET_V1 */
     card.appendChild(revelScore(it._sc,"正确配对:"+q.pairs.map(p=>p.left+"→"+p.right).join("；"))); }
   const last=(i+1>=_lq.items.length);
