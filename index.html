@@ -4020,10 +4020,11 @@ async function lawAdopt(o){
   if(bad.length) throw new Error("有 "+bad.length+" 条缺 id/subject/sec/answer");
   /* points/qa 必须带上：points 是 170 个知识点(丢了「按知识点选题」就废)，
      qa 是她的提问+解答卡片。文件里没有就沿用本机已有的，别置空。 */
-  const _pv=(db.lawBank&&db.lawBank.points)||[], _qv=(db.lawBank&&db.lawBank.qa)||null;
+  const _pv=(db.lawBank&&db.lawBank.points)||[], _qv=(db.lawBank&&db.lawBank.qa)||null, _sv=(db.lawBank&&db.lawBank.sets)||null;   /* QZ_SETS_V1 */
   db.lawBank={version:o.version||1,questions:qs,cards:Array.isArray(o.cards)?o.cards:[],
               points:Array.isArray(o.points)&&o.points.length?o.points:_pv};
   const _qa=(o.qa&&typeof o.qa==="object")?o.qa:_qv; if(_qa) db.lawBank.qa=_qa;
+  const _st=Array.isArray(o.sets)?o.sets:_sv; if(_st) db.lawBank.sets=_st;
   await save(); closeModal(); law.qi=0; law.ci=0; render();
   toast("题库已更新："+qs.length+" 题 / "+db.lawBank.cards.length+" 张卡 / "+(db.lawBank.points||[]).length+" 个知识点");
 }
@@ -4988,6 +4989,38 @@ function qzItems(){ const p=qzPaper(); if(!p) return [];
   const map={}; qzAll().forEach(q=>map[q.src+"|"+q.id]=q);
   return p.items.map(it=>map[it.src+"|"+it.id]).filter(Boolean); }
 
+/* ---------- QZ_SETS_V1：题库里预置的专项套卷（bank.sets），题目引用原题，做题记录写回原题库 ---------- */
+const QZ_SET_BANKS={law:"lawBank",mg:"mgBank",sj:"sjBank",mz:"mzBank",gs:"gsBank",ec:"ecBank",ks:"ksBank"};
+function qzSets(){ const out=[];
+  Object.keys(QZ_SET_BANKS).forEach(src=>{ const b=db[QZ_SET_BANKS[src]];
+    ((b&&Array.isArray(b.sets))?b.sets:[]).forEach(s=>{ if(s&&s.id&&s.name&&Array.isArray(s.groups)) out.push(Object.assign({src:src},s)); }); });
+  return out; }
+function qzSetItems(set){ const have={}; qzAll().forEach(q=>{ have[q.src+"|"+q.id]=1; });
+  const items=[], grp=[];
+  set.groups.forEach(g=>{ let n=0; (g.ids||[]).forEach(id=>{ if(have[set.src+"|"+id]){ items.push({src:set.src,id:id}); n++; } }); if(n) grp.push({name:String(g.name||""),n:n}); });
+  return {items:items, grp:grp}; }
+function qzSetStart(id){ const set=qzSets().find(x=>x.id===id); if(!set) return;
+  const s=qzState(), p=s.paper;
+  if(p&&!p.submitted){
+    if(p.set===id){ qz.cur=p.cur||0; qz.view="run"; render(); return; }
+    if(p.tz&&typeof tzPark==="function") tzPark();
+    else { if(s.tzStash&&!s.tzStash.submitted&&!confirm("已经收起过一套没做完的卷子，再收会把更早那套放弃。确定吗？")) return;
+      s.tzStash=p; toast("原来那套没做完的卷子先收起来了，做完这套回刷题首页会放回去"); }
+  }
+  const r=qzSetItems(set); if(!r.items.length){ toast("这套卷子的题在题库里找不到，先更新题库"); return; }
+  s.paper={ id:uid(), mode:"practice", mins:Math.max(30,Math.round(r.items.length*0.6)), createdAt:new Date().toISOString(), startAt:Date.now(),
+            usedMs:0, resumeAt:Date.now(), items:r.items, picks:{}, marks:{}, cur:0, submitted:false, score:null,
+            name:set.name, set:set.id, grp:r.grp };
+  qz.cur=0; qz.view="run"; save(); render(); }
+function qzSetCards(){ return qzSets().map(set=>{ const r=qzSetItems(set), n=r.items.length; if(!n) return "";
+  const ex=(qzState().exams||[]).filter(e=>e.set===set.id), last=ex[ex.length-1];
+  const p=qzPaper(), going=!!(p&&!p.submitted&&p.set===set.id);
+  const dn=going?Object.keys(p.picks||{}).filter(k=>k.indexOf("_tmp")!==0).length:0;
+  const st=going?("做到 "+dn+"/"+n+" 题 · 点开接着做"):(n+" 题 · "+r.grp.length+" 组");
+  const meta=last?("上次 "+last.right+"/"+last.n+" · "+last.pct+"% · "+last.date+(ex.length>1?" · 做过 "+ex.length+" 次":"")):"题目引用原题 · 做错进错题本";
+  return '<button class="qz-card" data-set="'+esc(set.id)+'"><div class="qz-cname">📌 '+esc(set.name)+'</div><div class="qz-cnum">'+esc(st)+'</div>'+
+         '<div class="qz-bar"><i style="width:'+(going?Math.round(dn/n*100):(last?last.pct:0))+'%"></i></div><div class="qz-cmeta">'+esc(meta)+'</div></button>'; }).join(""); }
+
 
 /* ---------- 知识点（法律题库按法典编章挂点，管理题库自带 points） ---------- */
 /* 选中科目下的全部知识点，带题数。不选科目就返回全部。 */
@@ -5070,7 +5103,7 @@ function qzHome(main){
   let h='<div class="qz-hd"><h2>刷题</h2><span class="qz-sub">选一个科目直接练，或自由组卷做一套模拟卷</span></div>';
   if(p&&!p.submitted){
     const done=Object.keys(p.picks||{}).length;
-    h+='<div class="qz-resume"><div><b>'+(p.tz?'习思想套卷第 '+p.tz.g+' 组第 '+(p.tz.d+1)+' 天还没做完':'有一套没做完的'+QZ_MODE[p.mode])+'</b><span class="qz-sub">共 '+((p.items||p.qs||[]).length)+' 题 · 已答 '+done+' 题</span></div>'+
+    h+='<div class="qz-resume"><div><b>'+(p.tz?'习思想套卷第 '+p.tz.g+' 组第 '+(p.tz.d+1)+' 天还没做完':(p.set&&p.name?esc(p.name)+' 还没做完':'有一套没做完的'+QZ_MODE[p.mode]))+'</b><span class="qz-sub">共 '+((p.items||p.qs||[]).length)+' 题 · 已答 '+done+' 题</span></div>'+
        '<div class="qz-ract"><button class="qz-btn pri" id="qzGo">继续</button><button class="qz-btn" id="qzDrop">放弃</button></div></div>';
   }
   if(!groups.length){
@@ -5093,6 +5126,7 @@ function qzHome(main){
          '<div class="qz-cmeta">已做 '+s.done+' · <span class="r">错题 '+s.wrong+'</span></div></button>';
     }); });
   /* 模考题：整套真题卷，含写作 */
+  h+=qzSetCards();   /* QZ_SETS_V1 */
   const mk=qzMocks();
   h+='<button class="qz-card mock" id="qzMock"><div class="qz-cname">📄 模考题</div>'+
      '<div class="qz-cnum">'+(mk.length?mk.length+' 套整卷':'还没有卷子')+'</div>'+
@@ -5156,6 +5190,7 @@ function qzHome(main){
     qz.pick={}; qz.pick[b.dataset.subj]=true; qz.kps={}; qz.kpg={}; qz.view="build"; render(); });
   const nb=main.querySelector("#qzNew"); if(nb) nb.onclick=()=>{ qz.view="build"; render(); };
   const mb=main.querySelector("#qzMock"); if(mb) mb.onclick=()=>{ qz.view="mock"; render(); };
+  main.querySelectorAll("[data-set]").forEach(b=>b.onclick=()=>qzSetStart(b.dataset.set));   /* QZ_SETS_V1 */
   const tzc=main.querySelector("#qzTz"); if(tzc) tzc.onclick=()=>{ qz.view="tz"; render(); };   /* TZ_MODULE_V1 */
   const wrb=main.querySelector("#qzWr"); if(wrb) wrb.onclick=()=>go("wr");
   const hlb=main.querySelector("#qzHlsGo"); if(hlb) hlb.onclick=()=>{ qz.view="hl"; render(); };
@@ -5789,7 +5824,9 @@ function qzRun(main){
   qzQStart(p,key);
   /* 按题型分节，卷内连续编号 */
   const groups=[]; let n=0;
-  QZ_SECS.forEach(sec=>{ const list=[];
+  if(Array.isArray(p.grp)&&p.grp.length&&p.grp.reduce((a,g)=>a+(+g.n||0),0)===qs.length){ let i0=0;   /* QZ_SETS_V1：专项套卷按组、按题单顺序 */
+    p.grp.forEach(g=>{ const list=[]; for(let k=0;k<g.n;k++) list.push({i:i0+k,no:0}); i0+=g.n; groups.push({sec:g.name,list:list}); }); }
+  else QZ_SECS.forEach(sec=>{ const list=[];
     qs.forEach((x,i)=>{ if(x.sec===sec) list.push({i:i,no:0}); });
     if(list.length) groups.push({sec:sec,list:list}); });
   groups.forEach(g=>g.list.forEach(it=>{ it.no=++n; }));
@@ -5800,7 +5837,7 @@ function qzRun(main){
   /* 顶栏：返回 / 考试名 / 计时 / 交卷 */
   const doneN=Object.keys(p.picks).filter(k=>k.indexOf("_tmp")!==0).length;
   h+='<div class="qz-top"><div class="qz-tl"><button class="qz-btn sm" id="qzExit">‹ 返回</button>'+
-     '<b>'+(p.tz?'习思想套卷 · 第'+p.tz.g+'组第'+(p.tz.d+1)+'天':'综合测试')+'</b><span class="qz-tag">'+QZ_MODE[p.mode]+'</span></div>'+
+     '<b>'+(p.tz?'习思想套卷 · 第'+p.tz.g+'组第'+(p.tz.d+1)+'天':(p.set&&p.name?esc(p.name):'综合测试'))+'</b><span class="qz-tag">'+QZ_MODE[p.mode]+'</span></div>'+
      '<div class="qz-tr"><button class="qz-aa" id="qzAA" title="字号：小／中／大">A<small>A</small></button><span class="qz-done">已完成 '+doneN+'/'+qs.length+' 题</span>'+
      '<span class="qz-clock" id="qzClock">'+(exam?'剩余 '+qzFmtTime(qzLeft(p)):'⏱ '+qzFmtTime(qzUsed(p)))+'</span>'+
      '<span class="qz-clock qz-qclk" id="qzQClock">本题 '+qzMmss(qzQMs(p,key))+'</span>'+
@@ -5830,7 +5867,7 @@ function qzRun(main){
      (qz.showHist?'<span><i class="hg"></i>以前做对</span><span><i class="hb"></i>以前做错</span>':"")+'</div>'+
      '<button class="qz-btn pri qz-submit" id="qzSubmit">交卷</button></div>';
   /* 右：题目 */
-  const _sg=groups.find(g=>g.sec===curSec), _sn=_sg?_sg.list.length:1;   /* MACHINE_STYLE_V1 题头 */
+  const _sg=groups.find(g=>g.sec===curSec), _sn=_sg?_sg.list.length:qs.filter(x=>x.sec===curSec).length;   /* QZ_SETS_V1 */   /* MACHINE_STYLE_V1 题头 */
   h+='<div class="qz-main"><div class="qz-qhd">'+
      '<div class="qz-qh1"><b>'+esc(QZ_SECNAME[curSec]||curSec)+'</b><span>（共 '+_sn+' 题，共 '+(Math.round(_sn*(QZ_PTS[curSec]||1)*10)/10)+' 分。）</span></div>'+
      '<span class="qz-qsrc">'+esc(q.subject)+(q.page?' · 原书第'+esc(String(q.page))+'页':'')+'</span>'+   /* QZ_PAGE_LABEL */
@@ -6005,7 +6042,7 @@ function qzSubmit(qs){
   p.score={right:right,n:qs.length,pct:qs.length?Math.round(right/qs.length*100):0,unanswered:un,
            pts:qzR1(got),full:qzR1(full),ppct:full?Math.round(got/full*100):0};
   const s=qzState();
-  s.exams.push({date:today(),n:qs.length,right:right,pct:p.score.pct,pts:qzR1(got),full:qzR1(full),mode:p.mode,secs:Math.round(qzUsed(p)/1000)});
+  s.exams.push({date:today(),n:qs.length,right:right,pct:p.score.pct,pts:qzR1(got),full:qzR1(full),mode:p.mode,secs:Math.round(qzUsed(p)/1000),set:p.set||undefined});   /* QZ_SETS_V1 */
   if(s.exams.length>60) s.exams=s.exams.slice(-60);
   if(p.tz&&typeof tzOnSubmit==="function") tzOnSubmit(p,qs);   /* TZ_MODULE_V1：套卷记成绩 */
   qz.view="result"; save(); render();
