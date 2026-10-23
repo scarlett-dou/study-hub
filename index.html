@@ -5786,7 +5786,7 @@ function qzSec(ms){ const s=Math.round(ms/1000); return s>=60?Math.floor(s/60)+"
 function qzMmss(ms){ return qzFmtTime(ms).replace(/^00:/,""); }
 /* 出处小标（2026-09-13 她要求「做题后注明是无非的题还是金标尺的题」）：按题上的 org 分两家，模考卷单列 */
 function qzOrgTag(q){ const o=q.org||""; let cls="",txt="";
-  if(q.src==="mk"){ cls="mk"; txt=o?o+"模考":"模考卷"; }   /* MK_ORG_TAG */
+  if(q.src==="mk"){ cls="mk"; txt=o?(/模考$/.test(o)?o:o+"模考"):"模考卷"; }   /* MK_ORG_TAG MK_ORG_TAG2 */
   else if(/^金标尺/.test(o)){ cls="jb"; txt=(o==="金标尺")?"金标尺":"金标尺·"+o.slice(3).replace(/^选调题库$/,"选调题库"); }
   else if(/^无非/.test(o)){ cls="wf"; txt=(o==="无非")?"无非":"无非·"+o.slice(2); }
   else if(o){ cls="mk"; txt=o; }
