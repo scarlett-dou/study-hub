@@ -4926,7 +4926,9 @@ function qzPool(){ const sel=qz.pick, kp=qz.kps, anyKp=Object.keys(kp).length;
     (!Object.keys(qz.stars||{}).length||(q.star&&qz.stars[q.star])));
   /* MK_QA_V1：同一道题（模考题带 dupOf＝代表那道的 src|id）在一张卷里只出一次；题库题排在前面，所以优先留题库那道 */
   const _seen=new Set();
-  return _r.filter(q=>{ const k=(q._raw&&q._raw.dupOf)||(q.src+"|"+q.id); if(_seen.has(k)) return false; _seen.add(k); return true; }); }
+  /* QZ_DUP_V2：代表那道在结果里就只留代表那道（它带问答和做题记录），不在才留组里第一道 */
+  const _has=new Set(_r.map(q=>q.src+"|"+q.id));
+  return _r.filter(q=>{ const own=q.src+"|"+q.id, k=(q._raw&&q._raw.dupOf)||own; if(k!==own&&_has.has(k)) return false; if(_seen.has(k)) return false; _seen.add(k); return true; }); }
 
 /* ---------- QZORGSTAR2：出题机构 / 难度星级 ---------- */
 /* 无非题库每题自带 1–5 星难度，金标尺题库没有；两套题合在 lawBank 里靠 org 区分。
@@ -6854,7 +6856,8 @@ function tzSeen(T){ const m={}; T.groups.forEach(g=>g.days.forEach(d=>{ if(!d.do
   (d.items||[]).forEach(it=>{ const k=it.src+"|"+it.id; if(!un[k]) m[k]=g.no; }); })); return m; }
 /* 出一组 */
 function tzMakeGroup(){
-  const T=tzS(), pool=tzPool(); if(!pool.length) return null;
+  const T=tzS(), pool=(function(r){ const has=new Set(r.map(tzKey)), seen=new Set();   /* QZ_DUP_V2：同一道题只进一份 */
+    return r.filter(q=>{ const own=tzKey(q), k=(q._raw&&q._raw.dupOf)||own; if(k!==own&&has.has(k)) return false; if(seen.has(k)) return false; seen.add(k); return true; }); })(tzPool()); if(!pool.length) return null;
   const last=T.groups[T.groups.length-1], no=(last?last.no:0)+1, seen=tzSeen(T), ord=tzChOrd();
   const wrongLast={}; if(last) last.days.forEach(d=>Object.keys(d.wrong||{}).forEach(k=>wrongLast[k]=1));
   const byKp={}; pool.forEach(q=>{ (byKp[q._raw.kp]=byKp[q._raw.kp]||[]).push(q); });
