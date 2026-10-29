@@ -1,0 +1,798 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>面试背诵</title>
+<!-- PWA:清单 + iOS 主屏幕支持（与 Study Hub 同一套写法，数据各管各的） -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="面试背诵">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<style>
+  /* ===== 样式：照搬 Study Hub 的配色与组件，只加本 App 特有的 ===== */
+  :root{
+    --bg:#f2f2f7; --bg2:#ffffff; --card:#ffffff;
+    --text:#1c1c1e; --text2:rgba(60,60,67,.6); --text3:rgba(60,60,67,.3);
+    --sep:rgba(60,60,67,.16); --sep2:rgba(60,60,67,.29);
+    --tint:#007aff; --tint-soft:#e9f0ff;
+    --red:#ff3b30; --green:#34c759; --orange:#ff9500; --gray:#8e8e93;
+    --red-soft:#ffe9e7; --green-soft:#e6f8ea; --orange-soft:#fff3e0;
+    --fill:rgba(120,120,128,.12); --fill2:rgba(120,120,128,.2);
+    --r:12px; --r-sm:9px; --r-lg:16px;
+    --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 1px rgba(0,0,0,.03);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#000000; --bg2:#1c1c1e; --card:#1c1c1e; --text:#ffffff; --text2:rgba(235,235,245,.6); --text3:rgba(235,235,245,.3);
+      --sep:rgba(84,84,88,.5); --sep2:rgba(84,84,88,.65); --tint:#0a84ff; --tint-soft:#0a2647;
+      --red:#ff453a; --green:#30d158; --orange:#ff9f0a; --gray:#98989d; --fill:rgba(120,120,128,.24); --fill2:rgba(120,120,128,.36);
+      --red-soft:#3a1715; --green-soft:#10301a; --orange-soft:#3a2a0c;
+      --shadow:0 1px 3px rgba(0,0,0,.4); }
+  }
+  @media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue","Microsoft YaHei",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;color:var(--text);background:var(--bg);padding:22px 16px 60px;min-height:100vh;font-size:15px;line-height:1.45}
+  .wrap{max-width:1040px;margin:0 auto}
+  button{font-family:inherit;cursor:pointer}
+  h1,h2,h3,h4{font-weight:600;margin:0}
+
+  header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+  .brand{font-size:26px;font-weight:700;letter-spacing:-.02em}
+  .nav{display:flex;gap:6px;background:var(--fill);padding:3px;border-radius:11px}
+  .nav button{border:none;background:transparent;border-radius:8px;padding:7px 15px;font-size:14px;font-weight:500;color:var(--text);transition:.18s}
+  .nav button.sel{background:var(--bg2);box-shadow:var(--shadow);font-weight:600}
+
+  .countdown{background:var(--card);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:18px 22px;margin-bottom:16px;display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+  .countdown .big{font-size:clamp(40px,8vw,60px);font-weight:700;letter-spacing:-.03em;line-height:.95;color:var(--tint);font-variant-numeric:tabular-nums}
+  .countdown .big small{font-size:15px;font-weight:500;color:var(--text2);margin-left:7px}
+  .countdown .meta{flex:1;min-width:200px}
+  .countdown .meta .lab{font-size:13px;color:var(--text2)}
+  .countdown .meta .ttl{font-size:18px;font-weight:600;margin:1px 0 9px}
+  .pbar{height:8px;border-radius:5px;background:var(--fill2);overflow:hidden}
+  .pbar i{display:block;height:100%;background:var(--tint);border-radius:5px}
+  .countdown .meta .pn{font-size:12px;color:var(--text2);margin-top:5px}
+
+  .cal{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;align-items:start}
+  .calleft{display:flex;flex-direction:column;gap:16px;min-width:0}
+  @media(max-width:780px){.cal{grid-template-columns:1fr}}
+  .panel{background:var(--card);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:16px}
+  .seclab{font-size:12px;font-weight:600;color:var(--text2);margin:16px 0 7px}
+  .seclab:first-child{margin-top:0}
+  .glist{background:var(--card);border:1px solid var(--sep);border-radius:11px;overflow:hidden}
+  .gi{display:flex;align-items:center;gap:11px;padding:11px 13px;border-top:1px solid var(--sep);cursor:pointer}
+  .gi:first-child{border-top:none}
+  .gi:hover{background:var(--fill)}
+  .gdot{width:11px;height:11px;border-radius:50%;flex:none}
+  .gi .gt{flex:1;font-size:14.5px;min-width:0}
+  .gi .gt .gs{font-size:11.5px;color:var(--text2);margin-top:2px}
+  .gi.done .gt .gtitle{color:var(--text2)}
+  .mbar{height:5px;border-radius:3px;background:var(--fill2);overflow:hidden;margin-top:7px;max-width:200px}
+  .mbar i{display:block;height:100%;border-radius:3px}
+  .empty{font-size:13px;color:var(--text2);padding:8px 2px}
+
+  .mod-h{font-size:24px;font-weight:700;letter-spacing:-.02em;margin:2px 0 4px}
+  .mod-sub{font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.5}
+  .card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+  .card h4{font-size:15px;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+  .crow{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--sep);cursor:pointer}
+  .crow:first-of-type{border-top:none}
+  .crow .ct{flex:1;min-width:0}
+  .crow .ct .cs{font-size:12px;color:var(--text2);margin-top:3px}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:13px}
+  .field label{font-size:13px;font-weight:600}
+  .field .desc,.desc{font-size:12px;color:var(--text2);line-height:1.55;font-weight:400}
+  input[type=text],input[type=date],input[type=number],input[type=password],select,textarea{font-family:inherit;font-size:15px;border:1px solid var(--sep2);border-radius:9px;padding:9px 11px;background:var(--bg2);color:var(--text);width:100%;-webkit-appearance:none}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--tint);box-shadow:0 0 0 3px var(--tint-soft)}
+  textarea{resize:vertical;min-height:54px}
+  .frow{display:flex;gap:10px;flex-wrap:wrap}.frow>.field{flex:1;min-width:120px}
+  .btn{border:none;border-radius:10px;padding:10px 18px;font-size:15px;font-weight:600;background:var(--tint);color:#fff}
+  .btn:active{transform:scale(.98)}
+  .btn.sec{background:var(--fill);color:var(--tint)}
+  .btn.sm{padding:7px 13px;font-size:13px;border-radius:9px}
+  .btn.warn{background:var(--fill);color:var(--red)}
+  .btn.ok{background:var(--green)}
+  .btn:disabled{opacity:.45}
+  .btnrow{display:flex;gap:9px;flex-wrap:wrap;margin-top:6px}
+  .seg{display:flex;gap:0;background:var(--fill);border-radius:9px;padding:2px;margin-bottom:13px}
+  .seg button{flex:1;border:none;background:transparent;border-radius:7px;padding:8px 4px;font-size:13.5px;font-weight:500;color:var(--text)}
+  .seg button.sel{background:var(--bg2);box-shadow:var(--shadow);font-weight:600}
+  .swatches{display:flex;gap:9px;flex-wrap:wrap}
+  .sw{width:30px;height:30px;border-radius:50%;border:2px solid transparent;cursor:pointer}
+  .sw.sel{border-color:var(--text);box-shadow:0 0 0 2px var(--bg2) inset}
+  .ph{text-align:center;padding:44px 20px;color:var(--text2)}
+  .ph h3{font-size:20px;color:var(--text);margin:10px 0 6px}.ph p{font-size:13px;max-width:420px;margin:0 auto;line-height:1.6}
+  footer.foot{margin-top:26px;font-size:11.5px;color:var(--text2);text-align:center}
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;padding:18px;z-index:50}
+  .scrim.on{display:flex}
+  .modal{background:var(--bg2);width:100%;max-width:560px;border-radius:var(--r-lg);box-shadow:0 24px 60px rgba(0,0,0,.3);max-height:90vh;overflow:auto}
+  .mhead{padding:16px 18px 12px;border-bottom:1px solid var(--sep);display:flex;justify-content:space-between;align-items:flex-start;gap:10px;position:sticky;top:0;background:var(--bg2);z-index:1}
+  .mhead .d{font-size:18px;font-weight:700}
+  .x{background:none;border:none;font-size:21px;color:var(--text2);line-height:1;padding:2px 6px;flex:none}
+  .mbody{padding:16px 18px 20px}
+  #toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);background:rgba(40,40,42,.96);color:#fff;padding:11px 20px;border-radius:12px;font-size:14px;font-weight:500;opacity:0;pointer-events:none;transition:.25s;z-index:80;max-width:90vw;text-align:center}
+  #toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* ===== 面试背诵特有 ===== */
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  @media(max-width:560px){.tiles{grid-template-columns:repeat(2,1fr)}}
+  .tile{background:var(--fill);border-radius:11px;padding:10px 12px}
+  .tile .n{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+  .tile .l{font-size:12px;color:var(--text2)}
+  .chip{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--fill);color:var(--text2);white-space:nowrap}
+  .chip.g{background:var(--green-soft);color:var(--green)} .chip.o{background:var(--orange-soft);color:var(--orange)} .chip.r{background:var(--red-soft);color:var(--red)} .chip.b{background:var(--tint-soft);color:var(--tint)}
+  .prompt{font-size:13px;color:var(--text2);margin:-4px 0 12px;line-height:1.6}
+  .prompt b{color:var(--text)}
+  .srctext{font-size:17px;line-height:1.95;letter-spacing:.01em}
+  .sline{display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--sep);align-items:flex-start}
+  .sline:first-child{border-top:none}
+  .sline .sn{flex:none;width:44px;text-align:center;padding-top:4px}
+  .sline .sx{flex:1;min-width:0;font-size:16.5px;line-height:1.9}
+  .sline.weak .sx{background:var(--orange-soft);border-radius:8px;padding:0 6px}
+  .hint{font-size:16px;line-height:2;color:var(--text2);letter-spacing:.06em}
+  .hint b{color:var(--text);font-weight:600}
+  textarea.ans{font-size:17px;line-height:1.8;min-height:220px}
+  @media(max-width:560px){textarea.ans{font-size:16px;min-height:200px}}
+  .testbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .timer{font-variant-numeric:tabular-nums;font-weight:600;color:var(--text2);font-size:14px}
+  .interim{font-size:13px;color:var(--text2);min-height:18px;margin-top:6px}
+  .score{font-size:clamp(46px,10vw,64px);font-weight:700;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+  .score.g{color:var(--green)} .score.o{color:var(--orange)} .score.r{color:var(--red)}
+  .tk.ok{color:var(--text)}
+  .tk.miss{color:var(--red);background:var(--red-soft);border-radius:3px;cursor:pointer;text-decoration:underline;text-decoration-style:wavy;text-underline-offset:4px}
+  .tk.ovr{color:var(--orange);background:var(--orange-soft);border-radius:3px;cursor:pointer}
+  ins.ex{text-decoration:line-through;color:var(--gray);font-size:.82em;margin:0 1px;background:var(--fill);border-radius:3px;padding:0 2px}
+  .pu{color:var(--text3)}
+  .legend{font-size:12px;color:var(--text2);line-height:1.8}
+  .legend span{margin-right:10px}
+  .yours{white-space:pre-wrap;font-size:14px;line-height:1.8;color:var(--text2);background:var(--fill);border-radius:9px;padding:10px 12px}
+  details summary{cursor:pointer;font-size:13px;color:var(--tint);font-weight:600;margin:6px 0}
+  .ctx{font-size:14px;color:var(--text2);background:var(--fill);border-radius:9px;padding:8px 11px;margin-bottom:10px;line-height:1.7}
+  .hist{display:flex;gap:6px;flex-wrap:wrap}
+  .rowlog{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--sep);cursor:pointer;font-size:14px}
+  .rowlog:first-child{border-top:none}
+  .rowlog .tm{font-size:12px;color:var(--text2);width:42px;flex:none;font-variant-numeric:tabular-nums}
+  .rowlog .tt{flex:1;min-width:0}
+
+  /* ===== PWA / iOS 适配 ===== */
+  html{-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}
+  @supports(top:env(safe-area-inset-top)){
+    body{padding:calc(22px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) calc(60px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+    .scrim{padding:calc(18px + env(safe-area-inset-top)) 18px calc(18px + env(safe-area-inset-bottom))}
+    #toast{bottom:calc(28px + env(safe-area-inset-bottom))}
+  }
+  @media(max-width:560px){
+    input[type=text],input[type=date],input[type=number],input[type=password],select,textarea{font-size:16px}
+    .nav button{padding:7px 11px}
+    .brand{font-size:23px}
+  }
+</style>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">面试背诵</div>
+    <nav class="nav" id="nav">
+      <button data-t="today">今天</button><button data-t="lib">内容库</button><button data-t="log">记录</button><button data-t="set">设置</button>
+    </nav>
+  </header>
+  <div id="main"></div>
+  <footer class="foot" id="foot"></footer>
+</div>
+<div class="scrim" id="scrim"><div class="modal" id="modal"></div></div>
+<div id="toast"></div>
+<script>
+"use strict";
+/* ===== 0. 常量 & 状态 =====
+   数据只存本 App 自己的键（IndexedDB ms-db / localStorage ms-*），和 Study Hub 互不读写。
+   云同步只写 study-data 仓库里的 mianshi/data.json 一个文件；Study Hub 只删它自己清单里的文件，碰不到这里。 */
+const APP_VER="v1 · 2026-10-29";
+const LS_KEY="ms-db";
+const COLORS=["#007aff","#34c759","#ff9500","#ff3b30","#af52de","#5ac8fa","#ff2d55","#a2845e"];
+const DEF_SET={examDate:"",pass:90,good:95,intervals:[1,2,4,7,15,30],numStrict:true,upd:0};
+let db=null;
+const VIEW={tab:"today"};
+let S=null; /* 正在背 / 默写的会话 */
+
+/* ===== 1. 工具 ===== */
+const $=id=>document.getElementById(id);
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function pad(n){ return (n<10?"0":"")+n; }
+function dkey(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function today(){ return dkey(new Date()); }
+function addDays(k,n){ const a=k.split("-").map(Number); return dkey(new Date(a[0],a[1]-1,a[2]+n,12)); }
+function dayDiff(a,b){ const p=a.split("-").map(Number), q=b.split("-").map(Number); return Math.round((Date.UTC(q[0],q[1]-1,q[2])-Date.UTC(p[0],p[1]-1,p[2]))/86400000); }
+function md(k){ if(!k) return ""; const a=k.split("-"); return (+a[1])+"-"+(+a[2]); }
+function hm(ts){ const d=new Date(ts); return pad(d.getHours())+":"+pad(d.getMinutes()); }
+function fmtDur(s){ s=Math.round(s||0); return Math.floor(s/60)+":"+pad(s%60); }
+function hasLS(){ try{ localStorage.setItem("ms-t","1"); localStorage.removeItem("ms-t"); return true; }catch(e){ return false; } }
+let toastT=null;
+function toast(t,ms){ const el=$("toast"); el.textContent=t; el.classList.add("on"); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove("on"),ms||2400); }
+function scCls(s){ return s>=db.settings.good?"g":s>=db.settings.pass?"o":"r"; }
+function hashStr(s){ let h=0x811c9dc5; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,0x01000193)>>>0; } return h.toString(16); }
+function openModal(html){ $("modal").innerHTML=html; $("scrim").classList.add("on"); }
+function closeModal(){ $("scrim").classList.remove("on"); $("modal").innerHTML=""; }
+$("scrim").addEventListener("click",e=>{ if(e.target===$("scrim")) closeModal(); });
+
+/* ===== 2. 存储（IndexedDB 为主，localStorage 兜底镜像） ===== */
+function blankDb(){ return {v:1,savedAt:"",settings:Object.assign({},DEF_SET),topics:[],items:[],logs:[]}; }
+function normalizeDb(d){
+  if(!d||typeof d!=="object") d=blankDb();
+  d.v=1; d.settings=Object.assign({},DEF_SET,d.settings||{});
+  if(!Array.isArray(d.settings.intervals)||!d.settings.intervals.length) d.settings.intervals=DEF_SET.intervals.slice();
+  ["topics","items","logs"].forEach(k=>{ if(!Array.isArray(d[k])) d[k]=[]; });
+  return d;
+}
+function idbOpen(){ return new Promise((res,rej)=>{ try{ const r=indexedDB.open("ms-db",1); r.onupgradeneeded=()=>r.result.createObjectStore("kv"); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }catch(e){ rej(e); } }); }
+async function idbGet(k){ try{ const d=await idbOpen(); return await new Promise(res=>{ const q=d.transaction("kv").objectStore("kv").get(k); q.onsuccess=()=>res(q.result); q.onerror=()=>res(undefined); }); }catch(e){ return undefined; } }
+async function idbPut(k,v){ try{ const d=await idbOpen(); await new Promise(res=>{ const t=d.transaction("kv","readwrite"); t.objectStore("kv").put(v,k); t.oncomplete=res; t.onerror=res; }); return true; }catch(e){ return false; } }
+async function loadDb(){
+  let a=null,b=null;
+  const s=await idbGet("db"); if(typeof s==="string"){ try{ a=JSON.parse(s); }catch(e){} }
+  if(hasLS()){ try{ const t=localStorage.getItem(LS_KEY); if(t) b=JSON.parse(t); }catch(e){} }
+  /* 两处都有就合并（按条目取新），不会因为一处写失败丢东西 */
+  db=normalizeDb(a&&b?mergeDb(a,b):(a||b));
+}
+let persistT=null;
+function persist(){ const s=JSON.stringify(db); idbPut("db",s); if(hasLS()){ try{ localStorage.setItem(LS_KEY,s); }catch(e){} } }
+function save(){ db.savedAt=new Date().toISOString(); IDX=null; persist(); syncSoon(); }
+function touch(o){ o.upd=Date.now(); return o; }
+
+/* ===== 2.5 合并 + 云同步（GitHub Contents API，单文件 mianshi/data.json） =====
+   合并规则：话题、内容、记录都按 id 合并，同一条取 upd 新的；删除是打 del 标记（墓碑），不会被旧设备“复活”。
+   复习进度不单独存，每次从记录重算，所以两台设备各背各的，合起来进度也对。 */
+function pickNewer(x,y){ if(!x) return y; if(!y) return x; const a=x.upd||0,b=y.upd||0; if(a!==b) return a>b?x:y; return JSON.stringify(x)>=JSON.stringify(y)?x:y; }
+function mergeArr(a,b){ const m=new Map(); (a||[]).forEach(o=>{ if(o&&o.id) m.set(o.id,o); }); (b||[]).forEach(o=>{ if(o&&o.id) m.set(o.id,pickNewer(m.get(o.id),o)); }); return Array.from(m.values()).sort((p,q)=>p.id<q.id?-1:p.id>q.id?1:0); }
+function mergeDb(a,b){ a=a||{}; b=b||{};
+  return { v:1, savedAt:(a.savedAt||"")>(b.savedAt||"")?a.savedAt:(b.savedAt||a.savedAt||""),
+    settings:Object.assign({},DEF_SET,pickNewer(a.settings,b.settings)||{}),
+    topics:mergeArr(a.topics,b.topics), items:mergeArr(a.items,b.items), logs:mergeArr(a.logs,b.logs) }; }
+function fp(d){ const m=mergeDb(d,{}); delete m.savedAt; return hashStr(JSON.stringify(m)); }
+
+const SY={token:"",repo:"",branch:"main",path:"mianshi/data.json",sha:"",busy:false,pending:false,timer:null,status:"",last:0,fail:0,retryT:null};
+function syLoad(){ if(!hasLS()) return; try{
+  SY.token=localStorage.getItem("ms-token")||""; SY.repo=localStorage.getItem("ms-repo")||""; SY.sha=localStorage.getItem("ms-sha")||"";
+  /* 同一个网站下 Study Hub 已经填过令牌，就直接沿用（令牌只授权 study-data 仓库，本 App 也只写那里） */
+  if(!SY.token&&localStorage.getItem("cs-token")){ SY.token=localStorage.getItem("cs-token"); SY.repo=localStorage.getItem("cs-repo")||"scarlett-dou/study-data"; sySave(); SY.adopted=true; }
+}catch(e){} }
+function sySave(){ if(!hasLS()) return; try{ localStorage.setItem("ms-token",SY.token); localStorage.setItem("ms-repo",SY.repo); SY.sha?localStorage.setItem("ms-sha",SY.sha):localStorage.removeItem("ms-sha"); }catch(e){} }
+function syOn(){ return !!(SY.token&&SY.repo); }
+function sySet(t){ SY.status=t; renderFoot(); const el=$("syStatus"); if(el) el.textContent=t; }
+function b64enc(str){ const b=new TextEncoder().encode(str); let s="",CH=0x8000; for(let i=0;i<b.length;i+=CH) s+=String.fromCharCode.apply(null,b.subarray(i,i+CH)); return btoa(s); }
+function b64dec(b64){ const bin=atob((b64||"").replace(/\s/g,"")); const b=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) b[i]=bin.charCodeAt(i); return new TextDecoder().decode(b); }
+async function syReq(method,body,accept){
+  const url="https://api.github.com/repos/"+SY.repo+"/contents/"+SY.path.split("/").map(encodeURIComponent).join("/")+(method==="GET"?("?ref="+SY.branch+"&t="+Date.now()):"");
+  const ac=new AbortController(); const t=setTimeout(()=>ac.abort(),20000);
+  try{ return await fetch(url,{method,cache:"no-store",signal:ac.signal,headers:{"Authorization":"Bearer "+SY.token,"Accept":accept||"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"},body:body?JSON.stringify(body):undefined}); }
+  finally{ clearTimeout(t); }
+}
+async function syGet(){ /* → {data,sha} / {missing:true}；出错抛异常 */
+  const r=await syReq("GET");
+  if(r.status===404) return {missing:true};
+  if(r.status===401||r.status===403) throw new Error("令牌无效或无权限");
+  if(!r.ok) throw new Error("读取失败 "+r.status);
+  const m=await r.json(); let text;
+  if(m.content&&m.content.length) text=b64dec(m.content);
+  else { const r2=await syReq("GET",null,"application/vnd.github.raw"); if(!r2.ok) throw new Error("读取失败 "+r2.status); text=await r2.text(); }
+  return {data:JSON.parse(text),sha:m.sha};
+}
+function syncSoon(ms){ if(!syOn()) return; clearTimeout(SY.timer); SY.timer=setTimeout(syncNow,ms==null?6000:ms); }
+async function syncNow(){
+  if(!syOn()) return;
+  if(SY.busy){ SY.pending=true; return; }
+  SY.busy=true; clearTimeout(SY.retryT); sySet("同步中…");
+  try{
+    for(let round=0;round<4;round++){
+      const g=await syGet();
+      const remote=g.missing?null:normalizeDb(g.data);
+      const merged=normalizeDb(remote?mergeDb(db,remote):mergeDb(db,{}));
+      if(fp(merged)!==fp(db)){ db=merged; IDX=null; persist(); if(!["test","drill"].includes(VIEW.tab)) render(); }
+      if(remote&&fp(merged)===fp(remote)){ SY.sha=g.sha; break; }   /* 云端已经和本机一样 */
+      const body={message:"mianshi sync "+new Date().toISOString(),content:b64enc(JSON.stringify(merged)),branch:SY.branch};
+      if(!g.missing) body.sha=g.sha;
+      const r=await syReq("PUT",body);
+      if(r.status===409||r.status===422) continue;   /* 别处刚推过：重新读、重新合，不盲目覆盖 */
+      if(r.status===401||r.status===403) throw new Error("令牌无效或无权限");
+      if(!r.ok) throw new Error("上传失败 "+r.status);
+      try{ const j=await r.json(); SY.sha=j.content.sha; }catch(e){}
+      break;
+    }
+    sySave(); SY.last=Date.now(); SY.fail=0; sySet("已同步 "+hm(SY.last));
+  }catch(e){
+    SY.fail++; const wait=Math.min(300000,15000*Math.pow(2,SY.fail-1));
+    sySet("云端未同步（"+(e&&e.name==="AbortError"?"超时":(e&&e.message||"网络错误"))+"），"+Math.round(wait/1000)+" 秒后重试");
+    SY.retryT=setTimeout(syncNow,wait);
+  }finally{
+    SY.busy=false;
+    if(SY.pending){ SY.pending=false; syncSoon(1500); }
+  }
+}
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") syncSoon(300); else if(syOn()) syncNow(); });
+
+/* ===== 3. 逐字比对内核 =====
+   ·标点、空格不计；全角半角统一；阿拉伯数字和中文数字算同一个（7年＝七年，110亩＝一百一十亩）。
+   ·按「最长公共子序列」对齐原文和她写的：原文里没对上的＝漏/错（红），多写的＝多（灰色删除线）。
+   ·数字是关键信息，权重 3；多写的字扣 0.5（同一处写错字只算一次错，不重复扣）。
+   ·语音识别把人名听错了可以点红字「算对」（改判），分数当场重算。 */
+const CN_D={"零":0,"〇":0,"一":1,"二":2,"三":3,"四":4,"五":5,"六":6,"七":7,"八":8,"九":9};
+const CN_U={"十":10,"百":100,"千":1000};
+const CN_ALL="零〇一二三四五六七八九十百千万亿";
+function cnToNum(s){
+  if(!/[零〇一二三四五六七八九]/.test(s)&&s[0]!=="十") return null;
+  if(!/[十百千]/.test(s)) return s.split("").map(c=>CN_D[c]).join("");
+  let sec=0,num=0;
+  for(const c of s){
+    if(c in CN_D) num=CN_D[c];
+    else if(c in CN_U){ sec+=(num||1)*CN_U[c]; num=0; }
+  }
+  return String(sec+num);
+}
+const WORD=/[\p{L}\p{N}]/u;
+function tokenize(s){
+  const out=[]; let i=0; const n=s.length;
+  while(i<n){
+    let c=s[i]; const cc=c.charCodeAt(0);
+    if(cc>=0xFF10&&cc<=0xFF19) c=String.fromCharCode(cc-0xFEE0);
+    if(/[0-9]/.test(c)){ let j=i, t="";
+      while(j<n){ let d=s[j]; const k=d.charCodeAt(0); if(k>=0xFF10&&k<=0xFF19) d=String.fromCharCode(k-0xFEE0);
+        if(/[0-9]/.test(d)){ t+=d; j++; } else if((d==="."||d===","||d==="．"||d==="，")&&j+1<n&&/[0-9０-９]/.test(s[j+1])&&t){ if(d==="."||d==="．") t+="."; j++; } else break; }
+      t=t.replace(/^0+(?=\d)/,""); out.push({t,a:i,b:j,num:true}); i=j; continue; }
+    if(CN_ALL.includes(c)){ let j=i; while(j<n&&CN_ALL.includes(s[j])&&s[j]!=="万"&&s[j]!=="亿") j++;
+      /* 万、亿 永远单独算一个字：「七百六十万」＝760＋万，和原文「760万」对得上 */
+      if(j===i){ out.push({t:c,a:i,b:i+1,num:false}); i++; continue; }
+      const run=s.slice(i,j), v=cnToNum(run);
+      if(v!==null){ out.push({t:v,a:i,b:j,num:true}); i=j; continue; }
+      for(let k=i;k<j;k++) out.push({t:s[k],a:k,b:k+1,num:false}); i=j; continue; }
+    if(WORD.test(c)){ out.push({t:c.toLowerCase(),a:i,b:i+1,num:false}); }
+    i++;
+  }
+  return out;
+}
+/* 原文分句：。！？；和换行处断开，每句单独打分，保证每一句都过关 */
+function splitSegs(text){
+  const segs=[]; let st=0;
+  for(let i=0;i<text.length;i++){ if(/[。！？；!?;\n]/.test(text[i])){ let j=i+1; while(j<text.length&&/[”’」』）)\s]/.test(text[j])&&text[j]!=="\n") j++; segs.push([st,j]); st=j; i=j-1; } }
+  if(st<text.length) segs.push([st,text.length]);
+  return segs.map(([a,b])=>({a,b,text:text.slice(a,b).trim()})).filter(x=>tokenize(x.text).length>0);
+}
+function align(A,B){
+  const n=A.length,m=B.length,W=m+1;
+  const L=new Uint16Array((n+1)*(m+1));
+  for(let i=n-1;i>=0;i--) for(let j=m-1;j>=0;j--) L[i*W+j]=A[i].t===B[j].t?L[(i+1)*W+j+1]+1:Math.max(L[(i+1)*W+j],L[i*W+j+1]);
+  const am=new Int32Array(n).fill(-1), ins=[]; for(let g=0;g<=n;g++) ins.push([]);
+  let i=0,j=0;
+  while(i<n&&j<m){
+    if(A[i].t===B[j].t&&L[i*W+j]===L[(i+1)*W+j+1]+1){ am[i]=j; i++; j++; }
+    else if(L[(i+1)*W+j]>=L[i*W+j+1]) i++;
+    else { ins[i].push(j); j++; }
+  }
+  while(j<m){ ins[n].push(j); j++; }
+  return {am,ins};
+}
+/* 对一段原文 token 区间 [lo,hi) 打分；多写的字归到它前面那个原文字所在的句子 */
+function scoreRange(A,al,ov,lo,hi,isFirst){
+  let tot=0,got=0,pen=0;
+  for(let i=lo;i<hi;i++){ const w=A[i].num?3:1; tot+=w; if(al.am[i]>=0||ov.has(i)) got+=w; }
+  const gaps=[]; for(let g=lo+1;g<=hi;g++) gaps.push(g); if(isFirst) gaps.unshift(0);
+  gaps.forEach(g=>{ const k=al.ins[g].length; if(!k) return; let d=0,p=g-1; while(p>=0&&al.am[p]<0&&!ov.has(p)){ d++; p--; } pen+=Math.max(0,k-d)*0.5; });
+  if(!tot) return 100;
+  return Math.max(0,Math.min(100,Math.floor(100*(got-pen)/tot+1e-9)));
+}
+/* 批改：原文 + 她写的 + 改判集合 → 总分、每句分、对齐结果 */
+function grade(text,input,ovArr){
+  const A=tokenize(text), B=tokenize(input||""), al=align(A,B), ov=new Set(ovArr||[]);
+  const segs=splitSegs(text).map(s=>{ let lo=A.findIndex(t=>t.a>=s.a); if(lo<0) lo=A.length; let hi=lo; while(hi<A.length&&A[hi].a<s.b) hi++; return Object.assign({lo,hi},s); }).filter(s=>s.hi>s.lo);
+  const miss=[]; for(let i=0;i<A.length;i++) if(al.am[i]<0&&!ov.has(i)) miss.push(i);
+  /* 数字是事实，错一个这句就不算过（设置里可关）：分数压到合格线以下 */
+  const strict=typeof db!=="undefined"&&db&&db.settings&&db.settings.numStrict!==false, cap=strict?db.settings.pass-1:100;
+  const numBad=(lo,hi)=>miss.some(i=>i>=lo&&i<hi&&A[i].num);
+  const segScores=segs.map((s,k)=>{ const v=scoreRange(A,al,ov,s.lo,s.hi,k===0); return numBad(s.lo,s.hi)?Math.min(v,cap):v; });
+  let score=scoreRange(A,al,ov,0,A.length,true); if(numBad(0,A.length)) score=Math.min(score,cap);
+  return {A,B,al,ov,segs,segScores,score,missN:miss.length,numMiss:miss.filter(i=>A[i].num).length};
+}
+function diffHtml(text,input,g,seg){
+  const {A,B,al,ov}=g; let out="", pos=seg.a;
+  const exHtml=gap=>{ const js=al.ins[gap]; if(!js||!js.length) return ""; return '<ins class="ex">'+esc(js.map(j=>input.slice(B[j].a,B[j].b)).join(""))+"</ins>"; };
+  if(seg.lo===0) out+=exHtml(0);
+  for(let i=seg.lo;i<seg.hi;i++){
+    if(i>seg.lo) out+=exHtml(i);
+    if(A[i].a>pos) out+='<span class="pu">'+esc(text.slice(pos,A[i].a))+"</span>";
+    const cls=al.am[i]>=0?"ok":ov.has(i)?"ovr":"miss";
+    out+='<span class="tk '+cls+'"'+(cls==="ok"?"":' data-i="'+i+'"')+">"+esc(text.slice(A[i].a,A[i].b))+"</span>";
+    pos=A[i].b;
+  }
+  out+=exHtml(seg.hi);
+  if(seg.b>pos) out+='<span class="pu">'+esc(text.slice(pos,seg.b))+"</span>";
+  return out;
+}
+
+/* ===== 4. 复习内核（进度从记录重算） =====
+   ·新内容：当天先看、再默写，全文默写过合格线（默认 90）才算「学会」，第二天开始复习。
+   ·复习间隔 1→2→4→7→15→30 天：当天第一次全文默写 ≥优秀线（95）进下一档；在合格线和优秀线之间原档再来一次；没过合格线退回 1 天，
+     并且当天进「重练」——先只练错句（每句都要过合格线），再全文默写一遍过了才算完。
+   ·看过原文再写的、首字提示写的、单句练习，都不算复习成绩（不改进度），只有不看原文的全文默写算。
+   ·提前（没到期）默写：没过就退回 1 天，过了不改进度。
+   ·设了面试日期：复习日不会排到面试前一天之后，保证面试前每条都再过一遍。 */
+let IDX=null;
+function index(){
+  if(IDX) return IDX;
+  const by=new Map(); db.logs.forEach(l=>{ if(l.del) return; if(!by.has(l.itemId)) by.set(l.itemId,[]); by.get(l.itemId).push(l); });
+  by.forEach(a=>a.sort((x,y)=>x.ts-y.ts));
+  const st=new Map(); db.items.forEach(it=>{ if(!it.del) st.set(it.id,replay(it,by.get(it.id)||[])); });
+  IDX={by,st}; return IDX;
+}
+function replay(it,logs){
+  const P=db.settings.pass, G=db.settings.good, INT=db.settings.intervals, ex=db.settings.examDate, td=today();
+  let introduced=false,introDay=null,k=0,due=null,last=null,lastFull=null,mastered=false;
+  const days=new Map(); logs.forEach(l=>{ if(l.kind!=="full") return; if(!days.has(l.day)) days.set(l.day,[]); days.get(l.day).push(l); });
+  const cap=(d,nd)=>{ if(ex&&d<addDays(ex,-1)&&nd>addDays(ex,-1)) return addDays(ex,-1); return nd; };
+  Array.from(days.keys()).sort().forEach(d=>{
+    const arr=days.get(d), first=arr[0].score, anyPass=arr.some(l=>l.score>=P);
+    lastFull=arr[arr.length-1];
+    if(!introduced){ if(anyPass){ introduced=true; introDay=d; k=0; due=cap(d,addDays(d,INT[0])); } return; }
+    if(d<due){ if(first<P){ k=0; due=addDays(d,INT[0]); mastered=false; } return; }
+    if(first>=G) k=Math.min(k+1,INT.length-1); else if(first<P) k=0;
+    mastered=first>=G&&k===INT.length-1;
+    due=cap(d,addDays(d,INT[k]));
+  });
+  const tl=logs.filter(l=>l.kind==="full"&&l.day===td);
+  const todayFirst=tl.length?tl[0].score:null, todayPass=tl.some(l=>l.score>=P);
+  const anyToday=logs.some(l=>l.day===td);
+  /* 薄弱句：最近一次全文默写里没过合格线的句子（原文改过就不算） */
+  let weak=[]; if(lastFull&&lastFull.th===hashStr(it.text)) weak=(lastFull.segs||[]).map((s,i)=>s<P?i:-1).filter(i=>i>=0);
+  last=lastFull?lastFull.score:null;
+  return {introduced,introDay,k,due,last,lastFull,mastered,todayFirst,todayPass,anyToday,weak,nFull:logs.filter(l=>l.kind==="full").length};
+}
+function stageLabel(s){
+  if(!s.introduced) return {t:"待学",c:""};
+  if(s.mastered) return {t:"已掌握",c:"g"};
+  return {t:"第 "+(s.k+1)+" 轮",c:s.k>=3?"g":s.k>=1?"b":"o"};
+}
+function mastPct(s){ if(!s.introduced) return 0; const n=db.settings.intervals.length; return Math.round(100*(s.mastered?n:s.k+0.5)/n); }
+function liveItems(){ return db.items.filter(i=>!i.del); }
+function liveTopics(){ return db.topics.filter(t=>!t.del).sort((a,b)=>(a.order||0)-(b.order||0)||(a.id<b.id?-1:1)); }
+function topicOf(it){ return db.topics.find(t=>t.id===it.topicId&&!t.del)||{name:"未分话题",color:"#8e8e93"}; }
+/* 今天的四类 */
+/* 一条内容今天属于哪一类：learn 待学 / redo 重练 / due 到期复习 / done 今日已过 / none 今天不用背 */
+function catOf(s){
+  if(!s) return "none";
+  if(!s.introduced) return "learn";
+  if(s.todayFirst!==null) return s.todayPass?"done":"redo";   /* 今天全文默写过：有一次过线就算过（第一次没过的，进度已经退回 1 天） */
+  if(s.due&&s.due<=today()) return "due";
+  return "none";
+}
+function todayLists(){
+  const st=index().st, L={redo:[],due:[],learn:[],done:[]};
+  liveItems().sort((a,b)=>(a.order||0)-(b.order||0)).forEach(it=>{ const c=catOf(st.get(it.id)); if(c!=="none") L[c].push(it); });
+  /* 今天默写过但还没学会的排在待学最前；到期复习按到期日，逾期久的先 */
+  L.learn.sort((a,b)=>(st.get(a.id).todayFirst===null)-(st.get(b.id).todayFirst===null));
+  L.due.sort((a,b)=>(st.get(a.id).due<st.get(b.id).due?-1:st.get(a.id).due>st.get(b.id).due?1:0));
+  return L;
+}
+
+/* ===== 5. 页面框架 ===== */
+$("nav").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; go(b.dataset.t); });
+function go(t){ stopRec(); VIEW.tab=t; if(["today","lib","log","set"].includes(t)) S=null; render(); window.scrollTo(0,0); }
+function render(){
+  const navT=["learn","test","result","drill"].includes(VIEW.tab)?((S&&S.from)||"today"):VIEW.tab;
+  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("sel",b.dataset.t===navT));
+  const f={today:vToday,lib:vLib,log:vLog,set:vSet,learn:vLearn,test:vTest,result:vResult,drill:vDrill}[VIEW.tab]||vToday;
+  $("main").innerHTML=f(); after();
+  renderFoot();
+}
+function renderFoot(){ $("foot").textContent="面试背诵 "+APP_VER+(syOn()?" · ☁️ "+(SY.status||"未同步"):" · 未开云同步（设置里可开）"); }
+let afterFns=[]; function after(){ const a=afterFns; afterFns=[]; a.forEach(f=>f()); }
+
+/* ===== 6. 今天 ===== */
+function vToday(){
+  const L=todayLists(), st=index().st, ex=db.settings.examDate, td=today();
+  const total=L.redo.length+L.due.length+L.learn.length+L.done.length, done=L.done.length;
+  let h='<div class="countdown">';
+  if(ex){ const n=dayDiff(td,ex); h+='<div class="big">'+(n>=0?n:0)+'<small>天</small></div>'; }
+  h+='<div class="meta"><div class="lab">'+(ex?"距面试 "+md(ex):"今天 "+md(td))+'</div><div class="ttl">今日背诵 '+done+" / "+total+'</div><div class="pbar"><i style="width:'+(total?Math.round(100*done/total):0)+'%"></i></div><div class="pn">'+(total===done&&total?"今天的都过了 ✓":"重练 "+L.redo.length+" · 待复习 "+L.due.length+" · 待学 "+L.learn.length)+"</div></div></div>";
+  h+='<div class="cal"><div class="calleft"><div class="panel">';
+  h+='<div class="tiles"><div class="tile"><div class="n" style="color:var(--red)">'+L.redo.length+'</div><div class="l">重练</div></div><div class="tile"><div class="n" style="color:var(--tint)">'+L.due.length+'</div><div class="l">待复习</div></div><div class="tile"><div class="n" style="color:var(--orange)">'+L.learn.length+'</div><div class="l">待学</div></div><div class="tile"><div class="n" style="color:var(--green)">'+L.done.length+'</div><div class="l">今日已过</div></div></div>';
+  const left=L.redo.length+L.due.length+L.learn.length;
+  h+='<div class="btnrow" style="margin-top:12px"><button class="btn" '+(left?"":"disabled")+' onclick="startQueue()">'+(left?"开始今天的背诵（"+left+" 条）":"今天没有要背的了")+'</button><button class="btn sec" onclick="editItem()">＋ 新增内容</button></div>';
+  h+='<div class="desc" style="margin-top:10px">顺序：先重练（今天没过的），再到期复习，最后新学。复习时不看原文，直接全文默写；默写可以打字，也可以用手机输入法上的🎤语音输入。</div></div>';
+  const sec=(lab,arr,kind)=>{ if(!arr.length) return ""; let s='<div class="seclab">'+lab+'</div><div class="glist">';
+    arr.forEach(it=>{ const x=st.get(it.id), tp=topicOf(it), sl=stageLabel(x);
+      let sub=esc(tp.name)+" · "+sl.t;
+      if(kind==="redo") sub+=" · 今天第一次 "+x.todayFirst+" 分，要先练错句再全文过一遍";
+      else if(kind==="due") sub+=" · "+(x.due<td?"逾期 "+dayDiff(x.due,td)+" 天":"今天到期")+(x.last!=null?" · 上次 "+x.last+" 分":"");
+      else if(kind==="learn") sub+=x.todayFirst!=null?" · 今天默写最高还没过 "+db.settings.pass:(" · "+md(it.day)+" 加的");
+      else sub+=" · 今天 "+x.todayFirst+" 分"+(x.due?" · 下次 "+md(x.due):"");
+      s+='<div class="gi'+(kind==="done"?" done":"")+'" onclick="itemDetail(\''+it.id+'\',\'today\')"><span class="gdot" style="background:'+tp.color+'"></span><div class="gt"><div class="gtitle">'+esc(it.title)+'</div><div class="gs">'+sub+'</div></div><span class="chip '+(kind==="redo"?"r":kind==="done"?"g":kind==="learn"?"o":"b")+'">'+(kind==="redo"?"重练":kind==="due"?"复习":kind==="learn"?"新学":"✓")+"</span></div>"; });
+    return s+"</div>"; };
+  h+=sec("重练（今天没过合格线）",L.redo,"redo")+sec("到期复习",L.due,"due")+sec("待学（新加的）",L.learn,"learn");
+  if(!liveItems().length) h+='<div class="ph"><h3>还没有背诵内容</h3><p>点「＋ 新增内容」把今天要背的一段贴进来；或者到 设置 → 导入，一次导入整理好的内容。</p></div>';
+  h+='</div><div class="calleft"><div class="panel">'+(L.done.length?sec("今日已过",L.done,"done"):'<div class="seclab">今日已过</div><div class="empty">还没有。</div>')+upcoming()+"</div></div></div>";
+  return h;
+}
+function upcoming(){
+  const st=index().st, td=today(), cnt={};
+  liveItems().forEach(it=>{ const s=st.get(it.id); if(s&&s.introduced&&s.due>td){ cnt[s.due]=(cnt[s.due]||0)+1; } });
+  const ks=Object.keys(cnt).sort().slice(0,7);
+  if(!ks.length) return "";
+  return '<div class="seclab">接下来几天要复习</div><div class="hist">'+ks.map(k=>'<span class="chip">'+md(k)+" · "+cnt[k]+" 条</span>").join("")+"</div>";
+}
+function startQueue(){
+  const L=todayLists();
+  S={from:"today",queue:L.redo.concat(L.due,L.learn).map(i=>i.id),qi:0};
+  nextInQueue(true);
+}
+function nextInQueue(first){
+  if(!S||!S.queue) return go("today");
+  if(!first) S.qi++;
+  /* 跳过已经过了的（比如在详情里单独背过、或已删除） */
+  while(S.qi<S.queue.length){ const it=getItem(S.queue[S.qi]), c=it?catOf(index().st.get(it.id)):"none"; if(c!=="done"&&c!=="none") break; S.qi++; }
+  if(S.qi>=S.queue.length){ const left=todayLists(); toast(left.redo.length+left.learn.length?"这一轮走完了，还有没过的在「重练」「待学」里":"今天这一轮背完了 ✓",3500); return go("today"); }
+  const it=getItem(S.queue[S.qi]), s=index().st.get(it.id);
+  if(!s.introduced) startLearn(it.id,"today");
+  else if(s.todayFirst!==null&&!s.todayPass&&s.weak.length) startDrill(it.id,"today");
+  else startTest(it.id,"full","today");
+}
+function getItem(id){ return db.items.find(i=>i.id===id&&!i.del); }
+function inQueue(){ return !!(S&&S.queue&&S.qi<S.queue.length); }
+/* 从「今天」的队列进来的，换页时把队列带着走；从内容库、记录进来的不带 */
+function keepQ(from){ return S&&S.queue&&S.from==="today"&&(from==null||from==="today")?{queue:S.queue,qi:S.qi}:{}; }
+
+/* ===== 7. 内容库 ===== */
+function vLib(){
+  const st=index().st, tps=liveTopics(), items=liveItems();
+  let h='<div class="mod-h">内容库</div><div class="mod-sub">按话题放要背的内容。一条＝一段要整段背下来的话（一个案例的略版或详版、一套对策、一句金句……）；长的会自动按句号、分号分句，每句单独打分。</div>';
+  h+='<div class="btnrow" style="margin:0 0 14px"><button class="btn" onclick="editItem()">＋ 新增内容</button><button class="btn sec" onclick="editTopic()">＋ 新增话题</button><button class="btn sec" onclick="go(\'set\');setTimeout(()=>{const e=document.getElementById(\'impBox\');if(e)e.scrollIntoView();},50)">批量导入</button></div>';
+  const groups=tps.map(t=>({t,items:items.filter(i=>i.topicId===t.id)}));
+  const orphan=items.filter(i=>!tps.some(t=>t.id===i.topicId)); if(orphan.length) groups.push({t:{id:"",name:"未分话题",color:"#8e8e93"},items:orphan});
+  if(!groups.length) return h+'<div class="ph"><h3>还没有话题</h3><p>先建一个话题，比如「楷模案例」「社会现象·对策」「观点类·怎么办」。</p></div>';
+  groups.forEach(g=>{
+    const ss=g.items.map(i=>st.get(i.id)), m=ss.filter(s=>s.mastered).length, intro=ss.filter(s=>s.introduced).length;
+    const avg=g.items.length?Math.round(ss.reduce((a,s)=>a+mastPct(s),0)/g.items.length):0;
+    h+='<div class="card"><h4><span class="gdot" style="background:'+g.t.color+'"></span><span style="flex:1">'+esc(g.t.name)+'</span><span class="chip">'+g.items.length+" 条 · 学会 "+intro+" · 掌握 "+m+"</span>"+(g.t.id?'<button class="btn sec sm" onclick="editTopic(\''+g.t.id+'\')">改</button>':"")+'</h4>';
+    h+='<div class="mbar" style="max-width:none;margin:-4px 0 6px"><i style="width:'+avg+'%;background:'+g.t.color+'"></i></div>';
+    if(!g.items.length) h+='<div class="empty">这个话题下还没有内容。</div>';
+    g.items.sort((a,b)=>(a.order||0)-(b.order||0)||(a.id<b.id?-1:1)).forEach(it=>{ const s=st.get(it.id), sl=stageLabel(s);
+      h+='<div class="crow" onclick="itemDetail(\''+it.id+'\',\'lib\')"><div class="ct"><div>'+esc(it.title)+'</div><div class="cs">'+(s.last!=null?"上次 "+s.last+" 分 · ":"")+(s.introduced?"下次 "+md(s.due):"还没学会")+(s.weak.length?" · 薄弱句 "+s.weak.length:"")+" · "+tokenize(it.text).length+' 字</div><div class="mbar"><i style="width:'+mastPct(s)+'%;background:'+g.t.color+'"></i></div></div><span class="chip '+sl.c+'">'+sl.t+"</span></div>"; });
+    h+="</div>"; });
+  return h;
+}
+function itemDetail(id,from){
+  const it=getItem(id); if(!it) return; const s=index().st.get(id), tp=topicOf(it), sl=stageLabel(s);
+  const logs=(index().by.get(id)||[]).filter(l=>l.kind==="full").slice(-12).reverse();
+  let h='<div class="mhead"><div><div class="d">'+esc(it.title)+'</div><div class="desc">'+esc(tp.name)+" · "+sl.t+(s.introduced?" · 下次复习 "+md(s.due):"")+'</div></div><button class="x" onclick="closeModal()">×</button></div><div class="mbody">';
+  if(it.cue) h+='<div class="prompt">提示：<b>'+esc(it.cue)+"</b></div>";
+  h+='<div class="btnrow" style="margin:0 0 14px"><button class="btn" onclick="closeModal();startLearn(\''+id+'\',\''+from+'\')">看原文背</button><button class="btn sec" onclick="closeModal();startTest(\''+id+'\',\'full\',\''+from+'\')">直接默写</button>'+(s.weak.length?'<button class="btn sec" onclick="closeModal();startDrill(\''+id+'\',\''+from+'\')">只练错句（'+s.weak.length+"）</button>":"")+"</div>";
+  h+='<div class="seclab">最近全文默写</div>'+(logs.length?'<div class="hist">'+logs.map(l=>'<span class="chip '+scCls(l.score)+'" style="cursor:pointer" onclick="closeModal();showLog(\''+l.id+'\')">'+md(l.day)+" · "+l.score+"</span>").join("")+"</div>":'<div class="empty">还没默写过。</div>');
+  h+='<div class="seclab">原文</div><div class="srctext" style="font-size:15px;line-height:1.85">'+esc(it.text).replace(/\n/g,"<br>")+"</div>";
+  h+='<div class="btnrow" style="margin-top:16px"><button class="btn sec sm" onclick="editItem(\''+id+'\')">编辑</button><button class="btn warn sm" onclick="delItem(\''+id+'\')">删除</button></div></div>';
+  openModal(h);
+}
+function editItem(id){
+  const it=id?getItem(id):null, tps=liveTopics();
+  const tsel=it?it.topicId:(VIEW.lastTopic||(tps[0]&&tps[0].id)||"");
+  let h='<div class="mhead"><div class="d">'+(it?"编辑内容":"新增背诵内容")+'</div><button class="x" onclick="closeModal()">×</button></div><div class="mbody">';
+  h+='<div class="field"><label>话题</label><select id="eTopic">'+tps.map(t=>'<option value="'+t.id+'"'+(t.id===tsel?" selected":"")+">"+esc(t.name)+"</option>").join("")+'<option value="__new">＋ 新话题…</option></select><input type="text" id="eTopicNew" placeholder="新话题名字" style="display:'+(tps.length?"none":"block")+'"></div>';
+  h+='<div class="field"><label>标题</label><input type="text" id="eTitle" value="'+esc(it?it.title:"")+'" placeholder="例：毛相林（略版）"></div>';
+  h+='<div class="field"><label>提示（默写时只看到标题和这一行，可空）</label><input type="text" id="eCue" value="'+esc(it?it.cue:"")+'" placeholder="例：实干为民 · 排比第一句"></div>';
+  h+='<div class="field"><label>正文（要一字不差背下来的话）</label><textarea id="eText" style="min-height:220px;font-size:15.5px;line-height:1.75">'+esc(it?it.text:"")+'</textarea><div class="desc">按「。！？；」和换行分句，每句单独打分。改了正文，旧的错句标记会作废，复习进度保留。</div></div>';
+  h+='<div class="btnrow"><button class="btn" onclick="saveItem(\''+(id||"")+'\')">保存</button><button class="btn sec" onclick="closeModal()">取消</button></div></div>';
+  openModal(h);
+  const sel=$("eTopic"); if(!tps.length) sel.value="__new";
+  sel.onchange=()=>{ $("eTopicNew").style.display=sel.value==="__new"?"block":"none"; };
+}
+function saveItem(id){
+  let tid=$("eTopic").value; const title=$("eTitle").value.trim(), text=$("eText").value.replace(/\r/g,"").trim();
+  if(!title) return toast("标题不能空"); if(!tokenize(text).length) return toast("正文不能空");
+  if(tid==="__new"||!tid){ const nm=$("eTopicNew").value.trim(); if(!nm) return toast("给新话题起个名字"); tid=newTopic(nm).id; }
+  VIEW.lastTopic=tid;
+  if(id){ const it=getItem(id); Object.assign(it,{topicId:tid,title,cue:$("eCue").value.trim(),text}); touch(it); }
+  else db.items.push(touch({id:uid(),topicId:tid,title,cue:$("eCue").value.trim(),text,day:today(),order:nextOrder(db.items)}));
+  save(); closeModal(); render(); toast(id?"已保存":"已加入，今天在「待学」里");
+}
+function delItem(id){ if(!confirm("删除这条内容？它的默写记录也一起不再显示。")) return; const it=getItem(id); it.del=true; touch(it); save(); closeModal(); render(); }
+function nextOrder(arr){ return arr.reduce((m,o)=>Math.max(m,o.order||0),0)+1; }
+function newTopic(name){ const t=touch({id:uid(),name,color:COLORS[liveTopics().length%COLORS.length],order:nextOrder(db.topics)}); db.topics.push(t); return t; }
+function editTopic(id){
+  const t=id?db.topics.find(x=>x.id===id):null; const col=t?t.color:COLORS[liveTopics().length%COLORS.length];
+  let h='<div class="mhead"><div class="d">'+(t?"改话题":"新增话题")+'</div><button class="x" onclick="closeModal()">×</button></div><div class="mbody">';
+  h+='<div class="field"><label>名字</label><input type="text" id="tName" value="'+esc(t?t.name:"")+'" placeholder="例：楷模案例"></div>';
+  h+='<div class="field"><label>颜色</label><div class="swatches" id="tCol">'+COLORS.map(c=>'<span class="sw'+(c===col?" sel":"")+'" data-c="'+c+'" style="background:'+c+'"></span>').join("")+"</div></div>";
+  h+='<div class="btnrow"><button class="btn" onclick="saveTopic(\''+(id||"")+'\')">保存</button>'+(t?'<button class="btn warn" onclick="delTopic(\''+id+'\')">删除话题</button>':"")+"</div></div>";
+  openModal(h);
+  $("tCol").onclick=e=>{ const s=e.target.closest(".sw"); if(!s) return; $("tCol").querySelectorAll(".sw").forEach(x=>x.classList.toggle("sel",x===s)); };
+}
+function saveTopic(id){ const nm=$("tName").value.trim(); if(!nm) return toast("名字不能空"); const c=($("tCol").querySelector(".sw.sel")||{}).dataset; const color=c?c.c:COLORS[0];
+  if(id){ const t=db.topics.find(x=>x.id===id); t.name=nm; t.color=color; touch(t); } else { const t=newTopic(nm); t.color=color; }
+  save(); closeModal(); render(); }
+function delTopic(id){ const n=liveItems().filter(i=>i.topicId===id).length; if(n) return toast("话题下还有 "+n+" 条内容，先删掉或挪走"); const t=db.topics.find(x=>x.id===id); t.del=true; touch(t); save(); closeModal(); render(); }
+
+/* ===== 8. 背（看原文）→ 默写 → 批改 → 错句重练 ===== */
+function startLearn(id,from){ stopRec(); S=Object.assign({},keepQ(from),{itemId:id,from:from||(S&&S.from)||"today"}); VIEW.tab="learn"; render(); window.scrollTo(0,0); }
+function vLearn(){
+  const it=getItem(S.itemId); if(!it) return vToday(); const s=index().st.get(it.id), tp=topicOf(it);
+  const segs=splitSegs(it.text);
+  let h='<div class="mod-h">'+esc(it.title)+'</div><div class="mod-sub">'+esc(tp.name)+(it.cue?" · 提示："+esc(it.cue):"")+" · 共 "+segs.length+" 句、"+tokenize(it.text).length+" 字"+(s.weak.length?" · 橙色是上次没过的句子":"")+"</div>";
+  h+='<div class="card">'+segs.map((g,i)=>'<div class="sline'+(s.weak.includes(i)?" weak":"")+'"><div class="sn"><span class="chip">'+(i+1)+'</span></div><div class="sx">'+esc(g.text)+"</div></div>").join("")+"</div>";
+  h+='<div class="btnrow"><button class="btn" onclick="startTest(\''+it.id+'\',\'full\')">背好了，全文默写</button><button class="btn sec" onclick="startTest(\''+it.id+'\',\'hint\')">先用首字提示默一遍</button>'+(s.weak.length?'<button class="btn sec" onclick="startDrill(\''+it.id+'\')">只练错句</button>':"")+'<button class="btn sec" onclick="leave()">返回</button></div>';
+  h+='<div class="desc" style="margin-top:10px">首字提示＝每个小分句只给第一个字，适合刚背完的第一遍；不算复习成绩。新内容要不看原文全文默写过 '+db.settings.pass+" 分才算学会，明天开始复习。</div>";
+  return h;
+}
+function leave(){ stopRec(); const f=S&&S.from||"today"; if(inQueue()&&f==="today"){ go("today"); } else go(f); }
+function startTest(id,mode,from){
+  stopRec();
+  S=Object.assign({},keepQ(from),{itemId:id,mode:mode||"full",from:from||(S&&S.from)||"today",t0:Date.now(),peek:false,seg:null});
+  VIEW.tab="test"; render(); window.scrollTo(0,0);
+}
+function hintHtml(text){
+  /* 每个小分句只露第一个字，其余用点代替（点数≈字数） */
+  return splitSegs(text).map(sg=>sg.text.split(/([，、。！？；：,;!?:\n“”"「」（）()])/).map(part=>{ const tk=tokenize(part); if(!tk.length) return '<span class="pu">'+esc(part)+"</span>"; const f=tk[0].num?"＿":part.slice(tk[0].a,tk[0].b); return "<b>"+esc(f)+"</b>"+"·".repeat(Math.min(30,Math.max(0,tk.length-1))); }).join("")).join("<br>");
+}
+function vTest(){
+  const it=getItem(S.itemId); if(!it) return vToday(); const tp=topicOf(it);
+  const isSeg=S.seg!=null, segs=splitSegs(it.text), sg=isSeg?segs[S.seg]:null;
+  const modeLab=isSeg?"单句练习 · 第 "+(S.seg+1)+"/"+segs.length+" 句":S.mode==="hint"?"首字提示默写（不算复习成绩）":"全文默写（不看原文）";
+  let h='<div class="mod-h">'+esc(it.title)+'</div><div class="mod-sub">'+esc(tp.name)+" · "+modeLab+(inQueue()&&S.from==="today"?" · 今天第 "+(S.qi+1)+"/"+S.queue.length+" 条":"")+"</div>";
+  h+='<div class="card">';
+  if(it.cue) h+='<div class="prompt">提示：<b>'+esc(it.cue)+"</b></div>";
+  if(isSeg){ h+=(S.seg>0?'<div class="ctx">上一句：'+esc(segs[S.seg-1].text)+"</div>":'<div class="ctx">这是第一句。</div>'); }
+  if(S.mode==="hint"&&!isSeg) h+='<div class="hint" style="margin-bottom:12px">'+hintHtml(it.text)+"</div>";
+  if(S.peek) h+='<div class="ctx" style="color:var(--orange)">看过原文了，这次只算练习：</div><div class="ctx">'+esc(isSeg?sg.text:it.text)+"</div>";
+  h+='<div class="testbar"><span class="timer" id="tmr">0:00</span><span style="flex:1"></span>'+(SR?'<button class="btn sec sm" id="micBtn" onclick="toggleRec()">🎤 开始说</button>':"")+'<button class="btn sec sm" onclick="peek()">看原文</button></div>';
+  h+='<textarea class="ans" id="ans" placeholder="'+(isSeg?"写这一句…":"从头写到尾，标点可以不写…")+'"></textarea><div class="interim" id="interim"></div>';
+  h+='<div class="btnrow"><button class="btn" onclick="submitTest()">交卷批改</button><button class="btn sec" onclick="leave()">返回</button>'+(inQueue()&&S.from==="today"?'<button class="btn sec" onclick="nextInQueue()">跳过这条</button>':"")+"</div>";
+  h+='<div class="desc" style="margin-top:10px">'+(SR?"「🎤 开始说」用浏览器自带识别（有的网络下用不了）；":"")+"更稳的是手机键盘上的🎤语音输入。人名、数字被识别错了，交卷后点红字可以改判成「算对」。</div></div>";
+  afterFns.push(()=>{ const a=$("ans"); if(S.draft) a.value=S.draft; a.addEventListener("input",()=>{ S.draft=a.value; }); clearInterval(S.tick); S.tick=setInterval(()=>{ const el=$("tmr"); if(!el){ clearInterval(S.tick); return; } el.textContent=fmtDur((Date.now()-S.t0)/1000); },1000); });
+  return h;
+}
+function peek(){ if(!S.peek&&!confirm("看原文后这次默写只算练习，不算复习成绩。确定看？")) return; S.peek=true; const v=$("ans").value; render(); $("ans").value=v; S.draft=v; }
+function submitTest(){
+  stopRec();
+  const it=getItem(S.itemId), input=$("ans").value; if(!tokenize(input).length) return toast("还什么都没写");
+  const isSeg=S.seg!=null, segs=splitSegs(it.text);
+  const text=isSeg?segs[S.seg].text:it.text;
+  const g=grade(text,input,[]);
+  const kind=isSeg?"seg":(S.mode==="hint"||S.peek)?"hint":"full";
+  const log=touch({id:uid(),itemId:it.id,day:today(),ts:Date.now(),kind,score:g.score,segs:g.segScores,input,ov:[],dur:Math.round((Date.now()-S.t0)/1000),th:hashStr(it.text)});
+  if(isSeg) log.segIdx=S.seg;
+  db.logs.push(log); S.draft=""; clearInterval(S.tick); save();
+  if(isSeg){ S.lastSeg=log.id; return afterSeg(log); }
+  S.logId=log.id; VIEW.tab="result"; render(); window.scrollTo(0,0);
+}
+function showLog(id){ const l=db.logs.find(x=>x.id===id); if(!l) return; const from=["today","lib","log"].includes(VIEW.tab)?VIEW.tab:(S&&S.from)||"today"; S=Object.assign({},keepQ(from),{from,itemId:l.itemId,logId:id,view:true}); VIEW.tab="result"; render(); window.scrollTo(0,0); }
+function vResult(){
+  const l=db.logs.find(x=>x.id===S.logId), it=l&&db.items.find(i=>i.id===l.itemId); if(!l||!it) return vToday();
+  const text=l.kind==="seg"?(splitSegs(it.text)[l.segIdx]||{}).text||"":it.text;
+  if(l.th&&l.th!==hashStr(it.text)) return '<div class="mod-h">'+esc(it.title)+'</div><div class="card"><div class="empty">这条默写之后原文改过，没法再按原文逐字对照。当时 '+l.score+' 分。</div><div class="seclab">当时写的</div><div class="yours">'+esc(l.input)+'</div></div><div class="btnrow"><button class="btn sec" onclick="leave()">返回</button></div>';
+  const g=grade(text,l.input,l.ov), P=db.settings.pass, G=db.settings.good, s=index().st.get(it.id);
+  const weak=g.segScores.map((x,i)=>x<P?i:-1).filter(i=>i>=0);
+  let verdict="";
+  const latest=(index().by.get(it.id)||[]).filter(x=>x.kind==="full").slice(-1)[0];
+  if(l.kind==="full"&&(l.day!==today()||!latest||latest.id!==l.id)) verdict="";
+  else if(l.kind==="full"){
+    if(!s.introduced) verdict="还没过合格线 "+P+"，这条还算「待学」。先练错句，再全文默一遍。";
+    else if(l.day===today()&&s.todayFirst!==null&&s.todayFirst<P&&!s.todayPass) verdict="没过合格线 "+P+"：复习间隔退回 1 天，今天要先把错句练过、再全文过一遍。";
+    else if(l.day===today()&&s.todayFirst!==null&&s.todayFirst<P&&s.todayPass) verdict="重练过关 ✓ 明天（"+md(s.due)+"）再复习。";
+    else if(s.introDay===today()) verdict="学会了 ✓ 明天（"+md(s.due)+"）开始复习。";
+    else verdict=(l.score>=G?"优秀 ✓ ":"过了合格线，")+"下次复习 "+md(s.due)+(s.mastered?"（已掌握，之后每 "+db.settings.intervals[db.settings.intervals.length-1]+" 天过一次）":"")+(l.score<G&&s.introduced?"。没到 "+G+" 分，间隔不升档。":"。");
+  } else if(l.kind==="hint") verdict="练习成绩，不改复习进度。"+(g.score>=P?"可以试试不看原文全文默写了。":"");
+  else verdict=g.score>=P?"这句过了。":"这句还没过。";
+  let h='<div class="mod-h">'+esc(it.title)+'</div><div class="mod-sub">'+md(l.day)+" "+hm(l.ts)+" · "+(l.kind==="full"?"全文默写":l.kind==="hint"?"练习默写":"单句练习")+" · 用时 "+fmtDur(l.dur)+"</div>";
+  h+='<div class="countdown"><div class="score '+scCls(g.score)+'">'+g.score+'<small style="font-size:15px;color:var(--text2);margin-left:6px;font-weight:500">分</small></div><div class="meta"><div class="ttl" style="margin-bottom:4px">'+(g.score>=G?"优秀":g.score>=P?"过关":"没过")+'</div><div class="pn" style="font-size:13px">'+esc(verdict)+"</div>"+'<div class="pn">漏写/写错 '+g.missN+" 处"+(g.numMiss?"（其中数字 "+g.numMiss+" 处"+(db.settings.numStrict!==false?"，数字错的句子不算过":"")+"）":"")+(g.ov.size?" · 改判算对 "+g.ov.size+" 处":"")+"</div></div></div>";
+  h+='<div class="card"><div class="legend"><span>黑字＝对</span><span style="color:var(--red)">红字＝漏写或写错（点一下改判算对）</span><span style="color:var(--gray)">灰色删除线＝多写的</span></div>';
+  h+='<div id="dff">'+g.segs.map((sg,i)=>'<div class="sline'+(g.segScores[i]<P?" weak":"")+'"><div class="sn"><span class="chip '+scCls(g.segScores[i])+'">'+g.segScores[i]+'</span></div><div class="sx">'+diffHtml(text,l.input,g,sg)+"</div></div>").join("")+"</div>";
+  h+='<details><summary>看我写的原样</summary><div class="yours">'+esc(l.input)+"</div></details></div>";
+  h+='<div class="btnrow">';
+  if(weak.length&&l.kind!=="seg") h+='<button class="btn" onclick="startDrill(\''+it.id+'\',null,'+JSON.stringify(weak)+')">只练错句（'+weak.length+" 句）</button>";
+  h+='<button class="btn '+(weak.length?"sec":"")+'" onclick="startTest(\''+it.id+'\',\'full\')">再全文默一遍</button>';
+  if(inQueue()&&S.from==="today") h+='<button class="btn sec" onclick="nextInQueue()">下一条 →</button>';
+  h+='<button class="btn sec" onclick="leave()">返回</button></div>';
+  afterFns.push(()=>{ $("dff").onclick=e=>{ const t=e.target.closest(".tk[data-i]"); if(!t) return; const i=+t.dataset.i; const ov=new Set(l.ov||[]); ov.has(i)?ov.delete(i):ov.add(i); l.ov=Array.from(ov).sort((a,b)=>a-b);
+    const g2=grade(text,l.input,l.ov); l.score=g2.score; l.segs=g2.segScores; touch(l); save(); const y=window.scrollY; render(); window.scrollTo(0,y); }; });
+  return h;
+}
+/* 错句重练：每句写到过合格线为止（没过的排到队尾再来），全部过了再全文默一遍 */
+function startDrill(id,from,segList){
+  stopRec(); const it=getItem(id), s=index().st.get(id);
+  const list=(segList&&segList.length?segList:s.weak).slice(); if(!list.length) return startTest(id,"full",from);
+  S=Object.assign({},keepQ(from),{itemId:id,from:from||(S&&S.from)||"today",drill:list,mode:"full"});
+  nextSeg();
+}
+function nextSeg(){ if(!S.drill.length){ VIEW.tab="drill"; S.seg=null; render(); return; } S.seg=S.drill[0]; S.t0=Date.now(); S.peek=false; S.draft=""; VIEW.tab="test"; render(); window.scrollTo(0,0); }
+function afterSeg(log){
+  const P=db.settings.pass, it=getItem(S.itemId), sg=splitSegs(it.text)[S.seg], g=grade(sg.text,log.input,[]);
+  const passed=log.score>=P&&!S.peek;
+  S.drill.shift(); if(!passed) S.drill.push(S.seg);
+  const h='<div class="mhead"><div><div class="d">第 '+(S.seg+1)+" 句 · "+log.score+' 分</div><div class="desc">'+(passed?"过了 ✓":"没过（"+(S.peek?"看了原文":"不到 "+P)+"），排到后面再来一次")+'</div></div><button class="x" onclick="closeModal()">×</button></div><div class="mbody"><div class="legend"><span style="color:var(--red)">红＝漏/错</span><span style="color:var(--gray)">灰色删除线＝多写</span></div><div class="srctext" style="font-size:16px">'+g.segs.map(x=>diffHtml(sg.text,log.input,g,x)).join("")+'</div><div class="btnrow" style="margin-top:14px"><button class="btn" onclick="closeModal()">'+(S.drill.length?"下一句（还剩 "+S.drill.length+"）":"错句都过了 → 全文默写")+"</button></div></div>";
+  nextSeg(); openModal(h);
+}
+function vDrill(){
+  const it=getItem(S.itemId);
+  return '<div class="ph"><h3>错句都过了 ✓</h3><p>现在不看原文把「'+esc(it.title)+'」全文默一遍，过了合格线今天这条才算完。</p><div class="btnrow" style="justify-content:center;margin-top:16px"><button class="btn" onclick="startTest(\''+it.id+'\',\'full\')">全文默写</button><button class="btn sec" onclick="leave()">返回</button></div></div>';
+}
+
+/* ===== 8.5 语音识别（浏览器自带，可用才显示按钮） ===== */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition||null;
+let REC=null;
+function toggleRec(){ if(REC){ stopRec(); return; }
+  try{ REC=new SR(); }catch(e){ toast("语音识别用不了，请用键盘上的🎤语音输入"); return; }
+  REC.lang="zh-CN"; REC.continuous=true; REC.interimResults=true; REC.want=true;
+  REC.onresult=e=>{ let fin="",tmp=""; for(let i=e.resultIndex;i<e.results.length;i++){ const r=e.results[i]; if(r.isFinal) fin+=r[0].transcript; else tmp+=r[0].transcript; }
+    const a=$("ans"); if(a&&fin){ a.value+=fin; S.draft=a.value; } const im=$("interim"); if(im) im.textContent=tmp; };
+  REC.onerror=e=>{ const m={"not-allowed":"没有麦克风权限","network":"网络连不上识别服务","no-speech":"没听到声音"}[e.error]; if(e.error!=="no-speech"){ toast((m||"识别出错")+"，可以改用键盘上的🎤语音输入",4000); if(REC) REC.want=false; } };
+  REC.onend=()=>{ if(REC&&REC.want){ try{ REC.start(); }catch(e){} } else { REC=null; const b=$("micBtn"); if(b) b.textContent="🎤 开始说"; } };
+  try{ REC.start(); const b=$("micBtn"); if(b) b.textContent="⏹ 停"; }catch(e){ REC=null; toast("语音识别启动失败"); }
+}
+function stopRec(){ if(REC){ REC.want=false; try{ REC.stop(); }catch(e){} REC=null; const b=$("micBtn"); if(b) b.textContent="🎤 开始说"; const im=$("interim"); if(im) im.textContent=""; } }
+
+/* ===== 9. 记录 ===== */
+function vLog(){
+  const logs=db.logs.filter(l=>!l.del&&getItem(l.itemId)).sort((a,b)=>b.ts-a.ts);
+  let h='<div class="mod-h">记录</div><div class="mod-sub">每一次默写都在这里，点开能看逐字批改。只有「全文默写」改复习进度。</div>';
+  if(!logs.length) return h+'<div class="ph"><h3>还没有记录</h3></div>';
+  const days=[]; const m=new Map(); logs.forEach(l=>{ if(!m.has(l.day)){ m.set(l.day,[]); days.push(l.day); } m.get(l.day).push(l); });
+  days.slice(0,30).forEach(d=>{ const a=m.get(d), f=a.filter(l=>l.kind==="full"); const avg=f.length?Math.round(f.reduce((s,l)=>s+l.score,0)/f.length):null;
+    const tm=a.reduce((s,l)=>s+(l.dur||0),0);
+    h+='<div class="card"><h4><span style="flex:1">'+md(d)+(d===today()?"（今天）":"")+'</span><span class="chip">全文默写 '+f.length+" 次"+(avg!=null?" · 平均 "+avg:"")+" · 共 "+fmtDur(tm)+"</span></h4>";
+    a.forEach(l=>{ const it=getItem(l.itemId); h+='<div class="rowlog" onclick="showLog(\''+l.id+'\')"><span class="tm">'+hm(l.ts)+'</span><span class="tt">'+esc(it.title)+'<span class="desc"> · '+(l.kind==="full"?"全文":l.kind==="hint"?"练习":"第 "+(l.segIdx+1)+" 句")+'</span></span><span class="chip '+scCls(l.score)+'">'+l.score+"</span></div>"; });
+    h+="</div>"; });
+  return h;
+}
+
+/* ===== 10. 设置 ===== */
+function vSet(){
+  const st=db.settings;
+  let h='<div class="mod-h">设置</div><div class="mod-sub">复习规则、云同步、导入导出。</div>';
+  h+='<div class="card"><h4>面试与评分</h4><div class="frow"><div class="field"><label>面试日期</label><input type="date" id="sEx" value="'+esc(st.examDate)+'"><div class="desc">填了就有倒计时，复习也不会排到面试前一天之后。</div></div><div class="field"><label>合格线</label><input type="number" id="sP" value="'+st.pass+'" min="50" max="100"><div class="desc">每句、全文都要到这个分才算过。</div></div><div class="field"><label>优秀线</label><input type="number" id="sG" value="'+st.good+'" min="50" max="100"><div class="desc">复习时第一次就到这个分，间隔才升一档。</div></div></div>';
+  h+='<div class="field"><label style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="sN"'+(st.numStrict!==false?" checked":"")+'> 数字错了，这句不算过</label><div class="desc">年份、人数、金额这类数字是事实，说错比漏几个字严重。勾上时，一句里只要有数字错或漏，这句分数压到合格线以下。</div></div>';
+  h+='<div class="field"><label>复习间隔（天）</label><input type="text" id="sI" value="'+st.intervals.join(",")+'"><div class="desc">用逗号隔开，默认 1,2,4,7,15,30。</div></div><button class="btn sm" onclick="saveSet()">保存</button></div>';
+  h+='<div class="card"><h4>☁️ 云同步（手机、电脑之间同步）</h4><div class="desc" style="margin-bottom:10px">存在 study-data 私有仓库里单独的 <b>mianshi/data.json</b>，和 Study Hub 的数据互不影响。同一个网站下 Study Hub 填过令牌的话会自动沿用。令牌只存在本机，不会写进同步数据。</div>';
+  h+='<div class="field"><label>仓库</label><input type="text" id="syRepo" value="'+esc(SY.repo||"scarlett-dou/study-data")+'"></div><div class="field"><label>令牌（GitHub 细粒度令牌，需要 study-data 的 Contents 读写）</label><input type="password" id="syTok" value="'+esc(SY.token)+'" placeholder="github_pat_…"></div>';
+  h+='<div class="desc" id="syStatus" style="margin-bottom:8px">'+esc(syOn()?(SY.status||"已连接"):"未连接")+'</div><div class="btnrow"><button class="btn sm" onclick="saveSync()">保存并同步</button>'+(syOn()?'<button class="btn sec sm" onclick="syncNow()">立即同步</button><button class="btn warn sm" onclick="dropSync()">断开（本机数据不动）</button>':"")+"</div></div>";
+  h+='<div class="card" id="impBox"><h4>导入 / 导出</h4><div class="desc" style="margin-bottom:10px">导入是<b>合并</b>，不会覆盖已有内容和记录。可以导入本 App 导出的 .json，也可以导入按下面格式写的文字（.txt 或直接粘贴）：<br><code># 话题名</code> 一行开新话题；<code>## 标题 | 提示</code> 一行开一条内容（提示可省）；下面的行都是这条的正文，到下一个 ## 或 # 为止。</div>';
+  h+='<textarea id="impTxt" style="min-height:120px" placeholder="# 楷模案例&#10;## 毛相林（略版） | 实干为民 · 排比第一句&#10;无论是重庆巫山下庄村的老支书毛相林……"></textarea>';
+  h+='<div class="btnrow"><button class="btn sm" onclick="importText($(\'impTxt\').value)">导入粘贴的文字</button><label class="btn sec sm" style="display:inline-block">选文件导入<input type="file" accept=".json,.txt,.md,text/plain,application/json" style="display:none" onchange="importFile(this)"></label><button class="btn sec sm" onclick="exportJson()">导出备份 .json</button></div></div>';
+  return h;
+}
+function saveSet(){ const st=db.settings; const P=+$("sP").value, G=+$("sG").value; const I=$("sI").value.split(/[,，\s]+/).map(Number).filter(n=>n>0&&n<400);
+  if(!(P>=50&&P<=100&&G>=P&&G<=100)) return toast("合格线 50–100，优秀线不低于合格线"); if(!I.length) return toast("间隔至少一个");
+  st.examDate=$("sEx").value||""; st.numStrict=$("sN").checked; st.pass=P; st.good=G; st.intervals=I; touch(st); save(); render(); toast("已保存"); }
+function saveSync(){ SY.repo=$("syRepo").value.trim(); SY.token=$("syTok").value.trim(); SY.sha=""; sySave(); renderFoot(); if(syOn()) syncNow(); render(); }
+function dropSync(){ if(!confirm("断开云同步？本机数据不动，云端文件也不删。")) return; SY.token=""; SY.sha=""; sySave(); try{ localStorage.setItem("ms-noadopt","1"); }catch(e){} render(); }
+function exportJson(){ const blob=new Blob([JSON.stringify(db,null,1)],{type:"application/json"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="面试背诵-备份-"+today()+".json"; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500); }
+function importFile(inp){ const f=inp.files&&inp.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ const t=String(r.result||"").replace(/^﻿/,""); if(/^\s*\{/.test(t)){ try{ const d=normalizeDb(JSON.parse(t)); db=normalizeDb(mergeDb(db,d)); save(); render(); toast("已合并导入"); }catch(e){ toast("文件不是有效的 JSON"); } } else importText(t); inp.value=""; }; r.readAsText(f,"utf-8"); }
+function importText(t){
+  t=(t||"").replace(/\r/g,""); if(!t.trim()) return toast("没有内容");
+  let topic=null, cur=null, n=0, skip=0; const out=[];
+  const flush=()=>{ if(cur){ cur.text=cur.lines.join("\n").trim(); if(tokenize(cur.text).length) out.push(cur); cur=null; } };
+  t.split("\n").forEach(line=>{
+    const m2=line.match(/^##\s*(.+)$/), m1=!m2&&line.match(/^#\s*(.+)$/);
+    if(m1){ flush(); topic=m1[1].trim(); return; }
+    if(m2){ flush(); const p=m2[1].split(/\s*[|｜]\s*/); cur={topic:topic||"未分话题",title:p[0].trim(),cue:(p[1]||"").trim(),lines:[]}; return; }
+    if(cur) cur.lines.push(line);
+  });
+  flush();
+  if(!out.length) return toast("没认出内容：每条要以「## 标题」开头");
+  out.forEach(o=>{ let tp=liveTopics().find(x=>x.name===o.topic); if(!tp) tp=newTopic(o.topic);
+    if(liveItems().some(i=>i.topicId===tp.id&&i.title===o.title&&i.text===o.text)){ skip++; return; }
+    db.items.push(touch({id:uid(),topicId:tp.id,title:o.title,cue:o.cue,text:o.text,day:today(),order:nextOrder(db.items)})); n++; });
+  save(); render(); toast("导入 "+n+" 条"+(skip?"，"+skip+" 条已存在跳过":""),3500);
+}
+
+/* ===== 11. 初始化 ===== */
+(async function init(){
+  await loadDb();
+  syLoad(); if(SY.adopted){ try{ if(localStorage.getItem("ms-noadopt")){ SY.token=""; sySave(); SY.adopted=false; } }catch(e){} }
+  render();
+  if(SY.adopted) toast("已沿用 Study Hub 的云同步令牌",3000);
+  if(syOn()) syncNow();
+  /* 过了零点自动换到新的一天 */
+  let lastDay=today(); setInterval(()=>{ if(today()!==lastDay){ lastDay=today(); IDX=null; if(["today","lib"].includes(VIEW.tab)) render(); } },60000);
+})();
+
+/* ===== 12. PWA：离线缓存 ===== */
+if("serviceWorker" in navigator && (location.protocol==="https:"||["localhost","127.0.0.1"].includes(location.hostname))){
+  window.addEventListener("load",()=>{ navigator.serviceWorker.register("sw.js",{scope:"./"}).catch(()=>{}); });
+}
+</script>
