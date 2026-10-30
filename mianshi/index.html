@@ -187,7 +187,7 @@
 /* ===== 0. 常量 & 状态 =====
    数据只存本 App 自己的键（IndexedDB ms-db / localStorage ms-*），和 Study Hub 互不读写。
    云同步只写 study-data 仓库里的 mianshi/data.json 一个文件；Study Hub 只删它自己清单里的文件，碰不到这里。 */
-const APP_VER="v2 · 2026-10-30";
+const APP_VER="v3 · 2026-10-31";
 const LS_KEY="ms-db";
 const COLORS=["#007aff","#34c759","#ff9500","#ff3b30","#af52de","#5ac8fa","#ff2d55","#a2845e"];
 const DEF_SET={examDate:"",pass:90,good:95,intervals:[1,2,4,7,15,30],numStrict:true,upd:0};
@@ -248,8 +248,10 @@ function mergeArr(a,b){ const m=new Map(); (a||[]).forEach(o=>{ if(o&&o.id) m.se
 function mergeDb(a,b){ a=a||{}; b=b||{};
   return { v:1, savedAt:(a.savedAt||"")>(b.savedAt||"")?a.savedAt:(b.savedAt||a.savedAt||""),
     settings:Object.assign({},DEF_SET,pickNewer(a.settings,b.settings)||{}),
-    topics:mergeArr(a.topics,b.topics), items:mergeArr(a.items,b.items), logs:mergeArr(a.logs,b.logs) }; }
-function fp(d){ const m=mergeDb(d,{}); delete m.savedAt; return hashStr(JSON.stringify(m)); }
+    topics:mergeArr(a.topics,b.topics), items:mergeArr(a.items,b.items), logs:mergeArr(a.logs,b.logs),
+    srcSha:a.srcSha||"", srcAt:a.srcAt||"", srcN:a.srcN||0 }; }
+function fpStrip(m){ delete m.savedAt; delete m.srcSha; delete m.srcAt; delete m.srcN; return m; }
+function fp(d){ return hashStr(JSON.stringify(fpStrip(mergeDb(d,{})))); }
 
 const SY_DEFAULT_REPO="scarlett-dou/study-data";   /* 和 Study Hub 同一个私有仓库；写在这里不等于能访问（还要令牌） */
 const SY={token:"",repo:"",branch:"main",path:"mianshi/data.json",sha:"",busy:false,pending:false,timer:null,status:"",last:0,fail:0,retryT:null};
@@ -263,8 +265,8 @@ function syOn(){ return !!(SY.token&&SY.repo); }
 function sySet(t){ SY.status=t; renderFoot(); const el=$("syStatus"); if(el) el.textContent=syOn()?"已连接："+SY.repo+" · "+t:t; }
 function b64enc(str){ const b=new TextEncoder().encode(str); let s="",CH=0x8000; for(let i=0;i<b.length;i+=CH) s+=String.fromCharCode.apply(null,b.subarray(i,i+CH)); return btoa(s); }
 function b64dec(b64){ const bin=atob((b64||"").replace(/\s/g,"")); const b=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) b[i]=bin.charCodeAt(i); return new TextDecoder().decode(b); }
-async function syReq(method,body,accept){
-  const url="https://api.github.com/repos/"+SY.repo+"/contents/"+SY.path.split("/").map(encodeURIComponent).join("/")+(method==="GET"?("?ref="+SY.branch+"&t="+Date.now()):"");
+async function syReq(method,body,accept,pth){
+  const url="https://api.github.com/repos/"+SY.repo+"/contents/"+(pth||SY.path).split("/").map(encodeURIComponent).join("/")+(method==="GET"?("?ref="+SY.branch+"&t="+Date.now()):"");
   const ac=new AbortController(); const t=setTimeout(()=>ac.abort(),20000);
   try{ return await fetch(url,{method,cache:"no-store",signal:ac.signal,headers:{"Authorization":"Bearer "+SY.token,"Accept":accept||"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"},body:body?JSON.stringify(body):undefined}); }
   finally{ clearTimeout(t); }
@@ -279,12 +281,41 @@ async function syGet(){ /* → {data,sha} / {missing:true}；出错抛异常 */
   else { const r2=await syReq("GET",null,"application/vnd.github.raw"); if(!r2.ok) throw new Error("读取失败 "+r2.status); text=await r2.text(); }
   return {data:JSON.parse(text),sha:m.sha};
 }
+/* 背诵源：各 chat 的定稿写在电脑上的「背诵源」文件夹，脚本生成 mianshi/content.json 推到同一个仓库。
+   这里按「话题／标题」对上条目（id 由它算出，几台设备算出来一样）：新的加进来、改了的更新、背诵源里删掉的移除。
+   App 里手动改过的条目，背诵源那条下次变了才会被盖掉；在 App 里删掉的不会被加回来。 */
+async function syPullSource(){
+  const r=await syReq("GET",null,null,"mianshi/content.json");
+  if(r.status===404) return;
+  if(!r.ok) throw new Error("读取背诵源失败 "+r.status);
+  const m=await r.json(); if(m.sha&&m.sha===db.srcSha) return;
+  let text=m.content&&m.content.length?b64dec(m.content):null;
+  if(text==null){ const r2=await syReq("GET",null,"application/vnd.github.raw","mianshi/content.json"); if(!r2.ok) throw new Error("读取背诵源失败 "+r2.status); text=await r2.text(); }
+  const n=applySource(JSON.parse(text)); db.srcSha=m.sha||""; db.srcAt=new Date().toISOString(); db.srcN=n;
+  IDX=null; persist(); if(!["test","drill","learn"].includes(VIEW.tab)) render();
+}
+function applySource(c){
+  const td=today(), ids=new Set(), tids=new Map();
+  (c.topics||[]).forEach((name,i)=>{ const id="s-t"+hashStr(name); tids.set(name,id); let t=db.topics.find(x=>x.id===id);
+    if(!t){ db.topics.push(touch({id,name,color:COLORS[i%COLORS.length],order:i+1,src:1})); }
+    else if(t.del||t.order!==i+1){ t.del=false; t.order=i+1; touch(t); } });
+  (c.items||[]).forEach((x,i)=>{ const id="s-"+hashStr(x.sid), sh=hashStr([x.topic,x.title,x.cue,x.text].join("0001")); ids.add(id);
+    const it=db.items.find(o=>o.id===id), topicId=tids.get(x.topic)||("s-t"+hashStr(x.topic));
+    if(!it){ db.items.push(touch({id,topicId,title:x.title,cue:x.cue,text:x.text,day:td,order:i+1,src:1,srcH:sh})); return; }
+    if(it.srcH===sh&&it.order===i+1) return;
+    if(it.srcH!==sh){ if(it.text!==x.text&&!it.del) it.chg=td; Object.assign(it,{topicId,title:x.title,cue:x.cue,text:x.text,srcH:sh}); }
+    it.order=i+1; touch(it); });
+  db.items.forEach(it=>{ if(it.src&&!it.del&&!ids.has(it.id)){ it.del=true; touch(it); } });
+  db.topics.forEach(t=>{ if(t.src&&!t.del&&!tids.has(t.name)&&!db.items.some(i=>!i.del&&i.topicId===t.id)){ t.del=true; touch(t); } });
+  return ids.size;
+}
 function syncSoon(ms){ if(!syOn()) return; clearTimeout(SY.timer); SY.timer=setTimeout(syncNow,ms==null?6000:ms); }
 async function syncNow(){
   if(!syOn()) return;
   if(SY.busy){ SY.pending=true; return; }
   SY.busy=true; clearTimeout(SY.retryT); sySet("同步中…");
   try{
+    await syPullSource();
     for(let round=0;round<4;round++){
       const g=await syGet();
       const remote=g.missing?null:normalizeDb(g.data);
@@ -438,13 +469,16 @@ function replay(it,logs){
     mastered=first>=G&&k===INT.length-1;
     due=cap(d,addDays(d,INT[k]));
   });
+  /* 背诵源改了原文、改后还没全文默写过：今天就复习一次 */
+  const changed=introduced&&!!lastFull&&lastFull.th!==hashStr(it.text);
+  if(changed){ mastered=false; if(due>td) due=td; }
   const tl=logs.filter(l=>l.kind==="full"&&l.day===td);
   const todayFirst=tl.length?tl[0].score:null, todayPass=tl.some(l=>l.score>=P);
   const anyToday=logs.some(l=>l.day===td);
   /* 薄弱句：最近一次全文默写里没过合格线的句子（原文改过就不算） */
   let weak=[]; if(lastFull&&lastFull.th===hashStr(it.text)) weak=(lastFull.segs||[]).map((s,i)=>s<P?i:-1).filter(i=>i>=0);
   last=lastFull?lastFull.score:null;
-  return {introduced,introDay,k,due,last,lastFull,mastered,todayFirst,todayPass,anyToday,weak,nFull:logs.filter(l=>l.kind==="full").length};
+  return {introduced,introDay,k,due,last,lastFull,mastered,changed,todayFirst,todayPass,anyToday,weak,nFull:logs.filter(l=>l.kind==="full").length};
 }
 function stageLabel(s){
   if(!s.introduced) return {t:"待学",c:""};
@@ -504,7 +538,7 @@ function vToday(){
     arr.forEach(it=>{ const x=st.get(it.id), tp=topicOf(it), sl=stageLabel(x);
       let sub=esc(tp.name)+" · "+sl.t;
       if(kind==="redo") sub+=" · 今天第一次 "+x.todayFirst+" 分，要先练错句再全文过一遍";
-      else if(kind==="due") sub+=" · "+(x.due<td?"逾期 "+dayDiff(x.due,td)+" 天":"今天到期")+(x.last!=null?" · 上次 "+x.last+" 分":"");
+      else if(kind==="due") sub+=(x.changed?" · 原文改过":"")+" · "+(x.due<td?"逾期 "+dayDiff(x.due,td)+" 天":"今天到期")+(x.last!=null?" · 上次 "+x.last+" 分":"");
       else if(kind==="learn") sub+=x.todayFirst!=null?" · 今天默写最高还没过 "+db.settings.pass:(" · "+md(it.day)+" 加的");
       else sub+=" · 今天 "+x.todayFirst+" 分"+(x.due?" · 下次 "+md(x.due):"");
       s+='<div class="gi'+(kind==="done"?" done":"")+'" onclick="itemDetail(\''+it.id+'\',\'today\')"><span class="gdot" style="background:'+tp.color+'"></span><div class="gt"><div class="gtitle">'+esc(it.title)+'</div><div class="gs">'+sub+'</div></div><span class="chip '+(kind==="redo"?"r":kind==="done"?"g":kind==="learn"?"o":"b")+'">'+(kind==="redo"?"重练":kind==="due"?"复习":kind==="learn"?"新学":"✓")+"</span></div>"; });
@@ -557,7 +591,7 @@ function vLib(){
     h+='<div class="mbar" style="max-width:none;margin:-4px 0 6px"><i style="width:'+avg+'%;background:'+g.t.color+'"></i></div>';
     if(!g.items.length) h+='<div class="empty">这个话题下还没有内容。</div>';
     g.items.sort((a,b)=>(a.order||0)-(b.order||0)||(a.id<b.id?-1:1)).forEach(it=>{ const s=st.get(it.id), sl=stageLabel(s);
-      h+='<div class="crow" onclick="itemDetail(\''+it.id+'\',\'lib\')"><div class="ct"><div>'+esc(it.title)+'</div><div class="cs">'+(s.last!=null?"上次 "+s.last+" 分 · ":"")+(s.introduced?"下次 "+md(s.due):"还没学会")+(s.weak.length?" · 薄弱句 "+s.weak.length:"")+" · "+tokenize(it.text).length+' 字</div><div class="mbar"><i style="width:'+mastPct(s)+'%;background:'+g.t.color+'"></i></div></div><span class="chip '+sl.c+'">'+sl.t+"</span></div>"; });
+      h+='<div class="crow" onclick="itemDetail(\''+it.id+'\',\'lib\')"><div class="ct"><div>'+esc(it.title)+'</div><div class="cs">'+(s.last!=null?"上次 "+s.last+" 分 · ":"")+(s.introduced?"下次 "+md(s.due):"还没学会")+(s.changed?" · 原文改过，要再默一遍":"")+(s.weak.length?" · 薄弱句 "+s.weak.length:"")+" · "+tokenize(it.text).length+' 字</div><div class="mbar"><i style="width:'+mastPct(s)+'%;background:'+g.t.color+'"></i></div></div><span class="chip '+sl.c+'">'+sl.t+"</span></div>"; });
     h+="</div>"; });
   return h;
 }
@@ -576,6 +610,7 @@ function editItem(id){
   const it=id?getItem(id):null, tps=liveTopics();
   const tsel=it?it.topicId:(VIEW.lastTopic||(tps[0]&&tps[0].id)||"");
   let h='<div class="mhead"><div class="d">'+(it?"编辑内容":"新增背诵内容")+'</div><button class="x" onclick="closeModal()">×</button></div><div class="mbody">';
+  if(it&&it.src) h+='<div class="prompt">这条来自<b>背诵源</b>（chat 定稿）。在这里改只改本 App；chat 那边下次改了这条，会用定稿盖掉。要长期改，请在对应的 chat 里改。</div>';
   h+='<div class="field"><label>话题</label><select id="eTopic">'+tps.map(t=>'<option value="'+t.id+'"'+(t.id===tsel?" selected":"")+">"+esc(t.name)+"</option>").join("")+'<option value="__new">＋ 新话题…</option></select><input type="text" id="eTopicNew" placeholder="新话题名字" style="display:'+(tps.length?"none":"block")+'"></div>';
   h+='<div class="field"><label>标题</label><input type="text" id="eTitle" value="'+esc(it?it.title:"")+'" placeholder="例：毛相林（略版）"></div>';
   h+='<div class="field"><label>提示（默写时只看到标题和这一行，可空）</label><input type="text" id="eCue" value="'+esc(it?it.cue:"")+'" placeholder="例：实干为民 · 排比第一句"></div>';
@@ -754,6 +789,7 @@ function vSet(){
   h+='<div class="card" id="syCard"><h4>☁️ 云同步（GitHub 自动 · 推荐）</h4><div class="desc" id="syStatus" style="margin-bottom:8px">'+(syOn()?("已连接："+esc(SY.repo)+" · "+esc(SY.status||"打开即自动同步")):"未配置 —— 填入和 Study Hub 一样的<b>私有</b>仓库与令牌，电脑、手机开 App 自动拉、改完自动上传。")+'</div>';
   h+='<div class="frow"><div class="field"><label>数据仓库 owner/repo</label><input type="text" id="syRepo" placeholder="'+SY_DEFAULT_REPO+'" value="'+esc(SY.repo||SY_DEFAULT_REPO)+'"></div><div class="field"><label>访问令牌 Token</label><input type="password" id="syTok" autocomplete="off" placeholder="'+(SY.token?"（已保存，换令牌再粘贴）":"github_pat_… / ghp_…")+'" value=""></div></div>';
   h+='<div class="btnrow"><button class="btn sm" onclick="saveSync()">连接 / 保存</button>'+(syOn()?'<button class="btn sm sec" onclick="syncNow()">立即同步</button><button class="btn sm sec" onclick="syPeekCmp()">🔄 对比两边</button><button class="btn sm sec" onclick="syForcePull()">⬇️ 下载到本机</button><button class="btn sm sec" onclick="syForcePush()">⬆️ 上传到云端</button><button class="btn sm warn" onclick="dropSync()">断开</button>':"")+'</div><div id="syCmp"></div>';
+  h+='<div class="desc" style="margin-top:10px"><b>背诵源：</b>'+(db.srcAt?'已更新到 '+esc(new Date(db.srcAt).toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}))+' 拉到的那份（'+db.srcN+' 条）':'还没拉到')+'。各 chat 定稿后自动出现在内容库，改过原文的条目会回到「到期复习」。</div>';
   h+='<div class="desc" style="margin-top:10px">和 Study Hub 用<b>同一个仓库、同一个令牌</b>（在 Study Hub 的 设置 → 云同步 里就是那个），但只读写里面单独的 <b>mianshi/data.json</b>，两个 App 的数据互不影响。<br>平时不用点按钮：打开 App 自动拉，背完自动上传（几秒后），切到后台前也会传一次。两台设备各背各的，合起来按条合并，不会整份互相盖掉。<br>令牌只存在本机，不写进同步数据。iPhone「添加到主屏幕」后的 App 和 Safari 是两份存储，要在主屏幕 App 里再填一次。</div></div>';
   h+='<div class="card" id="impBox"><h4>导入 / 导出</h4><div class="desc" style="margin-bottom:10px">导入是<b>合并</b>，不会覆盖已有内容和记录。可以导入本 App 导出的 .json，也可以导入按下面格式写的文字（.txt 或直接粘贴）：<br><code># 话题名</code> 一行开新话题；<code>## 标题 | 提示</code> 一行开一条内容（提示可省）；下面的行都是这条的正文，到下一个 ## 或 # 为止。</div>';
   h+='<textarea id="impTxt" style="min-height:120px" placeholder="# 楷模案例&#10;## 毛相林（略版） | 实干为民 · 排比第一句&#10;无论是重庆巫山下庄村的老支书毛相林……"></textarea>';
