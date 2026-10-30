@@ -187,7 +187,7 @@
 /* ===== 0. 常量 & 状态 =====
    数据只存本 App 自己的键（IndexedDB ms-db / localStorage ms-*），和 Study Hub 互不读写。
    云同步只写 study-data 仓库里的 mianshi/data.json 一个文件；Study Hub 只删它自己清单里的文件，碰不到这里。 */
-const APP_VER="v1 · 2026-10-29";
+const APP_VER="v2 · 2026-10-30";
 const LS_KEY="ms-db";
 const COLORS=["#007aff","#34c759","#ff9500","#ff3b30","#af52de","#5ac8fa","#ff2d55","#a2845e"];
 const DEF_SET={examDate:"",pass:90,good:95,intervals:[1,2,4,7,15,30],numStrict:true,upd:0};
@@ -251,15 +251,16 @@ function mergeDb(a,b){ a=a||{}; b=b||{};
     topics:mergeArr(a.topics,b.topics), items:mergeArr(a.items,b.items), logs:mergeArr(a.logs,b.logs) }; }
 function fp(d){ const m=mergeDb(d,{}); delete m.savedAt; return hashStr(JSON.stringify(m)); }
 
+const SY_DEFAULT_REPO="scarlett-dou/study-data";   /* 和 Study Hub 同一个私有仓库；写在这里不等于能访问（还要令牌） */
 const SY={token:"",repo:"",branch:"main",path:"mianshi/data.json",sha:"",busy:false,pending:false,timer:null,status:"",last:0,fail:0,retryT:null};
 function syLoad(){ if(!hasLS()) return; try{
   SY.token=localStorage.getItem("ms-token")||""; SY.repo=localStorage.getItem("ms-repo")||""; SY.sha=localStorage.getItem("ms-sha")||"";
   /* 同一个网站下 Study Hub 已经填过令牌，就直接沿用（令牌只授权 study-data 仓库，本 App 也只写那里） */
-  if(!SY.token&&localStorage.getItem("cs-token")){ SY.token=localStorage.getItem("cs-token"); SY.repo=localStorage.getItem("cs-repo")||"scarlett-dou/study-data"; sySave(); SY.adopted=true; }
+  if(!SY.token&&localStorage.getItem("cs-token")){ SY.token=localStorage.getItem("cs-token"); SY.repo=localStorage.getItem("cs-repo")||SY_DEFAULT_REPO; sySave(); SY.adopted=true; }
 }catch(e){} }
 function sySave(){ if(!hasLS()) return; try{ localStorage.setItem("ms-token",SY.token); localStorage.setItem("ms-repo",SY.repo); SY.sha?localStorage.setItem("ms-sha",SY.sha):localStorage.removeItem("ms-sha"); }catch(e){} }
 function syOn(){ return !!(SY.token&&SY.repo); }
-function sySet(t){ SY.status=t; renderFoot(); const el=$("syStatus"); if(el) el.textContent=t; }
+function sySet(t){ SY.status=t; renderFoot(); const el=$("syStatus"); if(el) el.textContent=syOn()?"已连接："+SY.repo+" · "+t:t; }
 function b64enc(str){ const b=new TextEncoder().encode(str); let s="",CH=0x8000; for(let i=0;i<b.length;i+=CH) s+=String.fromCharCode.apply(null,b.subarray(i,i+CH)); return btoa(s); }
 function b64dec(b64){ const bin=atob((b64||"").replace(/\s/g,"")); const b=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) b[i]=bin.charCodeAt(i); return new TextDecoder().decode(b); }
 async function syReq(method,body,accept){
@@ -492,6 +493,8 @@ function vToday(){
   let h='<div class="countdown">';
   if(ex){ const n=dayDiff(td,ex); h+='<div class="big">'+(n>=0?n:0)+'<small>天</small></div>'; }
   h+='<div class="meta"><div class="lab">'+(ex?"距面试 "+md(ex):"今天 "+md(td))+'</div><div class="ttl">今日背诵 '+done+" / "+total+'</div><div class="pbar"><i style="width:'+(total?Math.round(100*done/total):0)+'%"></i></div><div class="pn">'+(total===done&&total?"今天的都过了 ✓":"重练 "+L.redo.length+" · 待复习 "+L.due.length+" · 待学 "+L.learn.length)+"</div></div></div>";
+  if(!syOn()) h+='<div class="card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid var(--orange)"><div style="flex:1;min-width:200px;font-size:13.5px">☁️ 还没连云同步：这台设备上背的只存在本机，换设备看不到。</div><button class="btn sm" onclick="goSync()">去连接</button></div>';
+  else if(/未同步|出错|无效/.test(SY.status)) h+='<div class="card" style="font-size:13.5px;color:var(--red);border:1px solid var(--red)">☁️ '+esc(SY.status)+'</div>';
   h+='<div class="cal"><div class="calleft"><div class="panel">';
   h+='<div class="tiles"><div class="tile"><div class="n" style="color:var(--red)">'+L.redo.length+'</div><div class="l">重练</div></div><div class="tile"><div class="n" style="color:var(--tint)">'+L.due.length+'</div><div class="l">待复习</div></div><div class="tile"><div class="n" style="color:var(--orange)">'+L.learn.length+'</div><div class="l">待学</div></div><div class="tile"><div class="n" style="color:var(--green)">'+L.done.length+'</div><div class="l">今日已过</div></div></div>';
   const left=L.redo.length+L.due.length+L.learn.length;
@@ -741,15 +744,17 @@ function vLog(){
 }
 
 /* ===== 10. 设置 ===== */
+function goSync(){ go("set"); setTimeout(()=>{ const e=$("syCard"); if(e) e.scrollIntoView(); },60); }
 function vSet(){
   const st=db.settings;
   let h='<div class="mod-h">设置</div><div class="mod-sub">复习规则、云同步、导入导出。</div>';
   h+='<div class="card"><h4>面试与评分</h4><div class="frow"><div class="field"><label>面试日期</label><input type="date" id="sEx" value="'+esc(st.examDate)+'"><div class="desc">填了就有倒计时，复习也不会排到面试前一天之后。</div></div><div class="field"><label>合格线</label><input type="number" id="sP" value="'+st.pass+'" min="50" max="100"><div class="desc">每句、全文都要到这个分才算过。</div></div><div class="field"><label>优秀线</label><input type="number" id="sG" value="'+st.good+'" min="50" max="100"><div class="desc">复习时第一次就到这个分，间隔才升一档。</div></div></div>';
   h+='<div class="field"><label style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="sN"'+(st.numStrict!==false?" checked":"")+'> 数字错了，这句不算过</label><div class="desc">年份、人数、金额这类数字是事实，说错比漏几个字严重。勾上时，一句里只要有数字错或漏，这句分数压到合格线以下。</div></div>';
   h+='<div class="field"><label>复习间隔（天）</label><input type="text" id="sI" value="'+st.intervals.join(",")+'"><div class="desc">用逗号隔开，默认 1,2,4,7,15,30。</div></div><button class="btn sm" onclick="saveSet()">保存</button></div>';
-  h+='<div class="card"><h4>☁️ 云同步（手机、电脑之间同步）</h4><div class="desc" style="margin-bottom:10px">存在 study-data 私有仓库里单独的 <b>mianshi/data.json</b>，和 Study Hub 的数据互不影响。同一个网站下 Study Hub 填过令牌的话会自动沿用。令牌只存在本机，不会写进同步数据。</div>';
-  h+='<div class="field"><label>仓库</label><input type="text" id="syRepo" value="'+esc(SY.repo||"scarlett-dou/study-data")+'"></div><div class="field"><label>令牌（GitHub 细粒度令牌，需要 study-data 的 Contents 读写）</label><input type="password" id="syTok" value="'+esc(SY.token)+'" placeholder="github_pat_…"></div>';
-  h+='<div class="desc" id="syStatus" style="margin-bottom:8px">'+esc(syOn()?(SY.status||"已连接"):"未连接")+'</div><div class="btnrow"><button class="btn sm" onclick="saveSync()">保存并同步</button>'+(syOn()?'<button class="btn sec sm" onclick="syncNow()">立即同步</button><button class="btn warn sm" onclick="dropSync()">断开（本机数据不动）</button>':"")+"</div></div>";
+  h+='<div class="card" id="syCard"><h4>☁️ 云同步（GitHub 自动 · 推荐）</h4><div class="desc" id="syStatus" style="margin-bottom:8px">'+(syOn()?("已连接："+esc(SY.repo)+" · "+esc(SY.status||"打开即自动同步")):"未配置 —— 填入和 Study Hub 一样的<b>私有</b>仓库与令牌，电脑、手机开 App 自动拉、改完自动上传。")+'</div>';
+  h+='<div class="frow"><div class="field"><label>数据仓库 owner/repo</label><input type="text" id="syRepo" placeholder="'+SY_DEFAULT_REPO+'" value="'+esc(SY.repo||SY_DEFAULT_REPO)+'"></div><div class="field"><label>访问令牌 Token</label><input type="password" id="syTok" autocomplete="off" placeholder="'+(SY.token?"（已保存，换令牌再粘贴）":"github_pat_… / ghp_…")+'" value=""></div></div>';
+  h+='<div class="btnrow"><button class="btn sm" onclick="saveSync()">连接 / 保存</button>'+(syOn()?'<button class="btn sm sec" onclick="syncNow()">立即同步</button><button class="btn sm sec" onclick="syPeekCmp()">🔄 对比两边</button><button class="btn sm sec" onclick="syForcePull()">⬇️ 下载到本机</button><button class="btn sm sec" onclick="syForcePush()">⬆️ 上传到云端</button><button class="btn sm warn" onclick="dropSync()">断开</button>':"")+'</div><div id="syCmp"></div>';
+  h+='<div class="desc" style="margin-top:10px">和 Study Hub 用<b>同一个仓库、同一个令牌</b>（在 Study Hub 的 设置 → 云同步 里就是那个），但只读写里面单独的 <b>mianshi/data.json</b>，两个 App 的数据互不影响。<br>平时不用点按钮：打开 App 自动拉，背完自动上传（几秒后），切到后台前也会传一次。两台设备各背各的，合起来按条合并，不会整份互相盖掉。<br>令牌只存在本机，不写进同步数据。iPhone「添加到主屏幕」后的 App 和 Safari 是两份存储，要在主屏幕 App 里再填一次。</div></div>';
   h+='<div class="card" id="impBox"><h4>导入 / 导出</h4><div class="desc" style="margin-bottom:10px">导入是<b>合并</b>，不会覆盖已有内容和记录。可以导入本 App 导出的 .json，也可以导入按下面格式写的文字（.txt 或直接粘贴）：<br><code># 话题名</code> 一行开新话题；<code>## 标题 | 提示</code> 一行开一条内容（提示可省）；下面的行都是这条的正文，到下一个 ## 或 # 为止。</div>';
   h+='<textarea id="impTxt" style="min-height:120px" placeholder="# 楷模案例&#10;## 毛相林（略版） | 实干为民 · 排比第一句&#10;无论是重庆巫山下庄村的老支书毛相林……"></textarea>';
   h+='<div class="btnrow"><button class="btn sm" onclick="importText($(\'impTxt\').value)">导入粘贴的文字</button><label class="btn sec sm" style="display:inline-block">选文件导入<input type="file" accept=".json,.txt,.md,text/plain,application/json" style="display:none" onchange="importFile(this)"></label><button class="btn sec sm" onclick="exportJson()">导出备份 .json</button></div></div>';
@@ -758,8 +763,34 @@ function vSet(){
 function saveSet(){ const st=db.settings; const P=+$("sP").value, G=+$("sG").value; const I=$("sI").value.split(/[,，\s]+/).map(Number).filter(n=>n>0&&n<400);
   if(!(P>=50&&P<=100&&G>=P&&G<=100)) return toast("合格线 50–100，优秀线不低于合格线"); if(!I.length) return toast("间隔至少一个");
   st.examDate=$("sEx").value||""; st.numStrict=$("sN").checked; st.pass=P; st.good=G; st.intervals=I; touch(st); save(); render(); toast("已保存"); }
-function saveSync(){ SY.repo=$("syRepo").value.trim(); SY.token=$("syTok").value.trim(); SY.sha=""; sySave(); renderFoot(); if(syOn()) syncNow(); render(); }
-function dropSync(){ if(!confirm("断开云同步？本机数据不动，云端文件也不删。")) return; SY.token=""; SY.sha=""; sySave(); try{ localStorage.setItem("ms-noadopt","1"); }catch(e){} render(); }
+function saveSync(){ const rp=$("syRepo").value.trim()||SY_DEFAULT_REPO, tk=$("syTok").value.trim()||SY.token; if(!tk) return toast("请填写令牌");
+  SY.repo=rp; SY.token=tk; SY.sha=""; SY.fail=0; sySave(); try{ localStorage.removeItem("ms-noadopt"); }catch(e){} render(); syncNow(); }
+/* 对比两边：只读，不改任何一边 */
+function syStats(d){ d=normalizeDb(d); return {items:d.items.filter(x=>!x.del).length, topics:d.topics.filter(x=>!x.del).length, full:d.logs.filter(x=>!x.del&&x.kind==="full").length, logs:d.logs.filter(x=>!x.del).length, savedAt:d.savedAt||""}; }
+async function syPeekCmp(){ const box=$("syCmp"); if(!box) return; box.innerHTML='<div class="desc" style="margin-top:8px">读取云端…</div>';
+  let r=null; try{ const g=await syGet(); r=g.missing?{items:0,topics:0,full:0,logs:0,savedAt:""}:syStats(g.data); }catch(e){ box.innerHTML='<div class="desc" style="margin-top:8px;color:var(--red)">读不到云端（'+esc(e.message||"网络")+'）。</div>'; return; }
+  const l=syStats(db), row=(lab,a,b)=>'<tr><td style="padding:4px 8px;color:var(--text2)">'+lab+'</td><td style="padding:4px 8px'+(a<b?";color:var(--red);font-weight:600":"")+'">'+a+'</td><td style="padding:4px 8px'+(b<a?";color:var(--red);font-weight:600":"")+'">'+b+"</td></tr>";
+  const ft=t=>{ try{ return t?new Date(t).toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}):"—"; }catch(e){ return "—"; } };
+  box.innerHTML='<table style="border-collapse:collapse;font-size:13px;margin-top:10px"><tr><th></th><th style="padding:4px 8px;text-align:left">本机</th><th style="padding:4px 8px;text-align:left">云端</th></tr><tr><td style="padding:4px 8px;color:var(--text2)">保存时间</td><td style="padding:4px 8px">'+ft(l.savedAt)+'</td><td style="padding:4px 8px">'+ft(r.savedAt)+"</td></tr>"+row("话题",l.topics,r.topics)+row("内容条数",l.items,r.items)+row("全文默写次数",l.full,r.full)+row("全部记录",l.logs,r.logs)+'</table><div class="desc" style="margin-top:6px">标红＝这一边少。平时自动同步是按条合并的，两边会自己补齐；只有想整份放弃某一边时才用下载／上传。</div>'; }
+/* ⬇️ 下载：用云端整份替换本机（本机多出来的会丢） */
+async function syForcePull(){ if(!confirm("⬇️ 用云端数据整份替换本机？\n\n本机现在这份会被替换掉，本机有、云端没有的会丢。拿不准就先点「对比两边」。")) return;
+  if(SY.busy) return toast("正在同步中，稍等");
+  SY.busy=true; sySet("下载中…");
+  try{ const g=await syGet(); if(g.missing){ toast("云端还没有数据"); sySet("云端还没有数据"); return; }
+    db=normalizeDb(g.data); IDX=null; persist(); SY.sha=g.sha; sySave(); render(); sySet("已从云端下载 ✓ "+hm(Date.now())); toast("已下载云端数据 ✓"); }
+  catch(e){ sySet("下载出错（"+(e.message||"网络")+"）"); }
+  finally{ SY.busy=false; } }
+/* ⬆️ 上传：用本机整份替换云端（云端多出来的会丢） */
+async function syForcePush(){ if(!confirm("⬆️ 用本机数据整份替换云端？\n\n云端现在那份会被替换掉，云端有、本机没有的会丢。拿不准就先点「对比两边」。")) return;
+  if(SY.busy) return toast("正在同步中，稍等");
+  SY.busy=true; sySet("上传中…");
+  try{ for(let i=0;i<3;i++){ const g=await syGet(); const body={message:"mianshi upload "+new Date().toISOString(),content:b64enc(JSON.stringify(db)),branch:SY.branch}; if(!g.missing) body.sha=g.sha;
+      const r=await syReq("PUT",body); if(r.status===409||r.status===422) continue; if(!r.ok) throw new Error("上传失败 "+r.status);
+      try{ SY.sha=(await r.json()).content.sha; }catch(e){} sySave(); sySet("已上传到云端 ✓ "+hm(Date.now())); toast("已上传到云端 ✓"); return; }
+    throw new Error("云端一直在变，稍后再试"); }
+  catch(e){ sySet("上传出错（"+(e.message||"网络")+"）"); }
+  finally{ SY.busy=false; } }
+function dropSync(){ if(!confirm("断开云同步？本机数据保留，只是不再自动上传/下载。")) return; SY.token=""; SY.sha=""; SY.status=""; sySave(); try{ localStorage.setItem("ms-noadopt","1"); }catch(e){} render(); }
 function exportJson(){ const blob=new Blob([JSON.stringify(db,null,1)],{type:"application/json"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="面试背诵-备份-"+today()+".json"; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500); }
 function importFile(inp){ const f=inp.files&&inp.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ const t=String(r.result||"").replace(/^﻿/,""); if(/^\s*\{/.test(t)){ try{ const d=normalizeDb(JSON.parse(t)); db=normalizeDb(mergeDb(db,d)); save(); render(); toast("已合并导入"); }catch(e){ toast("文件不是有效的 JSON"); } } else importText(t); inp.value=""; }; r.readAsText(f,"utf-8"); }
 function importText(t){
