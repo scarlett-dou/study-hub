@@ -42,7 +42,8 @@
 
   header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
   .brand{font-size:26px;font-weight:700;letter-spacing:-.02em}
-  .nav{display:flex;gap:6px;background:var(--fill);padding:3px;border-radius:11px}
+  .nav{display:flex;gap:6px;background:var(--fill);padding:3px;border-radius:11px;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}.nav::-webkit-scrollbar{display:none}
+  .nav button{flex:none;white-space:nowrap}
   .nav button{border:none;background:transparent;border-radius:8px;padding:7px 15px;font-size:14px;font-weight:500;color:var(--text);transition:.18s}
   .nav button.sel{background:var(--bg2);box-shadow:var(--shadow);font-weight:600}
 
@@ -174,7 +175,7 @@
   <header class="top">
     <div class="brand">面试背诵</div>
     <nav class="nav" id="nav">
-      <button data-t="today">今天</button><button data-t="mods">题型</button><button data-t="log">记录</button><button data-t="set">设置</button>
+      <button data-t="today">进度</button><button data-t="lib">素材</button><button data-t="log">记录</button><button data-t="set">设置</button>
     </nav>
   </header>
   <div id="main"></div>
@@ -187,7 +188,7 @@
 /* ===== 0. 常量 & 状态 =====
    数据只存本 App 自己的键（IndexedDB ms-db / localStorage ms-*），和 Study Hub 互不读写。
    云同步只写 study-data 仓库里的 mianshi/data.json 一个文件；Study Hub 只删它自己清单里的文件，碰不到这里。 */
-const APP_VER="v6 · 2026-11-01";
+const APP_VER="v7 · 2026-11-01";
 const LS_KEY="ms-db";
 const COLORS=["#007aff","#34c759","#ff9500","#ff3b30","#af52de","#5ac8fa","#ff2d55","#a2845e"];
 const DEF_SET={examDate:"",pass:90,good:95,intervals:[1,2,4,7,15,30],numStrict:true,upd:0};
@@ -511,10 +512,17 @@ function todayLists(){
 
 /* ===== 5. 页面框架 ===== */
 $("nav").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; go(b.dataset.t); });
-function go(t){ stopRec(); VIEW.tab=t; if(["today","mods","lib","log","set"].includes(t)) S=null; if(t!=="mods") VIEW.mod=null; render(); window.scrollTo(0,0); }
+function go(t){ stopRec(); if(t.startsWith("cat:")){ VIEW.cat=t.slice(4); VIEW.mod=null; t="mods"; } VIEW.tab=t; if(["today","mods","lib","log","set"].includes(t)) S=null; if(t!=="mods") VIEW.mod=null; render(); window.scrollTo(0,0); }
+function modCat(m){ return m.name.split("·")[0]; }
+function cats(){ const a=[]; MODS.list.forEach(m=>{ const c=modCat(m); if(!a.includes(c)) a.push(c); }); return a; }
+/* 导航按钮跟着题型变：大类有增减时重画 */
+function renderNav(){ const want=["today"].concat(cats().map(c=>"cat:"+c),["lib","log","set"]), nav=$("nav");
+  if(Array.from(nav.children).map(b=>b.dataset.t).join("|")===want.join("|")) return;
+  const lab={today:"进度",lib:"素材",log:"记录",set:"设置"};
+  nav.innerHTML=want.map(t=>'<button data-t="'+esc(t)+'">'+esc(lab[t]||t.slice(4))+"</button>").join(""); }
 function render(){
-  let navT=["learn","test","result","drill","flow","flowres"].includes(VIEW.tab)?((S&&S.from)||"today"):VIEW.tab; if(navT==="lib") navT="mods";
-  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("sel",b.dataset.t===navT));
+  renderNav(); let navT=["learn","test","result","drill","flow","flowres"].includes(VIEW.tab)?((S&&S.from)||"today"):VIEW.tab; if(navT==="mods"){ const m=MODS.list[VIEW.mod]; navT="cat:"+(m?modCat(m):(VIEW.cat||cats()[0]||"")); }
+  document.querySelectorAll("#nav button").forEach(b=>{ const on=b.dataset.t===navT; b.classList.toggle("sel",on); if(on&&b.scrollIntoView&&b.offsetParent) b.parentNode.scrollLeft=Math.max(0,b.offsetLeft-b.parentNode.offsetWidth/2+b.offsetWidth/2); });
   const f={today:vToday,mods:vMods,flow:vFlow,flowres:vFlowRes,lib:vLib,log:vLog,set:vSet,learn:vLearn,test:vTest,result:vResult,drill:vDrill}[VIEW.tab]||vToday;
   $("main").innerHTML=f(); after();
   renderFoot();
@@ -583,7 +591,7 @@ function keepQ(from){ return S&&S.queue&&(S.from==="today"||S.from==="mods")&&(f
 /* ===== 7. 内容库 ===== */
 function vLib(){
   const st=index().st, tps=liveTopics(), items=liveItems();
-  let h='<div class="btnrow" style="margin:0 0 10px"><button class="btn sec sm" onclick="go(\'mods\')">← 题型</button></div><div class="mod-h">素材库</div><div class="mod-sub">所有要背的条目按分类放（人物案例、论证模板、好句……）；各个题型里用到的就是这里的条目，进度共用。一条＝一段要整段背下来的话（一个案例的略版或详版、一套对策、一句金句……）；长的会自动按句号、分号分句，每句单独打分。</div>';
+  let h='<div class="mod-h">素材库</div><div class="mod-sub">所有要背的条目按分类放（人物案例、论证模板、好句……）；各个题型里用到的就是这里的条目，进度共用。'+libFree()+'一条＝一段要整段背下来的话（一个案例的略版或详版、一套对策、一句金句……）；长的会自动按句号、分号分句，每句单独打分。</div>';
   h+='<div class="btnrow" style="margin:0 0 14px"><button class="btn" onclick="editItem()">＋ 新增内容</button><button class="btn sec" onclick="editTopic()">＋ 新增话题</button><button class="btn sec" onclick="go(\'set\');setTimeout(()=>{const e=document.getElementById(\'impBox\');if(e)e.scrollIntoView();},50)">批量导入</button></div>';
   const groups=tps.map(t=>({t,items:items.filter(i=>i.topicId===t.id)}));
   const orphan=items.filter(i=>!tps.some(t=>t.id===i.topicId)); if(orphan.length) groups.push({t:{id:"",name:"未分话题",color:"#8e8e93"},items:orphan});
@@ -775,25 +783,24 @@ function modCtx(id){ const m=MODS.list[VIEW.mod]; if(!m) return ""; const st=m.s
 function vMods(){
   if(VIEW.mod!=null&&MODS.list[VIEW.mod]) return vModDetail(VIEW.mod);
   const st=index().st;
-  let h='<div class="mod-h">题型</div><div class="mod-sub">按题型分，每个题型按答题流程一步步排好要背的话，背的时候顺着流程走，思路也跟着巩固。几个题型共用的案例、好句在最下面的素材库，同一条在哪里背进度都共用。</div>';
-  if(!MODS.list.length) return h+'<div class="ph"><h3>题型还没排好</h3><p>题型由每日复盘 chat 写在电脑上的「背诵源」里（00-题型模块.txt），同步后出现在这里。'+(syOn()?"":"要先在 设置 → 云同步 连上。")+'现在可以先从素材库里背。</p></div>'+libEntry();
-  const groups=[]; MODS.list.forEach((m,i)=>{ const g=m.name.split("·")[0]; let G=groups.find(x=>x.g===g); if(!G){ G={g,ms:[]}; groups.push(G); } G.ms.push(i); });
-  groups.forEach(G=>{ h+='<div class="seclab">'+esc(G.g)+'</div><div class="glist">';
+  if(!MODS.list.length) return '<div class="mod-h">题型</div><div class="ph"><h3>题型还没排好</h3><p>题型由每日复盘 chat 写在电脑上的「背诵源」里（00-题型模块.txt），同步后会出现在上面的导航里。'+(syOn()?"":"要先在 设置 → 云同步 连上。")+'现在可以先从「素材」里背。</p></div>';
+  const cs=cats(); if(!cs.includes(VIEW.cat)) VIEW.cat=cs[0];
+  let h='<div class="mod-h">'+esc(VIEW.cat)+'</div><div class="mod-sub">按考法分，点进去按答题流程一步步背；背的时候顺着流程走，思路也跟着巩固。同一条在哪里背进度都共用。</div>';
+  const groups=[{g:VIEW.cat,ms:MODS.list.map((m,i)=>modCat(m)===VIEW.cat?i:-1).filter(i=>i>=0)}];
+  groups.forEach(G=>{ h+='<div class="glist">';
   G.ms.forEach(i=>{ const m=MODS.list[i]; const all=modAll(m), ss=all.map(it=>st.get(it.id));
     const intro=ss.filter(s=>s.introduced).length, due=all.filter(it=>["learn","due","redo"].includes(catOf(st.get(it.id)))).length;
     const avg=all.length?Math.round(ss.reduce((a,s)=>a+mastPct(s),0)/all.length):0;
     h+='<div class="gi" onclick="openMod('+i+')"><span class="gdot" style="background:'+COLORS[i%COLORS.length]+'"></span><div class="gt"><div class="gtitle">'+esc(m.name.split("·").slice(1).join("·")||m.name)+'</div><div class="gs">'+m.steps.length+" 步 · "+all.length+" 条 · 学会 "+intro+(due?" · 今天要背 "+due:"")+'</div><div class="mbar"><i style="width:'+avg+'%;background:'+COLORS[i%COLORS.length]+'"></i></div></div><span class="chip">'+avg+"%</span></div>"; });
   h+="</div>"; });
-  return h+libEntry();
+  return h;
 }
-/* 素材库入口：各题型共用的案例、好句都在这里，没挂进任何题型的也在这里 */
-function libEntry(){ const used=new Set(); MODS.list.forEach(m=>modAll(m).forEach(it=>used.add(it.id))); const all=liveItems(), free=all.filter(it=>!used.has(it.id)).length;
-  return '<div class="seclab">素材库</div><div class="glist"><div class="gi" onclick="go(\'lib\')"><span class="gdot" style="background:#8e8e93"></span><div class="gt"><div class="gtitle">全部素材（按分类）</div><div class="gs">'+all.length+" 条 · 人物案例、论证模板、好句……"+(MODS.list.length&&free?" · 其中 "+free+" 条还没挂进题型":"")+'</div></div><span class="chip">›</span></div></div>'; }
-function openMod(i){ VIEW.mod=i; VIEW.tab="mods"; S=null; render(); window.scrollTo(0,0); }
+function libFree(){ if(!MODS.list.length) return ""; const used=new Set(); MODS.list.forEach(m=>modAll(m).forEach(it=>used.add(it.id))); const free=liveItems().filter(it=>!used.has(it.id)).length; return free?"其中 "+free+" 条还没挂进任何题型。":""; }
+function openMod(i){ VIEW.mod=i; VIEW.cat=modCat(MODS.list[i]); VIEW.tab="mods"; S=null; render(); window.scrollTo(0,0); }
 function vModDetail(i){
   const m=MODS.list[i], st=index().st, rows=modItems(m), all=modAll(m);
   const need=all.filter(it=>["learn","due","redo"].includes(catOf(st.get(it.id))));
-  let h='<div class="btnrow" style="margin:0 0 10px"><button class="btn sec sm" onclick="VIEW.mod=null;render()">← 全部题型</button></div><div class="mod-h">'+esc(m.name)+'</div>';
+  let h='<div class="btnrow" style="margin:0 0 10px"><button class="btn sec sm" onclick="VIEW.mod=null;render()">← '+esc(modCat(m))+'</button></div><div class="mod-h">'+esc(m.name)+'</div>';
   if(m.idea) h+='<div class="card"><div class="seclab" style="margin-top:0">答题思路</div><div class="srctext" style="font-size:15.5px;line-height:1.8">'+esc(m.idea).replace(/\n/g,"<br>")+"</div></div>";
   h+='<div class="btnrow" style="margin:0 0 14px"><button class="btn" '+(all.length?"":"disabled")+' onclick="modQueue('+i+',false)">'+(need.length?"背这个模块要背的（"+need.length+" 条）":"按流程全部背一遍（"+all.length+" 条）")+'</button>'+(need.length?'<button class="btn sec" onclick="modQueue('+i+',true)">全部背一遍</button>':"")+'<button class="btn sec" '+(all.length?"":"disabled")+' onclick="startFlow('+i+')">整套按流程默写</button></div>';
   rows.forEach(({st:sp,items},k)=>{
