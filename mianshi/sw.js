@@ -1,7 +1,7 @@
 /* 面试背诵 PWA Service Worker（照 Study Hub 的写法：网络优先、3 秒竞速、缓存兜底）
  * 只管 mianshi/ 这一层；只清自己（mianshi-）开头的旧缓存，不碰 Study Hub 的缓存。
  * 学习数据不经过这里（在 IndexedDB/localStorage），缓存的只是应用本身。 */
-const CACHE = "mianshi-pwa-v5";
+const CACHE = "mianshi-pwa-v6";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icon-180.png", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {

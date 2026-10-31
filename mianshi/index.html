@@ -187,7 +187,7 @@
 /* ===== 0. 常量 & 状态 =====
    数据只存本 App 自己的键（IndexedDB ms-db / localStorage ms-*），和 Study Hub 互不读写。
    云同步只写 study-data 仓库里的 mianshi/data.json 一个文件；Study Hub 只删它自己清单里的文件，碰不到这里。 */
-const APP_VER="v5 · 2026-11-01";
+const APP_VER="v6 · 2026-11-01";
 const LS_KEY="ms-db";
 const COLORS=["#007aff","#34c759","#ff9500","#ff3b30","#af52de","#5ac8fa","#ff2d55","#a2845e"];
 const DEF_SET={examDate:"",pass:90,good:95,intervals:[1,2,4,7,15,30],numStrict:true,upd:0};
@@ -798,9 +798,13 @@ function vModDetail(i){
   h+='<div class="btnrow" style="margin:0 0 14px"><button class="btn" '+(all.length?"":"disabled")+' onclick="modQueue('+i+',false)">'+(need.length?"背这个模块要背的（"+need.length+" 条）":"按流程全部背一遍（"+all.length+" 条）")+'</button>'+(need.length?'<button class="btn sec" onclick="modQueue('+i+',true)">全部背一遍</button>':"")+'<button class="btn sec" '+(all.length?"":"disabled")+' onclick="startFlow('+i+')">整套按流程默写</button></div>';
   rows.forEach(({st:sp,items},k)=>{
     h+='<div class="card"><h4><span class="chip b">'+(k+1)+'</span><span style="flex:1">'+esc(sp.name)+"</span>"+(items.length>1?'<span class="chip">'+items.length+" 种说法，任选</span>":"")+"</h4>"+(sp.cue?'<div class="desc" style="margin:-4px 0 8px">'+esc(sp.cue)+"</div>":"");
-    if(!items.length) h+='<div class="empty">这一步引用的条目还没同步到（或已删除）。</div>';
-    items.forEach(it=>{ const s=st.get(it.id), sl=stageLabel(s), c=catOf(s);
+    if(!items.length) h+='<div class="empty">'+(sp.refs.length?"这一步引用的条目还没同步到（或已删除）。":"这一步不用背，临场按提示说。")+'</div>';
+    const rank=it=>{ const c=catOf(st.get(it.id)); return c==="redo"?0:c==="due"?1:c==="learn"?2:3; };
+    const many=items.length>6, open=VIEW.openStep===i+"-"+k, shown=many&&!open?items.slice().sort((a,b)=>rank(a)-rank(b)).slice(0,5):items;
+    if(many) h+='<div class="desc" style="margin:-2px 0 6px">'+items.filter(it=>rank(it)<3).length+" 条要背（待学、到期、重练）"+(open?"":"，先列出 5 条")+"</div>";
+    shown.forEach(it=>{ const s=st.get(it.id), sl=stageLabel(s), c=catOf(s);
       h+='<div class="crow" onclick="itemDetail(\''+it.id+'\',\'mods\')"><div class="ct"><div>'+esc(it.title)+'</div><div class="cs">'+esc(topicOf(it).name)+(it.cue?" · "+esc(it.cue):"")+(s.changed?" · 原文改过":"")+'</div><div class="mbar"><i style="width:'+mastPct(s)+'%;background:'+topicOf(it).color+'"></i></div></div><span class="chip '+(c==="redo"?"r":c==="due"?"b":sl.c)+'">'+(c==="redo"?"重练":c==="due"?"今天复习":sl.t)+"</span></div>"; });
+    if(many) h+='<div class="btnrow" style="margin-top:8px"><button class="btn sec sm" onclick="VIEW.openStep='+(open?"null":"\'"+i+"-"+k+"\'")+';const y=window.scrollY;render();window.scrollTo(0,y)">'+(open?"收起":"展开全部 "+items.length+" 条")+"</button></div>";
     h+="</div>"; });
   return h;
 }
@@ -816,9 +820,9 @@ function vFlow(){
   const m=MODS.list[S.flow.mi]; if(!m) return vMods(); const rows=modItems(m);
   let h='<div class="mod-h">'+esc(m.name)+'</div><div class="mod-sub">整套按流程默写 · 只看步骤和提示，从开头写到结尾。有几种说法的步骤，先选这次用哪一种。空着的步骤不批改、不记成绩。</div>';
   h+='<div class="testbar" style="margin-bottom:10px"><span class="timer" id="tmr">0:00</span></div>';
-  rows.forEach(({st:sp,items},k)=>{ if(!items.length) return; const pid=S.flow.picks[k], it=getItem(pid)||items[0];
+  rows.forEach(({st:sp,items},k)=>{ if(!items.length){ h+='<div class="card"><h4><span class="chip b">'+(k+1)+'</span><span style="flex:1">'+esc(sp.name)+'</span><span class="chip">临场说</span></h4>'+(sp.cue?'<div class="desc">'+esc(sp.cue)+'</div>':'')+'</div>'; return; } const pid=S.flow.picks[k], it=getItem(pid)||items[0];
     h+='<div class="card"><h4><span class="chip b">'+(k+1)+'</span><span style="flex:1">'+esc(sp.name)+"</span></h4>"+(sp.cue?'<div class="desc" style="margin:-4px 0 8px">'+esc(sp.cue)+"</div>":"");
-    if(items.length>1) h+='<div class="field"><select onchange="flowPick('+k+',this.value)">'+items.map(x=>'<option value="'+x.id+'"'+(x.id===it.id?" selected":"")+">"+esc(x.title)+"</option>").join("")+"</select></div>";
+    if(items.length>1) h+='<div class="field">'+(items.length>6?'<label>这一步有 '+items.length+' 种说法，选这次用的</label>':'')+'<select onchange="flowPick('+k+',this.value)">'+items.map(x=>'<option value="'+x.id+'"'+(x.id===it.id?" selected":"")+">"+esc(x.title)+"</option>").join("")+"</select></div>";
     else h+='<div class="prompt"><b>'+esc(it.title)+"</b></div>";
     if(it.cue) h+='<div class="prompt">提示：<b>'+esc(it.cue)+"</b></div>";
     h+='<textarea class="ans" id="fa'+k+'" style="min-height:110px" placeholder="写这一步…"></textarea></div>'; });
