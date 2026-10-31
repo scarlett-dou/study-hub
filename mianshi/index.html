@@ -174,7 +174,7 @@
   <header class="top">
     <div class="brand">面试背诵</div>
     <nav class="nav" id="nav">
-      <button data-t="today">今天</button><button data-t="mods">题型</button><button data-t="lib">内容库</button><button data-t="log">记录</button><button data-t="set">设置</button>
+      <button data-t="today">今天</button><button data-t="mods">题型</button><button data-t="log">记录</button><button data-t="set">设置</button>
     </nav>
   </header>
   <div id="main"></div>
@@ -187,7 +187,7 @@
 /* ===== 0. 常量 & 状态 =====
    数据只存本 App 自己的键（IndexedDB ms-db / localStorage ms-*），和 Study Hub 互不读写。
    云同步只写 study-data 仓库里的 mianshi/data.json 一个文件；Study Hub 只删它自己清单里的文件，碰不到这里。 */
-const APP_VER="v4 · 2026-10-31";
+const APP_VER="v5 · 2026-11-01";
 const LS_KEY="ms-db";
 const COLORS=["#007aff","#34c759","#ff9500","#ff3b30","#af52de","#5ac8fa","#ff2d55","#a2845e"];
 const DEF_SET={examDate:"",pass:90,good:95,intervals:[1,2,4,7,15,30],numStrict:true,upd:0};
@@ -513,7 +513,7 @@ function todayLists(){
 $("nav").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; go(b.dataset.t); });
 function go(t){ stopRec(); VIEW.tab=t; if(["today","mods","lib","log","set"].includes(t)) S=null; if(t!=="mods") VIEW.mod=null; render(); window.scrollTo(0,0); }
 function render(){
-  const navT=["learn","test","result","drill","flow","flowres"].includes(VIEW.tab)?((S&&S.from)||"today"):VIEW.tab;
+  let navT=["learn","test","result","drill","flow","flowres"].includes(VIEW.tab)?((S&&S.from)||"today"):VIEW.tab; if(navT==="lib") navT="mods";
   document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("sel",b.dataset.t===navT));
   const f={today:vToday,mods:vMods,flow:vFlow,flowres:vFlowRes,lib:vLib,log:vLog,set:vSet,learn:vLearn,test:vTest,result:vResult,drill:vDrill}[VIEW.tab]||vToday;
   $("main").innerHTML=f(); after();
@@ -583,7 +583,7 @@ function keepQ(from){ return S&&S.queue&&(S.from==="today"||S.from==="mods")&&(f
 /* ===== 7. 内容库 ===== */
 function vLib(){
   const st=index().st, tps=liveTopics(), items=liveItems();
-  let h='<div class="mod-h">内容库</div><div class="mod-sub">按话题放要背的内容。一条＝一段要整段背下来的话（一个案例的略版或详版、一套对策、一句金句……）；长的会自动按句号、分号分句，每句单独打分。</div>';
+  let h='<div class="btnrow" style="margin:0 0 10px"><button class="btn sec sm" onclick="go(\'mods\')">← 题型</button></div><div class="mod-h">素材库</div><div class="mod-sub">所有要背的条目按分类放（人物案例、论证模板、好句……）；各个题型里用到的就是这里的条目，进度共用。一条＝一段要整段背下来的话（一个案例的略版或详版、一套对策、一句金句……）；长的会自动按句号、分号分句，每句单独打分。</div>';
   h+='<div class="btnrow" style="margin:0 0 14px"><button class="btn" onclick="editItem()">＋ 新增内容</button><button class="btn sec" onclick="editTopic()">＋ 新增话题</button><button class="btn sec" onclick="go(\'set\');setTimeout(()=>{const e=document.getElementById(\'impBox\');if(e)e.scrollIntoView();},50)">批量导入</button></div>';
   const groups=tps.map(t=>({t,items:items.filter(i=>i.topicId===t.id)}));
   const orphan=items.filter(i=>!tps.some(t=>t.id===i.topicId)); if(orphan.length) groups.push({t:{id:"",name:"未分话题",color:"#8e8e93"},items:orphan});
@@ -775,15 +775,20 @@ function modCtx(id){ const m=MODS.list[VIEW.mod]; if(!m) return ""; const st=m.s
 function vMods(){
   if(VIEW.mod!=null&&MODS.list[VIEW.mod]) return vModDetail(VIEW.mod);
   const st=index().st;
-  let h='<div class="mod-h">题型</div><div class="mod-sub">一个题型一个模块，按答题流程一步步排好要背的话。背的时候顺着流程走，思路也跟着巩固；这里背和在内容库里背是同一条，进度共用。</div>';
-  if(!MODS.list.length) return h+'<div class="ph"><h3>还没有题型模块</h3><p>题型模块由 chat 写在电脑上的「背诵源」里（00-题型模块.txt），同步后出现在这里。'+(syOn()?"":"要先在 设置 → 云同步 连上。")+'</p></div>';
-  h+='<div class="glist">';
-  MODS.list.forEach((m,i)=>{ const all=modAll(m), ss=all.map(it=>st.get(it.id));
+  let h='<div class="mod-h">题型</div><div class="mod-sub">按题型分，每个题型按答题流程一步步排好要背的话，背的时候顺着流程走，思路也跟着巩固。几个题型共用的案例、好句在最下面的素材库，同一条在哪里背进度都共用。</div>';
+  if(!MODS.list.length) return h+'<div class="ph"><h3>题型还没排好</h3><p>题型由每日复盘 chat 写在电脑上的「背诵源」里（00-题型模块.txt），同步后出现在这里。'+(syOn()?"":"要先在 设置 → 云同步 连上。")+'现在可以先从素材库里背。</p></div>'+libEntry();
+  const groups=[]; MODS.list.forEach((m,i)=>{ const g=m.name.split("·")[0]; let G=groups.find(x=>x.g===g); if(!G){ G={g,ms:[]}; groups.push(G); } G.ms.push(i); });
+  groups.forEach(G=>{ h+='<div class="seclab">'+esc(G.g)+'</div><div class="glist">';
+  G.ms.forEach(i=>{ const m=MODS.list[i]; const all=modAll(m), ss=all.map(it=>st.get(it.id));
     const intro=ss.filter(s=>s.introduced).length, due=all.filter(it=>["learn","due","redo"].includes(catOf(st.get(it.id)))).length;
     const avg=all.length?Math.round(ss.reduce((a,s)=>a+mastPct(s),0)/all.length):0;
-    h+='<div class="gi" onclick="openMod('+i+')"><span class="gdot" style="background:'+COLORS[i%COLORS.length]+'"></span><div class="gt"><div class="gtitle">'+esc(m.name)+'</div><div class="gs">'+m.steps.length+" 步 · "+all.length+" 条 · 学会 "+intro+(due?" · 今天要背 "+due:"")+'</div><div class="mbar"><i style="width:'+avg+'%;background:'+COLORS[i%COLORS.length]+'"></i></div></div><span class="chip">'+avg+"%</span></div>"; });
-  return h+"</div>";
+    h+='<div class="gi" onclick="openMod('+i+')"><span class="gdot" style="background:'+COLORS[i%COLORS.length]+'"></span><div class="gt"><div class="gtitle">'+esc(m.name.split("·").slice(1).join("·")||m.name)+'</div><div class="gs">'+m.steps.length+" 步 · "+all.length+" 条 · 学会 "+intro+(due?" · 今天要背 "+due:"")+'</div><div class="mbar"><i style="width:'+avg+'%;background:'+COLORS[i%COLORS.length]+'"></i></div></div><span class="chip">'+avg+"%</span></div>"; });
+  h+="</div>"; });
+  return h+libEntry();
 }
+/* 素材库入口：各题型共用的案例、好句都在这里，没挂进任何题型的也在这里 */
+function libEntry(){ const used=new Set(); MODS.list.forEach(m=>modAll(m).forEach(it=>used.add(it.id))); const all=liveItems(), free=all.filter(it=>!used.has(it.id)).length;
+  return '<div class="seclab">素材库</div><div class="glist"><div class="gi" onclick="go(\'lib\')"><span class="gdot" style="background:#8e8e93"></span><div class="gt"><div class="gtitle">全部素材（按分类）</div><div class="gs">'+all.length+" 条 · 人物案例、论证模板、好句……"+(MODS.list.length&&free?" · 其中 "+free+" 条还没挂进题型":"")+'</div></div><span class="chip">›</span></div></div>'; }
 function openMod(i){ VIEW.mod=i; VIEW.tab="mods"; S=null; render(); window.scrollTo(0,0); }
 function vModDetail(i){
   const m=MODS.list[i], st=index().st, rows=modItems(m), all=modAll(m);
@@ -876,7 +881,7 @@ function vSet(){
   h+='<div class="card" id="syCard"><h4>☁️ 云同步（GitHub 自动 · 推荐）</h4><div class="desc" id="syStatus" style="margin-bottom:8px">'+(syOn()?("已连接："+esc(SY.repo)+" · "+esc(SY.status||"打开即自动同步")):"未配置 —— 填入和 Study Hub 一样的<b>私有</b>仓库与令牌，电脑、手机开 App 自动拉、改完自动上传。")+'</div>';
   h+='<div class="frow"><div class="field"><label>数据仓库 owner/repo</label><input type="text" id="syRepo" placeholder="'+SY_DEFAULT_REPO+'" value="'+esc(SY.repo||SY_DEFAULT_REPO)+'"></div><div class="field"><label>访问令牌 Token</label><input type="password" id="syTok" autocomplete="off" placeholder="'+(SY.token?"（已保存，换令牌再粘贴）":"github_pat_… / ghp_…")+'" value=""></div></div>';
   h+='<div class="btnrow"><button class="btn sm" onclick="saveSync()">连接 / 保存</button>'+(syOn()?'<button class="btn sm sec" onclick="syncNow()">立即同步</button><button class="btn sm sec" onclick="syPeekCmp()">🔄 对比两边</button><button class="btn sm sec" onclick="syForcePull()">⬇️ 下载到本机</button><button class="btn sm sec" onclick="syForcePush()">⬆️ 上传到云端</button><button class="btn sm warn" onclick="dropSync()">断开</button>':"")+'</div><div id="syCmp"></div>';
-  h+='<div class="desc" style="margin-top:10px"><b>背诵源：</b>'+(db.srcAt?'已更新到 '+esc(new Date(db.srcAt).toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}))+' 拉到的那份（'+db.srcN+' 条）':'还没拉到')+'。各 chat 定稿后自动出现在内容库，改过原文的条目会回到「到期复习」。</div>';
+  h+='<div class="desc" style="margin-top:10px"><b>背诵源：</b>'+(db.srcAt?'已更新到 '+esc(new Date(db.srcAt).toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}))+' 拉到的那份（'+db.srcN+' 条）':'还没拉到')+'。各 chat 定稿后自动出现在题型和素材库里，改过原文的条目会回到「到期复习」。</div>';
   h+='<div class="desc" style="margin-top:10px">和 Study Hub 用<b>同一个仓库、同一个令牌</b>（在 Study Hub 的 设置 → 云同步 里就是那个），但只读写里面单独的 <b>mianshi/data.json</b>，两个 App 的数据互不影响。<br>平时不用点按钮：打开 App 自动拉，背完自动上传（几秒后），切到后台前也会传一次。两台设备各背各的，合起来按条合并，不会整份互相盖掉。<br>令牌只存在本机，不写进同步数据。iPhone「添加到主屏幕」后的 App 和 Safari 是两份存储，要在主屏幕 App 里再填一次。</div></div>';
   h+='<div class="card" id="impBox"><h4>导入 / 导出</h4><div class="desc" style="margin-bottom:10px">导入是<b>合并</b>，不会覆盖已有内容和记录。可以导入本 App 导出的 .json，也可以导入按下面格式写的文字（.txt 或直接粘贴）：<br><code># 话题名</code> 一行开新话题；<code>## 标题 | 提示</code> 一行开一条内容（提示可省）；下面的行都是这条的正文，到下一个 ## 或 # 为止。</div>';
   h+='<textarea id="impTxt" style="min-height:120px" placeholder="# 楷模案例&#10;## 毛相林（略版） | 实干为民 · 排比第一句&#10;无论是重庆巫山下庄村的老支书毛相林……"></textarea>';
