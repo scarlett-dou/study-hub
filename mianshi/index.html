@@ -201,7 +201,7 @@
 /* ===== 0. 常量 & 状态 =====
    数据只存本 App 自己的键（IndexedDB ms-db / localStorage ms-*），和 Study Hub 互不读写。
    云同步只写 study-data 仓库里的 mianshi/data.json 一个文件；Study Hub 只删它自己清单里的文件，碰不到这里。 */
-const APP_VER="v8 · 2026-11-01";
+const APP_VER="v9 · 2026-11-06";
 const LS_KEY="ms-db";
 const COLORS=["#007aff","#34c759","#ff9500","#ff3b30","#af52de","#5ac8fa","#ff2d55","#a2845e"];
 const DEF_SET={examDate:"",pass:90,good:95,intervals:[1,2,4,7,15,30],numStrict:true,upd:0};
@@ -297,7 +297,7 @@ async function syGet(){ /* → {data,sha} / {missing:true}；出错抛异常 */
 }
 /* 背诵源：各 chat 的定稿写在电脑上的「背诵源」文件夹，脚本生成 mianshi/content.json 推到同一个仓库。
    这里按「话题／标题」对上条目（id 由它算出，几台设备算出来一样）：新的加进来、改了的更新、背诵源里删掉的移除。
-   App 里手动改过的条目，背诵源那条下次变了才会被盖掉；在 App 里删掉的不会被加回来。 */
+   App 里手动改过的条目，背诵源那条下次变了才会被盖掉；在 App 里删掉的不会被加回来；背诵源删掉又写回来的会恢复，进度还在。 */
 function modsLoad(){ try{ const t=localStorage.getItem("ms-mods"); return t?JSON.parse(t):{sha:"",list:[]}; }catch(e){ return {sha:"",list:[]}; } }
 let MODS=modsLoad();
 async function syPullSource(){
@@ -318,7 +318,8 @@ function applySource(c){
   (c.items||[]).forEach((x,i)=>{ const id="s-"+hashStr(x.sid), sh=hashStr([x.topic,x.title,x.cue,x.text,(x.ex||[]).join("\n")].join("0001")); ids.add(id);
     const it=db.items.find(o=>o.id===id), topicId=tids.get(x.topic)||("s-t"+hashStr(x.topic));
     if(!it){ db.items.push(touch({id,topicId,title:x.title,cue:x.cue,text:x.text,ex:x.ex||[],day:td,order:i+1,src:1,srcH:sh})); return; }
-    if(it.srcH===sh&&it.order===i+1) return;
+    const back=it.del&&!it.userDel; if(back) it.del=false;
+    if(!back&&it.srcH===sh&&it.order===i+1) return;
     if(it.srcH!==sh){ if(it.text!==x.text&&!it.del) it.chg=td; Object.assign(it,{topicId,title:x.title,cue:x.cue,text:x.text,ex:x.ex||[],srcH:sh}); }
     it.order=i+1; touch(it); });
   db.items.forEach(it=>{ if(it.src&&!it.del&&!ids.has(it.id)){ it.del=true; touch(it); } });
@@ -524,7 +525,7 @@ function todayLists(){
 }
 
 /* ===== 5. 页面框架 ===== */
-$("nav").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; go(b.dataset.t); });
+$("nav").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; if(b.dataset.t==="lib") VIEW.topic=null; go(b.dataset.t); });
 function go(t){ stopRec(); if(t.startsWith("cat:")){ VIEW.cat=t.slice(4); VIEW.mod=null; t="mods"; } VIEW.tab=t; if(["today","mods","lib","log","set"].includes(t)) S=null; if(t!=="mods") VIEW.mod=null; render(); window.scrollTo(0,0); }
 function modCat(m){ return m.name.split("·")[0]; }
 function cats(){ const a=[]; MODS.list.forEach(m=>{ const c=modCat(m); if(!a.includes(c)) a.push(c); }); return a; }
@@ -534,7 +535,9 @@ function renderNav(){ const want=["today"].concat(cats().map(c=>"cat:"+c),["lib"
   const lab={today:"进度",lib:"素材",log:"记录",set:"设置"};
   nav.innerHTML=want.map(t=>'<button data-t="'+esc(t)+'">'+esc(lab[t]||t.slice(4))+"</button>").join(""); }
 function render(){
-  renderNav(); let navT=["learn","test","result","drill","flow","flowres"].includes(VIEW.tab)?((S&&S.from)||"today"):VIEW.tab; if(navT==="mods"){ const m=MODS.list[VIEW.mod]; navT="cat:"+(m?modCat(m):(VIEW.cat||cats()[0]||"")); }
+  /* 题型模块都从背诵源删掉了：题型页、整套默写不留空页，落到素材 */
+  if(!MODS.list.length&&["mods","flow","flowres"].includes(VIEW.tab)){ VIEW.tab="lib"; VIEW.mod=null; S=null; toast("题型模块已经删了，要背的都在素材里",3500); }
+  renderNav(); let navT=["learn","test","result","drill","flow","flowres"].includes(VIEW.tab)?((S&&S.from)||"today"):VIEW.tab; if(navT==="mods"){ const m=MODS.list[VIEW.mod]; navT=MODS.list.length?"cat:"+(m?modCat(m):(VIEW.cat||cats()[0]||"")):"lib"; }
   document.querySelectorAll("#nav button").forEach(b=>{ const on=b.dataset.t===navT; b.classList.toggle("sel",on); if(on&&b.scrollIntoView&&b.offsetParent) b.parentNode.scrollLeft=Math.max(0,b.offsetLeft-b.parentNode.offsetWidth/2+b.offsetWidth/2); });
   const f={today:vToday,mods:vMods,flow:vFlow,flowres:vFlowRes,lib:vLib,log:vLog,set:vSet,learn:vLearn,test:vTest,result:vResult,drill:vDrill}[VIEW.tab]||vToday;
   $("main").innerHTML=f(); after();
@@ -589,7 +592,7 @@ function nextInQueue(first){
   const fr=S.from||"today";
   /* 跳过已经过了的（比如在详情里单独背过、或已删除）；题型模块里「全部背一遍」不跳 */
   while(S.qi<S.queue.length){ const it=getItem(S.queue[S.qi]), c=it?catOf(index().st.get(it.id)):"none"; if(it&&(S.all||(c!=="done"&&c!=="none"))) break; S.qi++; }
-  if(S.qi>=S.queue.length&&fr==="mods"){ toast("这个模块背完一遍了 ✓",3000); return go("mods"); }
+  if(S.qi>=S.queue.length&&(fr==="mods"||fr==="lib")){ toast(fr==="lib"?"这个话题背完一遍了 ✓":"这个模块背完一遍了 ✓",3000); return go(fr); }
   if(S.qi>=S.queue.length){ const left=todayLists(); toast(left.redo.length+left.learn.length?"这一轮走完了，还有没过的在「重练」「待学」里":"今天这一轮背完了 ✓",3500); return go("today"); }
   const it=getItem(S.queue[S.qi]), s=index().st.get(it.id);
   if(!s.introduced) startLearn(it.id,fr);
@@ -598,28 +601,42 @@ function nextInQueue(first){
 }
 function getItem(id){ return db.items.find(i=>i.id===id&&!i.del); }
 function inQueue(){ return !!(S&&S.queue&&S.qi<S.queue.length); }
-/* 从「今天」的队列进来的，换页时把队列带着走；从内容库、记录进来的不带 */
-function keepQ(from){ return S&&S.queue&&(S.from==="today"||S.from==="mods")&&(from==null||from===S.from)?{queue:S.queue,qi:S.qi,all:S.all}:{}; }
+/* 从队列进来的（今天、题型模块、话题页），换页时把队列带着走；从单条、记录进来的不带 */
+function keepQ(from){ return S&&S.queue&&(from==null||from===S.from)?{queue:S.queue,qi:S.qi,all:S.all}:{}; }
 
 /* ===== 7. 内容库 ===== */
-function vLib(){
-  const st=index().st, tps=liveTopics(), items=liveItems();
-  let h='<div class="mod-h">素材库</div><div class="mod-sub">所有要背的条目按分类放（人物案例、论证模板、好句……）；各个题型里用到的就是这里的条目，进度共用。'+libFree()+'一条＝一段要整段背下来的话（一个案例的略版或详版、一套对策、一句金句……）；长的会自动按句号、分号分句，每句单独打分。</div>';
-  h+='<div class="btnrow" style="margin:0 0 14px"><button class="btn" onclick="editItem()">＋ 新增内容</button><button class="btn sec" onclick="editTopic()">＋ 新增话题</button><button class="btn sec" onclick="go(\'set\');setTimeout(()=>{const e=document.getElementById(\'impBox\');if(e)e.scrollIntoView();},50)">批量导入</button></div>';
+function topicGroups(){
+  const tps=liveTopics(), items=liveItems().sort((a,b)=>(a.order||0)-(b.order||0)||(a.id<b.id?-1:1));
   const groups=tps.map(t=>({t,items:items.filter(i=>i.topicId===t.id)}));
   const orphan=items.filter(i=>!tps.some(t=>t.id===i.topicId)); if(orphan.length) groups.push({t:{id:"",name:"未分话题",color:"#8e8e93"},items:orphan});
+  return groups;
+}
+function vLib(){
+  const st=index().st, groups=topicGroups();
+  const cur=VIEW.topic!=null&&groups.find(g=>g.t.id===VIEW.topic); if(cur) return vTopic(cur); VIEW.topic=null;
+  let h='<div class="mod-h">素材库</div><div class="mod-sub">所有要背的条目按话题放，点进去可以切换学习模式和背诵模式。'+libFree()+'一条＝一段要整段背下来的话（一个案例的略版或详版、一套对策、一句金句……）；长的会自动按句号、分号分句，每句单独打分。</div>';
+  h+='<div class="btnrow" style="margin:0 0 14px"><button class="btn" onclick="editItem()">＋ 新增内容</button><button class="btn sec" onclick="editTopic()">＋ 新增话题</button><button class="btn sec" onclick="go(\'set\');setTimeout(()=>{const e=document.getElementById(\'impBox\');if(e)e.scrollIntoView();},50)">批量导入</button></div>';
   if(!groups.length) return h+'<div class="ph"><h3>还没有话题</h3><p>先建一个话题，比如「楷模案例」「社会现象·对策」「观点类·怎么办」。</p></div>';
-  groups.forEach(g=>{
-    const ss=g.items.map(i=>st.get(i.id)), m=ss.filter(s=>s.mastered).length, intro=ss.filter(s=>s.introduced).length;
-    const avg=g.items.length?Math.round(ss.reduce((a,s)=>a+mastPct(s),0)/g.items.length):0;
-    h+='<div class="card"><h4><span class="gdot" style="background:'+g.t.color+'"></span><span style="flex:1">'+esc(g.t.name)+'</span><span class="chip">'+g.items.length+" 条 · 学会 "+intro+" · 掌握 "+m+"</span>"+(g.t.id?'<button class="btn sec sm" onclick="editTopic(\''+g.t.id+'\')">改</button>':"")+'</h4>';
-    h+='<div class="mbar" style="max-width:none;margin:-4px 0 6px"><i style="width:'+avg+'%;background:'+g.t.color+'"></i></div>';
-    if(!g.items.length) h+='<div class="empty">这个话题下还没有内容。</div>';
-    g.items.sort((a,b)=>(a.order||0)-(b.order||0)||(a.id<b.id?-1:1)).forEach(it=>{ const s=st.get(it.id), sl=stageLabel(s);
-      h+='<div class="crow" onclick="itemDetail(\''+it.id+'\',\'lib\')"><div class="ct"><div>'+esc(it.title)+'</div><div class="cs">'+(s.last!=null?"上次 "+s.last+" 分 · ":"")+(s.introduced?"下次 "+md(s.due):"还没学会")+(s.changed?" · 原文改过，要再默一遍":"")+(s.weak.length?" · 薄弱句 "+s.weak.length:"")+" · "+tokenize(it.text).length+' 字</div><div class="mbar"><i style="width:'+mastPct(s)+'%;background:'+g.t.color+'"></i></div></div><span class="chip '+sl.c+'">'+sl.t+"</span></div>"; });
+  /* 话题名「·」前面是大类（人物案例、开头结尾、好句……），同一类放一组 */
+  const bigOf=n=>n.includes("·")?n.split("·")[0]:"", bigs=[]; groups.forEach(g=>{ const b=bigOf(g.t.name); if(!bigs.includes(b)) bigs.push(b); });
+  bigs.forEach(b=>{ h+=(b?'<div class="seclab">'+esc(b)+"</div>":"")+'<div class="glist">';
+    groups.filter(g=>bigOf(g.t.name)===b).forEach(g=>{
+      const ss=g.items.map(i=>st.get(i.id)), intro=ss.filter(s=>s.introduced).length, due=g.items.filter(it=>["learn","due","redo"].includes(catOf(st.get(it.id)))).length;
+      const avg=g.items.length?Math.round(ss.reduce((a,s)=>a+mastPct(s),0)/g.items.length):0;
+      h+='<div class="gi" onclick="openTopic(\''+g.t.id+'\')"><span class="gdot" style="background:'+g.t.color+'"></span><div class="gt"><div class="gtitle">'+esc(b?g.t.name.slice(b.length+1):g.t.name)+'</div><div class="gs">'+g.items.length+" 条 · 学会 "+intro+(due?" · 今天要背 "+due:"")+'</div><div class="mbar"><i style="width:'+avg+'%;background:'+g.t.color+'"></i></div></div><span class="chip">'+avg+"%</span></div>"; });
     h+="</div>"; });
   return h;
 }
+function openTopic(id){ if(VIEW.topic!==id){ VIEW.inl={}; VIEW.dr={}; } VIEW.topic=id; render(); window.scrollTo(0,0); }
+function vTopic(g){
+  const st=index().st, ss=g.items.map(i=>st.get(i.id)), need=g.items.filter(it=>["learn","due","redo"].includes(catOf(st.get(it.id))));
+  let h='<div class="btnrow" style="margin:0 0 10px"><button class="btn sec sm" onclick="VIEW.topic=null;render();window.scrollTo(0,0)">← 素材</button>'+(g.t.id?'<button class="btn sec sm" onclick="editTopic(\''+g.t.id+'\')">改话题</button>':"")+'</div><div class="mod-h">'+esc(g.t.name)+'</div><div class="mod-sub">'+g.items.length+" 条 · 学会 "+ss.filter(s=>s.introduced).length+" · 掌握 "+ss.filter(s=>s.mastered).length+"</div>";
+  if(!g.items.length) return h+'<div class="ph"><h3>这个话题下还没有内容</h3></div>';
+  h+='<div class="btnrow" style="margin:0 0 14px"><button class="btn" onclick="topicQueue(\''+g.t.id+'\',false)">'+(need.length?"背这个话题要背的（"+need.length+" 条）":"全部背一遍（"+g.items.length+" 条）")+"</button>"+(need.length&&need.length<g.items.length?'<button class="btn sec" onclick="topicQueue(\''+g.t.id+'\',true)">全部背一遍</button>':"")+"</div>"+modeBar();
+  return h+'<div class="card">'+g.items.map(it=>modRow(it,"t-"+it.id,"lib")).join("")+"</div>";
+}
+function topicQueue(id,all){ const g=topicGroups().find(x=>x.t.id===id), st=index().st; if(!g) return; const ids=g.items.map(it=>it.id), need=ids.filter(x=>["learn","due","redo"].includes(catOf(st.get(x))));
+  S={from:"lib",queue:(all||!need.length)?ids:need,qi:0,all:all||!need.length}; nextInQueue(true); }
 function itemDetail(id,from){
   const it=getItem(id); if(!it) return; const s=index().st.get(id), tp=topicOf(it), sl=stageLabel(s);
   const logs=(index().by.get(id)||[]).filter(l=>l.kind==="full").slice(-12).reverse();
@@ -654,7 +671,7 @@ function saveItem(id){
   else db.items.push(touch({id:uid(),topicId:tid,title,cue:$("eCue").value.trim(),text,day:today(),order:nextOrder(db.items)}));
   save(); closeModal(); render(); toast(id?"已保存":"已加入，今天在「待学」里");
 }
-function delItem(id){ if(!confirm("删除这条内容？它的默写记录也一起不再显示。")) return; const it=getItem(id); it.del=true; touch(it); save(); closeModal(); render(); }
+function delItem(id){ if(!confirm("删除这条内容？它的默写记录也一起不再显示。")) return; const it=getItem(id); it.del=true; it.userDel=1; touch(it); save(); closeModal(); render(); }
 function nextOrder(arr){ return arr.reduce((m,o)=>Math.max(m,o.order||0),0)+1; }
 function newTopic(name){ const t=touch({id:uid(),name,color:COLORS[liveTopics().length%COLORS.length],order:nextOrder(db.topics)}); db.topics.push(t); return t; }
 function editTopic(id){
@@ -676,7 +693,7 @@ function startLearn(id,from){ stopRec(); S=Object.assign({},keepQ(from),{itemId:
 function vLearn(){
   const it=getItem(S.itemId); if(!it) return vToday(); const s=index().st.get(it.id), tp=topicOf(it);
   const segs=splitSegs(it.text);
-  let h='<div class="mod-h">'+esc(it.title)+'</div><div class="mod-sub">'+(inQueue()&&S.from==="mods"?esc(modCtx(it.id))+"第 "+(S.qi+1)+"/"+S.queue.length+" 条 · ":"")+esc(tp.name)+(it.cue?" · 提示："+esc(it.cue):"")+" · 共 "+segs.length+" 句、"+tokenize(it.text).length+" 字"+(s.weak.length?" · 橙色是上次没过的句子":"")+"</div>";
+  let h='<div class="mod-h">'+esc(it.title)+'</div><div class="mod-sub">'+(inQueue()&&S.from!=="today"?esc(modCtx(it.id))+"第 "+(S.qi+1)+"/"+S.queue.length+" 条 · ":"")+esc(tp.name)+(it.cue?" · 提示："+esc(it.cue):"")+" · 共 "+segs.length+" 句、"+tokenize(it.text).length+" 字"+(s.weak.length?" · 橙色是上次没过的句子":"")+"</div>";
   h+='<div class="card">'+segs.map((g,i)=>'<div class="sline'+(s.weak.includes(i)?" weak":"")+'"><div class="sn"><span class="chip">'+(i+1)+'</span></div><div class="sx">'+esc(g.text)+"</div></div>").join("")+exHtml(it)+"</div>";
   h+='<div class="btnrow"><button class="btn" onclick="startTest(\''+it.id+'\',\'full\')">背好了，全文默写</button><button class="btn sec" onclick="startTest(\''+it.id+'\',\'hint\')">先用首字提示默一遍</button>'+(s.weak.length?'<button class="btn sec" onclick="startDrill(\''+it.id+'\')">只练错句</button>':"")+'<button class="btn sec" onclick="leave()">返回</button></div>';
   h+='<div class="desc" style="margin-top:10px">首字提示＝每个小分句只给第一个字，适合刚背完的第一遍；不算复习成绩。新内容要不看原文全文默写过 '+db.settings.pass+" 分才算学会，明天开始复习。</div>";
@@ -696,7 +713,7 @@ function vTest(){
   const it=getItem(S.itemId); if(!it) return vToday(); const tp=topicOf(it);
   const isSeg=S.seg!=null, segs=splitSegs(it.text), sg=isSeg?segs[S.seg]:null;
   const modeLab=isSeg?"单句练习 · 第 "+(S.seg+1)+"/"+segs.length+" 句":S.mode==="hint"?"首字提示默写（不算复习成绩）":"全文默写（不看原文）";
-  let h='<div class="mod-h">'+esc(it.title)+'</div><div class="mod-sub">'+esc(tp.name)+" · "+modeLab+(inQueue()?(S.from==="mods"?" · "+esc(modCtx(it.id)):" · 今天")+"第 "+(S.qi+1)+"/"+S.queue.length+" 条":"")+"</div>";
+  let h='<div class="mod-h">'+esc(it.title)+'</div><div class="mod-sub">'+esc(tp.name)+" · "+modeLab+(inQueue()?(S.from==="mods"?" · "+esc(modCtx(it.id)):S.from==="lib"?" · ":" · 今天")+"第 "+(S.qi+1)+"/"+S.queue.length+" 条":"")+"</div>";
   h+='<div class="card">';
   if(it.cue) h+='<div class="prompt">提示：<b>'+esc(it.cue)+"</b></div>";
   if(isSeg){ h+=(S.seg>0?'<div class="ctx">上一句：'+esc(segs[S.seg-1].text)+"</div>":'<div class="ctx">这是第一句。</div>'); }
@@ -706,13 +723,13 @@ function vTest(){
   h+='<textarea class="ans" id="ans" placeholder="'+(isSeg?"写这一句…":"从头写到尾，标点可以不写…")+'"></textarea><div class="interim" id="interim"></div>';
   h+='<div class="btnrow"><button class="btn" onclick="submitTest()">交卷批改</button><button class="btn sec" onclick="leave()">返回</button>'+(inQueue()?'<button class="btn sec" onclick="nextInQueue()">跳过这条</button>':"")+"</div>";
   h+='<div class="desc" style="margin-top:10px">'+(SR?"「🎤 开始说」用浏览器自带识别（有的网络下用不了）；":"")+"更稳的是手机键盘上的🎤语音输入。人名、数字被识别错了，交卷后点红字可以改判成「算对」。</div></div>";
-  afterFns.push(()=>{ const a=$("ans"); if(S.draft) a.value=S.draft; a.addEventListener("input",()=>{ S.draft=a.value; }); clearInterval(S.tick); S.tick=setInterval(()=>{ const el=$("tmr"); if(!el){ clearInterval(S.tick); return; } el.textContent=fmtDur((Date.now()-S.t0)/1000); },1000); });
+  afterFns.push(()=>{ const a=$("ans"); if(S.draft) a.value=S.draft; a.addEventListener("input",()=>{ S.draft=a.value; }); clearInterval(S.tick); const tk=setInterval(()=>{ const el=$("tmr"); if(!el||!S){ clearInterval(tk); return; } el.textContent=fmtDur((Date.now()-S.t0)/1000); },1000); S.tick=tk; });
   return h;
 }
 function peek(){ if(!S.peek&&!confirm("看原文后这次默写只算练习，不算复习成绩。确定看？")) return; S.peek=true; const v=$("ans").value; render(); $("ans").value=v; S.draft=v; }
 function submitTest(){
   stopRec();
-  const it=getItem(S.itemId), input=$("ans").value; if(!tokenize(input).length) return toast("还什么都没写");
+  const it=getItem(S.itemId), input=$("ans").value; if(!it){ toast("这条已经从背诵源删掉了"); return leave(); } if(!tokenize(input).length) return toast("还什么都没写");
   const isSeg=S.seg!=null, segs=splitSegs(it.text);
   const text=isSeg?segs[S.seg].text:it.text;
   const g=grade(text,input,[]);
@@ -725,7 +742,7 @@ function submitTest(){
 }
 function showLog(id){ const l=db.logs.find(x=>x.id===id); if(!l) return; const from=["today","lib","log"].includes(VIEW.tab)?VIEW.tab:(S&&S.from)||"today"; S=Object.assign({},keepQ(from),{from,itemId:l.itemId,logId:id,view:true}); VIEW.tab="result"; render(); window.scrollTo(0,0); }
 function vResult(){
-  const l=db.logs.find(x=>x.id===S.logId), it=l&&db.items.find(i=>i.id===l.itemId); if(!l||!it) return vToday();
+  const l=db.logs.find(x=>x.id===S.logId), it=l&&getItem(l.itemId); if(!l||!it) return vToday();
   const text=l.kind==="seg"?(splitSegs(it.text)[l.segIdx]||{}).text||"":it.text;
   if(l.th&&l.th!==hashStr(it.text)) return '<div class="mod-h">'+esc(it.title)+'</div><div class="card"><div class="empty">这条默写之后原文改过，没法再按原文逐字对照。当时 '+l.score+' 分。</div><div class="seclab">当时写的</div><div class="yours">'+esc(l.input)+'</div></div><div class="btnrow"><button class="btn sec" onclick="leave()">返回</button></div>';
   const g=grade(text,l.input,l.ov), P=db.settings.pass, G=db.settings.good, s=index().st.get(it.id);
@@ -771,7 +788,7 @@ function afterSeg(log){
   nextSeg(); openModal(h);
 }
 function vDrill(){
-  const it=getItem(S.itemId);
+  const it=getItem(S.itemId); if(!it) return vToday();
   return '<div class="ph"><h3>错句都过了 ✓</h3><p>现在不看原文把「'+esc(it.title)+'」全文默一遍，过了合格线今天这条才算完。</p><div class="btnrow" style="justify-content:center;margin-top:16px"><button class="btn" onclick="startTest(\''+it.id+'\',\'full\')">全文默写</button><button class="btn sec" onclick="leave()">返回</button></div></div>';
 }
 
@@ -789,14 +806,14 @@ function toggleRec(){ if(REC){ stopRec(); return; }
 }
 function stopRec(){ if(REC){ REC.want=false; try{ REC.stop(); }catch(e){} REC=null; const b=$("micBtn"); if(b) b.textContent="🎤 开始说"; const im=$("interim"); if(im) im.textContent=""; } }
 
-/* ===== 8.7 题型模块：一个题型＝一套答题流程，每一步挂要背的条目（引用内容库里的条目，进度共用） ===== */
+/* ===== 8.7 题型模块：一个题型＝一套答题流程，每一步挂要背的条目（引用内容库里的条目，进度共用）
+   11-06 起模块都从背诵源删了，框架类不再进系统；没有模块时导航不出现题型，这段代码留着不用 ===== */
 function modItems(m){ return m.steps.map(st=>({st,items:st.refs.map(sid=>getItem("s-"+hashStr(sid))).filter(Boolean)})); }
 function modAll(m){ const seen=new Set(); return [].concat(...modItems(m).map(x=>x.items)).filter(it=>!seen.has(it.id)&&seen.add(it.id)); }
 function modCtx(id){ const m=MODS.list[VIEW.mod]; if(!m) return ""; const st=m.steps.find(x=>x.refs.some(sid=>"s-"+hashStr(sid)===id)); return st?m.name+" · "+st.name+" · ":""; }
 function vMods(){
   if(VIEW.mod!=null&&MODS.list[VIEW.mod]) return vModDetail(VIEW.mod);
   const st=index().st;
-  if(!MODS.list.length) return '<div class="mod-h">题型</div><div class="ph"><h3>题型还没排好</h3><p>题型由每日复盘 chat 写在电脑上的「背诵源」里（00-题型模块.txt），同步后会出现在上面的导航里。'+(syOn()?"":"要先在 设置 → 云同步 连上。")+'现在可以先从「素材」里背。</p></div>';
   const cs=cats(); if(!cs.includes(VIEW.cat)) VIEW.cat=cs[0];
   let h='<div class="mod-h">'+esc(VIEW.cat)+'</div><div class="mod-sub">按考法分，点进去按答题流程一步步背；背的时候顺着流程走，思路也跟着巩固。同一条在哪里背进度都共用。</div>';
   const groups=[{g:VIEW.cat,ms:MODS.list.map((m,i)=>modCat(m)===VIEW.cat?i:-1).filter(i=>i>=0)}];
@@ -816,9 +833,7 @@ function vModDetail(i){
   let h='<div class="btnrow" style="margin:0 0 10px"><button class="btn sec sm" onclick="VIEW.mod=null;render()">← '+esc(modCat(m))+'</button></div><div class="mod-h">'+esc(m.name)+'</div>';
   if(m.idea) h+='<div class="card"><div class="seclab" style="margin-top:0">答题思路</div><div class="srctext" style="font-size:15.5px;line-height:1.8">'+esc(m.idea).replace(/\n/g,"<br>")+"</div></div>";
   h+='<div class="btnrow" style="margin:0 0 14px"><button class="btn" '+(all.length?"":"disabled")+' onclick="modQueue('+i+',false)">'+(need.length?"背这个模块要背的（"+need.length+" 条）":"按流程全部背一遍（"+all.length+" 条）")+'</button>'+(need.length?'<button class="btn sec" onclick="modQueue('+i+',true)">全部背一遍</button>':"")+'<button class="btn sec" '+(all.length?"":"disabled")+' onclick="startFlow('+i+')">整套按流程默写</button></div>';
-  const mode=modeGet();
-  h+='<div class="mseg"><button class="'+(mode==="learn"?"sel":"")+'" onclick="modeSet(\'learn\')">学习模式</button><button class="'+(mode==="recite"?"sel":"")+'" onclick="modeSet(\'recite\')">背诵模式</button></div><div class="desc" style="margin:-6px 0 12px">'+(mode==="learn"?"学习模式：每条直接显示原文和示例，先看懂、读熟。":"背诵模式：每条下面一个框，不看原文写出来，按回车对照答案（要换行用 Shift＋回车）。分数记进这一条的复习进度。")+"</div>";
-  if(mode==="recite") afterFns.push(attachRecite,attachOv);
+  h+=modeBar();
   rows.forEach(({st:sp,items},k)=>{
     h+='<div class="card"><h4><span class="chip b">'+(k+1)+'</span><span style="flex:1">'+esc(sp.name)+"</span>"+(items.length>1?'<span class="chip">'+items.length+" 种说法，任选</span>":"")+"</h4>"+(sp.cue?'<div class="desc" style="margin:-4px 0 8px">'+esc(sp.cue)+"</div>":"");
     if(!items.length) h+='<div class="empty">'+(sp.refs.length?"这一步引用的条目还没同步到（或已删除）。":"这一步不用背，临场按提示说。")+'</div>';
@@ -832,9 +847,12 @@ function vModDetail(i){
 }
 function modeGet(){ if(!VIEW.mode){ try{ VIEW.mode=localStorage.getItem("ms-mode")||"learn"; }catch(e){ VIEW.mode="learn"; } } return VIEW.mode; }
 function modeSet(m){ VIEW.mode=m; try{ localStorage.setItem("ms-mode",m); }catch(e){} const y=window.scrollY; render(); window.scrollTo(0,y); }
-function modRow(it,key){ const st=index().st, s=st.get(it.id), sl=stageLabel(s), c=catOf(s), mode=modeGet();
-  let h='<div class="irow"><div class="ih" onclick="itemDetail(\''+it.id+'\',\'mods\')"><span class="t">'+esc(it.title)+'</span><span class="chip '+(c==="redo"?"r":c==="due"?"b":sl.c)+'">'+(c==="redo"?"重练":c==="due"?"今天复习":sl.t)+"</span></div>";
-  h+='<div class="cs">'+esc(topicOf(it).name)+(it.cue?" · "+esc(it.cue):"")+(s.changed?" · 原文改过":"")+"</div>";
+/* 学习／背诵模式的切换条：题型模块详情和话题页共用 */
+function modeBar(){ const mode=modeGet(); if(mode==="recite") afterFns.push(attachRecite,attachOv);
+  return '<div class="mseg"><button class="'+(mode==="learn"?"sel":"")+'" onclick="modeSet(\'learn\')">学习模式</button><button class="'+(mode==="recite"?"sel":"")+'" onclick="modeSet(\'recite\')">背诵模式</button></div><div class="desc" style="margin:-6px 0 12px">'+(mode==="learn"?"学习模式：每条直接显示原文和示例，先看懂、读熟。":"背诵模式：每条下面一个框，不看原文写出来，按回车对照答案（要换行用 Shift＋回车）。分数记进这一条的复习进度。")+"</div>"; }
+function modRow(it,key,from){ const st=index().st, s=st.get(it.id), sl=stageLabel(s), c=catOf(s), mode=modeGet(); from=from||"mods";
+  let h='<div class="irow"><div class="ih" onclick="itemDetail(\''+it.id+'\',\''+from+'\')"><span class="t">'+esc(it.title)+'</span><span class="chip '+(c==="redo"?"r":c==="due"?"b":sl.c)+'">'+(c==="redo"?"重练":c==="due"?"今天复习":sl.t)+"</span></div>";
+  h+='<div class="cs">'+[from==="lib"?"":topicOf(it).name,it.cue,s.changed?"原文改过":""].filter(Boolean).map(esc).join(" · ")+"</div>";
   if(mode==="learn") return h+'<div class="itx">'+esc(it.text).replace(/\n/g,"<br>")+"</div>"+exHtml(it)+"</div>";
   VIEW.inl=VIEW.inl||{}; VIEW.dr=VIEW.dr||{};
   const r=VIEW.inl[key], l=r&&db.logs.find(z=>z.id===r);
@@ -869,7 +887,7 @@ function vFlow(){
     h+='<textarea class="ans" id="fa'+k+'" style="min-height:110px" placeholder="写这一步…"></textarea></div>'; });
   h+='<div class="btnrow"><button class="btn" onclick="submitFlow()">交卷批改</button><button class="btn sec" onclick="leave()">返回</button></div>';
   afterFns.push(()=>{ rows.forEach((r,k)=>{ const a=$("fa"+k); if(!a) return; if(S.drafts[k]) a.value=S.drafts[k]; a.addEventListener("input",()=>{ S.drafts[k]=a.value; }); });
-    clearInterval(S.tick); S.tick=setInterval(()=>{ const el=$("tmr"); if(!el){ clearInterval(S.tick); return; } el.textContent=fmtDur((Date.now()-S.t0)/1000); },1000); });
+    clearInterval(S.tick); const tk=setInterval(()=>{ const el=$("tmr"); if(!el||!S){ clearInterval(tk); return; } el.textContent=fmtDur((Date.now()-S.t0)/1000); },1000); S.tick=tk; });
   return h;
 }
 function flowPick(k,id){ S.flow.picks[k]=id; S.drafts[k]=""; const y=window.scrollY; render(); window.scrollTo(0,y); }
@@ -884,7 +902,7 @@ function submitFlow(){
   clearInterval(S.tick); save(); S.flowRes=res; VIEW.tab="flowres"; render(); window.scrollTo(0,0);
 }
 function vFlowRes(){
-  const m=MODS.list[S.flow.mi], rows=modItems(m), P=db.settings.pass; if(!m||!S.flowRes) return vMods();
+  const m=MODS.list[S.flow.mi]; if(!m||!S.flowRes) return vMods(); const rows=modItems(m), P=db.settings.pass;
   const done=S.flowRes.filter(x=>!x.skip).map(x=>db.logs.find(l=>l.id===x.logId)).filter(Boolean);
   const avg=done.length?Math.floor(done.reduce((a,l)=>a+l.score,0)/done.length):0;
   let h='<div class="mod-h">'+esc(m.name)+'</div><div class="mod-sub">整套按流程默写 · 批改结果 · 每一步的分数分别记进那一条的复习进度</div>';
@@ -931,7 +949,7 @@ function vSet(){
   h+='<div class="card" id="syCard"><h4>☁️ 云同步（GitHub 自动 · 推荐）</h4><div class="desc" id="syStatus" style="margin-bottom:8px">'+(syOn()?("已连接："+esc(SY.repo)+" · "+esc(SY.status||"打开即自动同步")):"未配置 —— 填入和 Study Hub 一样的<b>私有</b>仓库与令牌，电脑、手机开 App 自动拉、改完自动上传。")+'</div>';
   h+='<div class="frow"><div class="field"><label>数据仓库 owner/repo</label><input type="text" id="syRepo" placeholder="'+SY_DEFAULT_REPO+'" value="'+esc(SY.repo||SY_DEFAULT_REPO)+'"></div><div class="field"><label>访问令牌 Token</label><input type="password" id="syTok" autocomplete="off" placeholder="'+(SY.token?"（已保存，换令牌再粘贴）":"github_pat_… / ghp_…")+'" value=""></div></div>';
   h+='<div class="btnrow"><button class="btn sm" onclick="saveSync()">连接 / 保存</button>'+(syOn()?'<button class="btn sm sec" onclick="syncNow()">立即同步</button><button class="btn sm sec" onclick="syPeekCmp()">🔄 对比两边</button><button class="btn sm sec" onclick="syForcePull()">⬇️ 下载到本机</button><button class="btn sm sec" onclick="syForcePush()">⬆️ 上传到云端</button><button class="btn sm warn" onclick="dropSync()">断开</button>':"")+'</div><div id="syCmp"></div>';
-  h+='<div class="desc" style="margin-top:10px"><b>背诵源：</b>'+(db.srcAt?'已更新到 '+esc(new Date(db.srcAt).toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}))+' 拉到的那份（'+db.srcN+' 条）':'还没拉到')+'。各 chat 定稿后自动出现在题型和素材库里，改过原文的条目会回到「到期复习」。</div>';
+  h+='<div class="desc" style="margin-top:10px"><b>背诵源：</b>'+(db.srcAt?'已更新到 '+esc(new Date(db.srcAt).toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}))+' 拉到的那份（'+db.srcN+' 条）':'还没拉到')+'。各 chat 定稿后自动出现在素材库里，改过原文的条目会回到「到期复习」。</div>';
   h+='<div class="desc" style="margin-top:10px">和 Study Hub 用<b>同一个仓库、同一个令牌</b>（在 Study Hub 的 设置 → 云同步 里就是那个），但只读写里面单独的 <b>mianshi/data.json</b>，两个 App 的数据互不影响。<br>平时不用点按钮：打开 App 自动拉，背完自动上传（几秒后），切到后台前也会传一次。两台设备各背各的，合起来按条合并，不会整份互相盖掉。<br>令牌只存在本机，不写进同步数据。iPhone「添加到主屏幕」后的 App 和 Safari 是两份存储，要在主屏幕 App 里再填一次。</div></div>';
   h+='<div class="card" id="impBox"><h4>导入 / 导出</h4><div class="desc" style="margin-bottom:10px">导入是<b>合并</b>，不会覆盖已有内容和记录。可以导入本 App 导出的 .json，也可以导入按下面格式写的文字（.txt 或直接粘贴）：<br><code># 话题名</code> 一行开新话题；<code>## 标题 | 提示</code> 一行开一条内容（提示可省）；下面的行都是这条的正文，到下一个 ## 或 # 为止。</div>';
   h+='<textarea id="impTxt" style="min-height:120px" placeholder="# 楷模案例&#10;## 毛相林（略版） | 实干为民 · 排比第一句&#10;无论是重庆巫山下庄村的老支书毛相林……"></textarea>';
