@@ -188,7 +188,7 @@
   <header class="top">
     <div class="brand">面试背诵</div>
     <nav class="nav" id="nav">
-      <button data-t="today">进度</button><button data-t="lib">素材</button><button data-t="log">记录</button><button data-t="set">设置</button>
+      <button data-t="plan">今天</button><button data-t="today">进度</button><button data-t="lib">素材</button><button data-t="log">记录</button><button data-t="set">设置</button>
     </nav>
   </header>
   <div id="main"></div>
@@ -201,12 +201,13 @@
 /* ===== 0. 常量 & 状态 =====
    数据只存本 App 自己的键（IndexedDB ms-db / localStorage ms-*），和 Study Hub 互不读写。
    云同步只写 study-data 仓库里的 mianshi/data.json 一个文件；Study Hub 只删它自己清单里的文件，碰不到这里。 */
-const APP_VER="v9 · 2026-11-06";
+const APP_VER="v10 · 2026-11-08";
 const LS_KEY="ms-db";
 const COLORS=["#007aff","#34c759","#ff9500","#ff3b30","#af52de","#5ac8fa","#ff2d55","#a2845e"];
 const DEF_SET={examDate:"",pass:90,good:95,intervals:[1,2,4,7,15,30],numStrict:true,upd:0};
+const EXAM_DEFAULT="2026-11-13";   /* 设置里没填面试日期时按这天算（成都公告 11-13～15 的第一天） */
 let db=null;
-const VIEW={tab:"today"};
+const VIEW={tab:"plan"};
 let S=null; /* 正在背 / 默写的会话 */
 
 /* ===== 1. 工具 ===== */
@@ -463,7 +464,7 @@ function diffHtml(text,input,g,seg){
      并且当天进「重练」——先只练错句（每句都要过合格线），再全文默写一遍过了才算完。
    ·看过原文再写的、首字提示写的、单句练习，都不算复习成绩（不改进度），只有不看原文的全文默写算。
    ·提前（没到期）默写：没过就退回 1 天，过了不改进度。
-   ·设了面试日期：复习日不会排到面试前一天之后，保证面试前每条都再过一遍。 */
+   ·复习日不会排到面试前一天之后，保证面试前每条都再过一遍（设置里没填面试日期就按 EXAM_DEFAULT 算）。 */
 let IDX=null;
 function index(){
   if(IDX) return IDX;
@@ -472,8 +473,9 @@ function index(){
   const st=new Map(); db.items.forEach(it=>{ if(!it.del) st.set(it.id,replay(it,by.get(it.id)||[])); });
   IDX={by,st}; return IDX;
 }
+function examDay(){ return db.settings.examDate||EXAM_DEFAULT; }
 function replay(it,logs){
-  const P=db.settings.pass, G=db.settings.good, INT=db.settings.intervals, ex=db.settings.examDate, td=today();
+  const P=db.settings.pass, G=db.settings.good, INT=db.settings.intervals, ex=examDay(), td=today();
   let introduced=false,introDay=null,k=0,due=null,last=null,lastFull=null,mastered=false;
   const days=new Map(); logs.forEach(l=>{ if(l.kind!=="full") return; if(!days.has(l.day)) days.set(l.day,[]); days.get(l.day).push(l); });
   const cap=(d,nd)=>{ if(ex&&d<addDays(ex,-1)&&nd>addDays(ex,-1)) return addDays(ex,-1); return nd; };
@@ -526,20 +528,20 @@ function todayLists(){
 
 /* ===== 5. 页面框架 ===== */
 $("nav").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; if(b.dataset.t==="lib") VIEW.topic=null; go(b.dataset.t); });
-function go(t){ stopRec(); if(t.startsWith("cat:")){ VIEW.cat=t.slice(4); VIEW.mod=null; t="mods"; } VIEW.tab=t; if(["today","mods","lib","log","set"].includes(t)) S=null; if(t!=="mods") VIEW.mod=null; render(); window.scrollTo(0,0); }
+function go(t){ stopRec(); if(t.startsWith("cat:")){ VIEW.cat=t.slice(4); VIEW.mod=null; t="mods"; } VIEW.tab=t; if(["plan","today","mods","lib","log","set"].includes(t)) S=null; if(t!=="mods") VIEW.mod=null; render(); window.scrollTo(0,0); }
 function modCat(m){ return m.name.split("·")[0]; }
 function cats(){ const a=[]; MODS.list.forEach(m=>{ const c=modCat(m); if(!a.includes(c)) a.push(c); }); return a; }
 /* 导航按钮跟着题型变：大类有增减时重画 */
-function renderNav(){ const want=["today"].concat(cats().map(c=>"cat:"+c),["lib","log","set"]), nav=$("nav");
+function renderNav(){ const want=["plan","today"].concat(cats().map(c=>"cat:"+c),["lib","log","set"]), nav=$("nav");
   if(Array.from(nav.children).map(b=>b.dataset.t).join("|")===want.join("|")) return;
-  const lab={today:"进度",lib:"素材",log:"记录",set:"设置"};
+  const lab={plan:"今天",today:"进度",lib:"素材",log:"记录",set:"设置"};
   nav.innerHTML=want.map(t=>'<button data-t="'+esc(t)+'">'+esc(lab[t]||t.slice(4))+"</button>").join(""); }
 function render(){
   /* 题型模块都从背诵源删掉了：题型页、整套默写不留空页，落到素材 */
   if(!MODS.list.length&&["mods","flow","flowres"].includes(VIEW.tab)){ VIEW.tab="lib"; VIEW.mod=null; S=null; toast("题型模块已经删了，要背的都在素材里",3500); }
   renderNav(); let navT=["learn","test","result","drill","flow","flowres"].includes(VIEW.tab)?((S&&S.from)||"today"):VIEW.tab; if(navT==="mods"){ const m=MODS.list[VIEW.mod]; navT=MODS.list.length?"cat:"+(m?modCat(m):(VIEW.cat||cats()[0]||"")):"lib"; }
   document.querySelectorAll("#nav button").forEach(b=>{ const on=b.dataset.t===navT; b.classList.toggle("sel",on); if(on&&b.scrollIntoView&&b.offsetParent) b.parentNode.scrollLeft=Math.max(0,b.offsetLeft-b.parentNode.offsetWidth/2+b.offsetWidth/2); });
-  const f={today:vToday,mods:vMods,flow:vFlow,flowres:vFlowRes,lib:vLib,log:vLog,set:vSet,learn:vLearn,test:vTest,result:vResult,drill:vDrill}[VIEW.tab]||vToday;
+  const f={plan:vPlan,today:vToday,mods:vMods,flow:vFlow,flowres:vFlowRes,lib:vLib,log:vLog,set:vSet,learn:vLearn,test:vTest,result:vResult,drill:vDrill}[VIEW.tab]||vPlan;
   $("main").innerHTML=f(); after();
   renderFoot();
 }
@@ -547,19 +549,19 @@ function renderFoot(){ $("foot").textContent="面试背诵 "+APP_VER+(syOn()?" �
 let afterFns=[]; function after(){ const a=afterFns; afterFns=[]; a.forEach(f=>f()); }
 
 /* ===== 6. 今天 ===== */
+function syncCard(){ if(!syOn()) return '<div class="card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid var(--orange)"><div style="flex:1;min-width:200px;font-size:13.5px">☁️ 还没连云同步：这台设备上背的只存在本机，换设备看不到。</div><button class="btn sm" onclick="goSync()">去连接</button></div>'; if(/未同步|出错|无效/.test(SY.status)) return '<div class="card" style="font-size:13.5px;color:var(--red);border:1px solid var(--red)">☁️ '+esc(SY.status)+'</div>'; return ""; }
 function vToday(){
-  const L=todayLists(), st=index().st, ex=db.settings.examDate, td=today();
+  const L=todayLists(), st=index().st, ex=examDay(), td=today();
   const total=L.redo.length+L.due.length+L.learn.length+L.done.length, done=L.done.length;
   let h='<div class="countdown">';
   if(ex){ const n=dayDiff(td,ex); h+='<div class="big">'+(n>=0?n:0)+'<small>天</small></div>'; }
-  h+='<div class="meta"><div class="lab">'+(ex?"距面试 "+md(ex):"今天 "+md(td))+'</div><div class="ttl">今日背诵 '+done+" / "+total+'</div><div class="pbar"><i style="width:'+(total?Math.round(100*done/total):0)+'%"></i></div><div class="pn">'+(total===done&&total?"今天的都过了 ✓":"重练 "+L.redo.length+" · 待复习 "+L.due.length+" · 待学 "+L.learn.length)+"</div></div></div>";
-  if(!syOn()) h+='<div class="card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid var(--orange)"><div style="flex:1;min-width:200px;font-size:13.5px">☁️ 还没连云同步：这台设备上背的只存在本机，换设备看不到。</div><button class="btn sm" onclick="goSync()">去连接</button></div>';
-  else if(/未同步|出错|无效/.test(SY.status)) h+='<div class="card" style="font-size:13.5px;color:var(--red);border:1px solid var(--red)">☁️ '+esc(SY.status)+'</div>';
+  h+='<div class="meta"><div class="lab">'+(ex?"距面试 "+md(ex):"今天 "+md(td))+'</div><div class="ttl">全部内容 '+done+" / "+total+'</div><div class="pbar"><i style="width:'+(total?Math.round(100*done/total):0)+'%"></i></div><div class="pn">'+(total===done&&total?"今天的都过了 ✓":"重练 "+L.redo.length+" · 待复习 "+L.due.length+" · 待学 "+L.learn.length)+"</div></div></div>";
+  h+=syncCard();
   h+='<div class="cal"><div class="calleft"><div class="panel">';
   h+='<div class="tiles"><div class="tile"><div class="n" style="color:var(--red)">'+L.redo.length+'</div><div class="l">重练</div></div><div class="tile"><div class="n" style="color:var(--tint)">'+L.due.length+'</div><div class="l">待复习</div></div><div class="tile"><div class="n" style="color:var(--orange)">'+L.learn.length+'</div><div class="l">待学</div></div><div class="tile"><div class="n" style="color:var(--green)">'+L.done.length+'</div><div class="l">今日已过</div></div></div>';
   const left=L.redo.length+L.due.length+L.learn.length;
-  h+='<div class="btnrow" style="margin-top:12px"><button class="btn" '+(left?"":"disabled")+' onclick="startQueue()">'+(left?"开始今天的背诵（"+left+" 条）":"今天没有要背的了")+'</button><button class="btn sec" onclick="editItem()">＋ 新增内容</button></div>';
-  h+='<div class="desc" style="margin-top:10px">顺序：先重练（今天没过的），再到期复习，最后新学。复习时不看原文，直接全文默写；默写可以打字，也可以用手机输入法上的🎤语音输入。</div></div>';
+  h+='<div class="btnrow" style="margin-top:12px"><button class="btn" '+(left?"":"disabled")+' onclick="startQueue()">'+(left?"按顺序全部背（"+left+" 条）":"没有要背的了")+'</button><button class="btn sec" onclick="editItem()">＋ 新增内容</button></div>';
+  h+='<div class="desc" style="margin-top:10px">这里是全部内容，每天该背什么看「今天」页。顺序：先重练（今天没过的），再到期复习，最后新学。复习时不看原文，直接全文默写；默写可以打字，也可以用手机输入法上的🎤语音输入。</div></div>';
   const sec=(lab,arr,kind)=>{ if(!arr.length) return ""; let s='<div class="seclab">'+lab+'</div><div class="glist">';
     arr.forEach(it=>{ const x=st.get(it.id), tp=topicOf(it), sl=stageLabel(x);
       let sub=esc(tp.name)+" · "+sl.t;
@@ -581,6 +583,54 @@ function upcoming(){
   if(!ks.length) return "";
   return '<div class="seclab">接下来几天要复习</div><div class="hist">'+ks.map(k=>'<span class="chip">'+md(k)+" · "+cnt[k]+" 条</span>").join("")+"</div>";
 }
+/* ===== 6.5 今天的任务 =====
+   背诵源里提示开头写「必背·11-08」＝排在这一天背；没写日期的是「有时间再背」。
+   ·新背：排在今天的；排在前几天还没背会的也在这里，排在最前面。
+   ·复习：排到今天为止的必背里，今天开始时已经到期的，到期算法还是第 4 节那套。
+   ·多背：有时间再背的、排在后面几天的，自己点「今天多背」（记在条目的 moreDay 上，跟条目一起同步，只当天有效）；背过的之后到期也列在这里。
+   列表按「今天开始时」的状态分（不算今天的记录），背完不会从列表里消失，进度才准；今天过没过看 todayPass。 */
+function tagOf(it){ const m=(it.cue||"").match(/^必背[·・.\s]*(\d{1,2})[-－/.月](\d{1,2})/); return m?today().slice(0,5)+pad(+m[1])+"-"+pad(+m[2]):""; }
+function cueShort(it){ return (it.cue||"").replace(/^(必背[·・.\s]*\d{1,2}[-－/.月]\d{1,2}日?|有时间再背)[\s·・｜|；;，,：:]*/,""); }
+function planLists(){
+  const I=index(); if(I.plan) return I.plan;
+  const td=today(), L={review:[],learn:[],more:[]};
+  liveItems().map(it=>({it,tag:tagOf(it)})).sort((a,b)=>(a.tag<b.tag?-1:a.tag>b.tag?1:0)||(a.it.order||0)-(b.it.order||0)).forEach(({it,tag})=>{
+    const s0=replay(it,(I.by.get(it.id)||[]).filter(l=>l.day<td));
+    if(tag&&tag<=td){ if(!s0.introduced) L.learn.push(it); else if(s0.due<=td) L.review.push(it); }
+    else if(it.moreDay===td||(s0.introduced&&s0.due<=td)) L.more.push(it); });
+  return I.plan=L;
+}
+function planRest(){ const L=planLists(), st=index().st; return L.review.concat(L.learn,L.more).filter(i=>!st.get(i.id).todayPass).length; }
+function planQueue(which){ const L=planLists(), st=index().st, ids=(which?L[which]:L.review.concat(L.learn,L.more)).filter(i=>!st.get(i.id).todayPass).map(i=>i.id);
+  if(!ids.length) return; S={from:"plan",queue:ids,qi:0}; nextInQueue(true); }
+function planMore(id,on){ const it=getItem(id); if(!it) return; it.moreDay=on?today():""; touch(it); save(); const y=window.scrollY; render(); window.scrollTo(0,y); toast(on?"加进今天的列表了":"取消了"); }
+function planOpen(id){ VIEW.moreOpen=VIEW.moreOpen===id?null:id; const y=window.scrollY; render(); window.scrollTo(0,y); }
+function vPlan(){
+  if(!liveItems().length) return vToday();
+  const L=planLists(), st=index().st, td=today(), ex=examDay(), n=dayDiff(td,ex), ok=a=>a.filter(i=>st.get(i.id).todayPass).length;
+  const nR=ok(L.review), nL=ok(L.learn), nM=ok(L.more), need=L.review.length+L.learn.length, total=need+L.more.length, left=total-nR-nL-nM, back=L.learn.filter(i=>tagOf(i)<td).length;
+  const nums=[[L.review,nR,"复习"],[L.learn,nL,"新背"],[L.more,nM,"多背"]].filter(x=>x[0].length).map(x=>x[2]+" "+x[1]+"/"+x[0].length).join(" · ");
+  const note=!need?"今天没有要背的必背，学有余力可以在下面多背":nR+nL===need?"今天的必背都过了 ✓ 学有余力可以在下面多背":!L.learn.length?"今天只复习":back?"新背里有 "+back+" 条是前几天没背完的":"";
+  let h='<div class="countdown">'+(n>=0?'<div class="big">'+n+"<small>天</small></div>":"")+'<div class="meta"><div class="lab">'+(n>=0?"距面试 "+md(ex)+" · ":"")+"今天 "+md(td)+'</div><div class="ttl">'+esc(nums||"今天没有任务")+'</div><div class="pbar"><i style="width:'+(total?Math.round(100*(total-left)/total):0)+'%"></i></div>'+(note?'<div class="pn">'+esc(note)+"</div>":"")+"</div></div>";
+  h+=syncCard();
+  h+='<div class="btnrow" style="margin:0 0 6px"><button class="btn" '+(left?"":"disabled")+' onclick="planQueue()">'+(left?"开始今天的任务（"+left+" 条）":"今天的任务都完成了")+'</button><button class="btn sec" onclick="document.getElementById(\'morePick\').scrollIntoView()">学有余力，多背几条</button></div><div class="desc" style="margin-bottom:12px">顺序：先复习，再新背，最后多背；每块也能单独开始。复习不看原文，全文默写过 '+db.settings.pass+" 分才算过。</div>"+modeBar();
+  const sec=(lab,arr,kind,empty)=>{ if(!arr.length) return empty?'<div class="card"><h4>'+lab+'</h4><div class="empty">'+empty+"</div></div>":""; const k=ok(arr);
+    return '<div class="card"><h4><span style="flex:1">'+lab+'</span><span class="chip'+(k===arr.length?" g":"")+'">'+k+" / "+arr.length+"</span>"+(k<arr.length?'<button class="btn sec sm" onclick="planQueue(\''+kind+'\')">开始</button>':"")+"</h4>"+arr.map(it=>modRow(it,"p-"+it.id,"plan")).join("")+"</div>"; };
+  return h+sec("今日复习",L.review,"review","今天没有到期要复习的。")+sec("今日新背",L.learn,"learn","今天没有新背。")+sec("今天多背",L.more,"more")+morePicker();
+}
+function morePicker(){
+  const td=today(), st=index().st, gs=topicGroups().map(g=>({id:g.t.id,name:g.t.name,color:g.t.color,items:g.items.filter(i=>!tagOf(i))})).filter(g=>g.items.length);
+  const early=liveItems().filter(i=>tagOf(i)>td).sort((a,b)=>tagOf(a)<tagOf(b)?-1:tagOf(a)>tagOf(b)?1:(a.order||0)-(b.order||0));
+  if(early.length) gs.unshift({id:"__early",name:"排在后面几天的必背（可以提前背）",color:"#ff9500",items:early});
+  if(!gs.length) return "";
+  let h='<div class="seclab" id="morePick">学有余力：选几条今天多背</div><div class="desc" style="margin-bottom:8px">点条目名字看原文，点「今天多背」加进今天的列表，只当天有效。背过的会记住，之后到期也列在「今天多背」里。</div><div class="glist">';
+  gs.forEach(g=>{ const open=VIEW.moreOpen===g.id, learned=g.items.filter(i=>st.get(i.id).introduced).length;
+    h+='<div class="gi" onclick="planOpen(\''+g.id+'\')"><span class="gdot" style="background:'+g.color+'"></span><div class="gt"><div class="gtitle">'+esc(g.name)+'</div><div class="gs">'+g.items.length+" 条"+(learned?" · 背过 "+learned:"")+'</div></div><span class="chip">'+(open?"收起":"展开")+"</span></div>";
+    if(open) h+='<div style="padding:0 13px 4px">'+g.items.map(it=>{ const s=st.get(it.id), sl=stageLabel(s), tg=tagOf(it);
+      return '<div class="crow"><div class="ct" onclick="itemDetail(\''+it.id+'\',\'plan\')"><div>'+esc(it.title)+'</div><div class="cs">'+[tg?"排在 "+md(tg):"",cueShort(it),tokenize(it.text).length+" 字"].filter(Boolean).map(esc).join(" · ")+"</div></div>"+(s.introduced?'<span class="chip '+sl.c+'">'+sl.t+"</span>":it.moreDay===td?'<button class="btn sec sm" onclick="planMore(\''+it.id+'\',false)">取消</button>':'<button class="btn sm" onclick="planMore(\''+it.id+'\',true)">今天多背</button>')+"</div>"; }).join("")+"</div>";
+  });
+  return h+"</div>";
+}
 function startQueue(){
   const L=todayLists();
   S={from:"today",queue:L.redo.concat(L.due,L.learn).map(i=>i.id),qi:0};
@@ -592,6 +642,7 @@ function nextInQueue(first){
   const fr=S.from||"today";
   /* 跳过已经过了的（比如在详情里单独背过、或已删除）；题型模块里「全部背一遍」不跳 */
   while(S.qi<S.queue.length){ const it=getItem(S.queue[S.qi]), c=it?catOf(index().st.get(it.id)):"none"; if(it&&(S.all||(c!=="done"&&c!=="none"))) break; S.qi++; }
+  if(S.qi>=S.queue.length&&fr==="plan"){ const rest=planRest(); toast(rest?"这一轮走完了，还有 "+rest+" 条没过":"今天的任务都完成了 ✓",3500); return go("plan"); }
   if(S.qi>=S.queue.length&&(fr==="mods"||fr==="lib")){ toast(fr==="lib"?"这个话题背完一遍了 ✓":"这个模块背完一遍了 ✓",3000); return go(fr); }
   if(S.qi>=S.queue.length){ const left=todayLists(); toast(left.redo.length+left.learn.length?"这一轮走完了，还有没过的在「重练」「待学」里":"今天这一轮背完了 ✓",3500); return go("today"); }
   const it=getItem(S.queue[S.qi]), s=index().st.get(it.id);
@@ -740,7 +791,7 @@ function submitTest(){
   if(isSeg){ S.lastSeg=log.id; return afterSeg(log); }
   S.logId=log.id; VIEW.tab="result"; render(); window.scrollTo(0,0);
 }
-function showLog(id){ const l=db.logs.find(x=>x.id===id); if(!l) return; const from=["today","lib","log"].includes(VIEW.tab)?VIEW.tab:(S&&S.from)||"today"; S=Object.assign({},keepQ(from),{from,itemId:l.itemId,logId:id,view:true}); VIEW.tab="result"; render(); window.scrollTo(0,0); }
+function showLog(id){ const l=db.logs.find(x=>x.id===id); if(!l) return; const from=["plan","today","lib","log"].includes(VIEW.tab)?VIEW.tab:(S&&S.from)||"today"; S=Object.assign({},keepQ(from),{from,itemId:l.itemId,logId:id,view:true}); VIEW.tab="result"; render(); window.scrollTo(0,0); }
 function vResult(){
   const l=db.logs.find(x=>x.id===S.logId), it=l&&getItem(l.itemId); if(!l||!it) return vToday();
   const text=l.kind==="seg"?(splitSegs(it.text)[l.segIdx]||{}).text||"":it.text;
@@ -851,8 +902,9 @@ function modeSet(m){ VIEW.mode=m; try{ localStorage.setItem("ms-mode",m); }catch
 function modeBar(){ const mode=modeGet(); if(mode==="recite") afterFns.push(attachRecite,attachOv);
   return '<div class="mseg"><button class="'+(mode==="learn"?"sel":"")+'" onclick="modeSet(\'learn\')">学习模式</button><button class="'+(mode==="recite"?"sel":"")+'" onclick="modeSet(\'recite\')">背诵模式</button></div><div class="desc" style="margin:-6px 0 12px">'+(mode==="learn"?"学习模式：每条直接显示原文和示例，先看懂、读熟。":"背诵模式：每条下面一个框，不看原文写出来，按回车对照答案（要换行用 Shift＋回车）。分数记进这一条的复习进度。")+"</div>"; }
 function modRow(it,key,from){ const st=index().st, s=st.get(it.id), sl=stageLabel(s), c=catOf(s), mode=modeGet(); from=from||"mods";
-  let h='<div class="irow"><div class="ih" onclick="itemDetail(\''+it.id+'\',\''+from+'\')"><span class="t">'+esc(it.title)+'</span><span class="chip '+(c==="redo"?"r":c==="due"?"b":sl.c)+'">'+(c==="redo"?"重练":c==="due"?"今天复习":sl.t)+"</span></div>";
-  h+='<div class="cs">'+[from==="lib"?"":topicOf(it).name,it.cue,s.changed?"原文改过":""].filter(Boolean).map(esc).join(" · ")+"</div>";
+  const plan=from==="plan", ok=plan&&c==="done", tg=plan?tagOf(it):"";
+  let h='<div class="irow"><div class="ih" onclick="itemDetail(\''+it.id+'\',\''+from+'\')"><span class="t">'+esc(it.title)+'</span><span class="chip '+(ok?"g":c==="redo"?"r":c==="due"?"b":sl.c)+'">'+(ok?"今天已过 ✓":c==="redo"?"重练":c==="due"?"今天复习":sl.t)+"</span></div>";
+  h+='<div class="cs">'+[tg&&tg<today()&&!s.introduced?md(tg)+" 没背完":"",from==="lib"?"":topicOf(it).name,plan?cueShort(it):it.cue,s.changed?"原文改过":""].filter(Boolean).map(esc).join(" · ")+"</div>";
   if(mode==="learn") return h+'<div class="itx">'+esc(it.text).replace(/\n/g,"<br>")+"</div>"+exHtml(it)+"</div>";
   VIEW.inl=VIEW.inl||{}; VIEW.dr=VIEW.dr||{};
   const r=VIEW.inl[key], l=r&&db.logs.find(z=>z.id===r);
@@ -943,7 +995,7 @@ function goSync(){ go("set"); setTimeout(()=>{ const e=$("syCard"); if(e) e.scro
 function vSet(){
   const st=db.settings;
   let h='<div class="mod-h">设置</div><div class="mod-sub">复习规则、云同步、导入导出。</div>';
-  h+='<div class="card"><h4>面试与评分</h4><div class="frow"><div class="field"><label>面试日期</label><input type="date" id="sEx" value="'+esc(st.examDate)+'"><div class="desc">填了就有倒计时，复习也不会排到面试前一天之后。</div></div><div class="field"><label>合格线</label><input type="number" id="sP" value="'+st.pass+'" min="50" max="100"><div class="desc">每句、全文都要到这个分才算过。</div></div><div class="field"><label>优秀线</label><input type="number" id="sG" value="'+st.good+'" min="50" max="100"><div class="desc">复习时第一次就到这个分，间隔才升一档。</div></div></div>';
+  h+='<div class="card"><h4>面试与评分</h4><div class="frow"><div class="field"><label>面试日期</label><input type="date" id="sEx" value="'+esc(st.examDate)+'"><div class="desc">不填按 11-13 算。复习不会排到面试前一天之后，面试前每条都再过一遍。</div></div><div class="field"><label>合格线</label><input type="number" id="sP" value="'+st.pass+'" min="50" max="100"><div class="desc">每句、全文都要到这个分才算过。</div></div><div class="field"><label>优秀线</label><input type="number" id="sG" value="'+st.good+'" min="50" max="100"><div class="desc">复习时第一次就到这个分，间隔才升一档。</div></div></div>';
   h+='<div class="field"><label style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="sN"'+(st.numStrict!==false?" checked":"")+'> 数字错了，这句不算过</label><div class="desc">年份、人数、金额这类数字是事实，说错比漏几个字严重。勾上时，一句里只要有数字错或漏，这句分数压到合格线以下。</div></div>';
   h+='<div class="field"><label>复习间隔（天）</label><input type="text" id="sI" value="'+st.intervals.join(",")+'"><div class="desc">用逗号隔开，默认 1,2,4,7,15,30。</div></div><button class="btn sm" onclick="saveSet()">保存</button></div>';
   h+='<div class="card" id="syCard"><h4>☁️ 云同步（GitHub 自动 · 推荐）</h4><div class="desc" id="syStatus" style="margin-bottom:8px">'+(syOn()?("已连接："+esc(SY.repo)+" · "+esc(SY.status||"打开即自动同步")):"未配置 —— 填入和 Study Hub 一样的<b>私有</b>仓库与令牌，电脑、手机开 App 自动拉、改完自动上传。")+'</div>';
@@ -1015,7 +1067,7 @@ function importText(t){
   if(SY.adopted) toast("已沿用 Study Hub 的云同步令牌",3000);
   if(syOn()) syncNow();
   /* 过了零点自动换到新的一天 */
-  let lastDay=today(); setInterval(()=>{ if(today()!==lastDay){ lastDay=today(); IDX=null; if(["today","lib"].includes(VIEW.tab)) render(); } },60000);
+  let lastDay=today(); setInterval(()=>{ if(today()!==lastDay){ lastDay=today(); IDX=null; if(["plan","today","lib"].includes(VIEW.tab)) render(); } },60000);
 })();
 
 /* ===== 12. PWA：离线缓存 ===== */
